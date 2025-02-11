@@ -8,7 +8,7 @@ version = "0.0.0a1"
 description = "A Python library for model evaluation, performance tracking, and metric visualizations, supporting classification and regression models with robust analytics and reporting."
 readme = { file = "README_min.md", content-type = "text/markdown" }
 authors = [
-    { name = "Leonid Shpaner, email = "lshpaner@ucla.edu" }
+    { name = "Leonid Shpaner", email = "lshpaner@ucla.edu" }
 ]
 requires-python = ">=3.7.4"
 dependencies = [
