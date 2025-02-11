@@ -4,6 +4,14 @@ import numpy as np
 import os
 import sys
 
+import model_metrics
+
+print(model_metrics.__version__)
+
+
+from model_metrics import ModelEvaluationMetrics
+
+
 # Add the parent directory to sys.path to access 'functions.py'
 print(os.path.join(os.pardir))
 sys.path.append(os.path.join(os.pardir))
@@ -14,7 +22,6 @@ from sklearn.linear_model import LogisticRegression
 from model_tuner import Model, loadObjects
 import model_tuner
 
-from model_metrics import ModelEvaluationMetrics
 
 ## Step 2. Append the correct paths
 # Add the parent directory to sys.path to access 'functions.py'
@@ -22,8 +29,8 @@ print(os.path.join(os.pardir))
 sys.path.append(os.path.join(os.pardir))
 sys.path.append(".")
 
-print(f"Model Tuner version: {model_tuner.__version__}")
-print(f"Model Tuner authors: {model_tuner.__author__} \n")
+print(f"Model Metrics version: {model_metrics.__version__}")
+print(f"Model Metrics authors: {model_metrics.__author__} \n")
 
 model_path = "../results/"
 
@@ -47,7 +54,8 @@ model_titles = [
 
 ## Step 5. Set the ModelEvaluationMetrics to new variable and run evaluator
 
-model_summary = evaluator.summarize_model_performance(
+model_evaluator = ModelEvaluationMetrics()
+model_summary = model_evaluator.summarize_model_performance(
     pipelines_or_models=pipelines_or_models,
     X=X_test,
     y=y_test,
