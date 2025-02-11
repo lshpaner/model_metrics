@@ -27,6 +27,7 @@ from sklearn.metrics import (
 
 
 class ModelEvaluationMetrics:
+
     def __init__(self):
         """
         Initialize the ModelEvaluationPlots class.
@@ -335,20 +336,6 @@ class ModelEvaluationMetrics:
 
         return titles
 
-    # def _extract_model_titles(self, models_or_pipelines):
-    #     """
-    #     Extract titles from models or pipelines.
-    #     """
-    #     titles = []
-    #     for model in models_or_pipelines:
-    #         if hasattr(model, "named_steps"):  # Pipeline
-    #             final_model = list(model.named_steps.values())
-    #             title = getattr(final_model, "__class__", type(final_model)).__name__
-    #         else:
-    #             title = getattr(model, "__class__", type(model)).__name__
-    #         titles.append(title)
-    #     return titles
-
     # Helper function to extract detailed model names from pipelines or models
     def _extract_model_name(self, pipeline_or_model):
         if hasattr(pipeline_or_model, "steps"):  # It's a pipeline
@@ -425,9 +412,6 @@ class ModelEvaluationMetrics:
 
             # Compute confusion matrix
             cm = confusion_matrix(y_true, y_pred)
-            # conf_matrix_df = pd.DataFrame(
-            #     cm, index=["Actual 0", "Actual 1"], columns=["Predicted 0", "Predicted 1"]
-            # )
 
             # Create confusion matrix DataFrame
             conf_matrix_df = pd.DataFrame(
@@ -636,18 +620,6 @@ class ModelEvaluationMetrics:
 
         if model_titles is None:
             model_titles = self._extract_model_titles(pipelines_or_models)
-
-        # if model_titles is None:
-        #     model_titles = [
-        #         self._extract_model_titles(model) for model in pipelines_or_models
-        #     ]
-
-        # if model_titles:
-        #     name = model_titles
-        # else:
-        #     name = self._extract_model_titles(model)
-        # if model_titles is None:
-        #     model_titles = self._extract_model_titles(pipelines_or_models)
 
         if isinstance(curve_kwgs, dict):
             curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
@@ -979,6 +951,7 @@ class ModelEvaluationMetrics:
             self._save_plot("Grid_PR", save_plot, image_path_png, image_path_svg)
             plt.show()
 
+    @staticmethod
     def plot_calibration_curve(
         self,
         pipelines_or_models,
