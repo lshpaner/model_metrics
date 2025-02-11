@@ -9,7 +9,7 @@ import model_metrics
 print(model_metrics.__version__)
 
 
-from model_metrics import ModelEvaluationMetrics
+from model_metrics import summarize_model_performance, plot_calibration_curve
 
 
 # Add the parent directory to sys.path to access 'functions.py'
@@ -54,8 +54,10 @@ model_titles = [
 
 ## Step 5. Set the ModelEvaluationMetrics to new variable and run evaluator
 
-model_evaluator = ModelEvaluationMetrics()
-model_summary = model_evaluator.summarize_model_performance(
+# model_evaluator = ModelEvaluationMetrics()
+
+## Step 6. Summarize Model Performance
+model_summary = summarize_model_performance(
     pipelines_or_models=pipelines_or_models,
     X=X_test,
     y=y_test,
@@ -66,3 +68,23 @@ model_summary = model_evaluator.summarize_model_performance(
 )
 
 print(model_summary)
+
+
+# Plot calibration curves in overlay mode
+plot_calibration_curve(
+    pipelines_or_models=pipelines_or_models,
+    X=X_test,
+    y=y_test,
+    model_titles=model_titles,
+    overlay=False,
+    title="Calibration Curves",
+    text_wrap=40,
+    figsize=(12, 8),
+    label_fontsize=14,
+    tick_fontsize=9,
+    bins=10,
+    show_brier_score=True,
+    # grid=True,
+    # gridlines=False,
+    linestyle_kwgs={"color": "black"},
+)
