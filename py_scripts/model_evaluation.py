@@ -8,23 +8,16 @@ import model_metrics
 
 print(model_metrics.__version__)
 
-
-from model_metrics import summarize_model_performance, plot_calibration_curve
-
-
-# Add the parent directory to sys.path to access 'functions.py'
-print(os.path.join(os.pardir))
-sys.path.append(os.path.join(os.pardir))
-sys.path.append(".")
-
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 from model_tuner import Model, loadObjects
 import model_tuner
 
+from model_metrics import summarize_model_performance, plot_calibration_curve
 
 ## Step 2. Append the correct paths
-# Add the parent directory to sys.path to access 'functions.py'
+# Add the parent directory to sys.path to access relevant .py scripts
+
 print(os.path.join(os.pardir))
 sys.path.append(os.path.join(os.pardir))
 sys.path.append(".")
@@ -52,11 +45,7 @@ model_titles = [
     "Logistic Regression",
 ]
 
-## Step 5. Set the ModelEvaluationMetrics to new variable and run evaluator
-
-# model_evaluator = ModelEvaluationMetrics()
-
-## Step 6. Summarize Model Performance
+## Step 5. Summarize Model Performance
 model_summary = summarize_model_performance(
     pipelines_or_models=pipelines_or_models,
     X=X_test,
@@ -69,6 +58,8 @@ model_summary = summarize_model_performance(
 
 print(model_summary)
 
+
+## Step 6. Plot the calibration curve
 
 # Plot calibration curves in overlay mode
 plot_calibration_curve(
