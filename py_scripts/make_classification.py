@@ -4,7 +4,10 @@ import numpy as np
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 from model_tuner import Model
+import model_tuner
 
+print(f"Model Tuner version: {model_tuner.__version__}")
+print(f"Model Tuner authors: {model_tuner.__author__} \n")
 
 # Generate a synthetic dataset
 X, y = make_classification(
