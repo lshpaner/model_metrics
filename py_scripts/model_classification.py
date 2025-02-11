@@ -1,13 +1,25 @@
 import pandas as pd
 import numpy as np
+import os
+import sys
 
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
-from model_tuner import Model
+from model_tuner import Model, dumpObjects
 import model_tuner
+
+# Add the parent directory to sys.path to access 'functions.py'
+print(os.path.join(os.pardir))
+sys.path.append(os.path.join(os.pardir))
+sys.path.append(".")
 
 print(f"Model Tuner version: {model_tuner.__version__}")
 print(f"Model Tuner authors: {model_tuner.__author__} \n")
+
+
+os.makedirs("../results", exist_ok=True)
+
+results = "../results"
 
 # Generate a synthetic dataset
 X, y = make_classification(
@@ -64,6 +76,12 @@ X_train, y_train = model.get_train_data(X, y)
 X_test, y_test = model.get_test_data(X, y)
 X_valid, y_valid = model.get_valid_data(X, y)
 
+### Parquet the validation and test data
+X_test.to_parquet(os.path.join(results, "X_test.parquet"))
+y_test.to_frame().to_parquet(os.path.join(results, "y_test.parquet"))
+X_valid.to_parquet(os.path.join(results, "X_valid.parquet"))
+y_valid.to_frame().to_parquet(os.path.join(results, "y_valid.parquet"))
+
 model.fit(X_train, y_train)
 
 print("Validation Metrics")
@@ -99,3 +117,12 @@ model.return_metrics(
     model_metrics=True,
     return_dict=False,
 )
+
+
+# Define the path to save the pickled model
+model_filename = os.path.join("../results", "logistic_regression_model.pkl")
+
+# Save the model
+dumpObjects(model, model_filename)
+
+print(f"Model saved to {model_filename}")
