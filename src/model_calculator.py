@@ -7,6 +7,7 @@ import os
 import re
 import tqdm
 
+import shap
 
 from sklearn.metrics import (
     accuracy_score,
