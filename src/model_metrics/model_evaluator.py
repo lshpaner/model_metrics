@@ -131,7 +131,7 @@ def get_predictions(model, X, y, model_threshold, custom_threshold, score):
 
 
 def summarize_model_performance(
-    pipelines_or_models,
+    model,
     X,
     y,
     model_threshold=None,
@@ -144,7 +144,7 @@ def summarize_model_performance(
     Summarize key performance metrics for multiple models.
 
     Parameters:
-    - pipelines_or_models: list
+    - model: list
         A list of models or pipelines to evaluate.
         Each pipeline should either end with a classifier or contain one.
     - X: array-like
@@ -183,12 +183,12 @@ def summarize_model_performance(
     - Models must support `predict_proba` or `decision_function` for predictions.
     """
 
-    if not isinstance(pipelines_or_models, list):
-        pipelines_or_models = [pipelines_or_models]
+    if not isinstance(model, list):
+        model = [model]
 
     metrics_data = []
 
-    for i, model in enumerate(pipelines_or_models):
+    for i, model in enumerate(model):
         # Determine the model name
         if model_titles:
             name = model_titles[i]
@@ -338,7 +338,7 @@ def extract_model_name(pipeline_or_model):
 
 
 def plot_conf_matrix(
-    pipelines_or_models,
+    model,
     X,
     y,
     model_titles=None,
@@ -369,11 +369,11 @@ def plot_conf_matrix(
     Returns:
     - None
     """
-    if not isinstance(pipelines_or_models, list):
-        pipelines_or_models = [pipelines_or_models]
+    if not isinstance(model, list):
+        model = [model]
 
     if model_titles is None:
-        model_titles = [extract_model_name(model) for model in pipelines_or_models]
+        model_titles = [extract_model_name(model) for model in model]
 
     # if class_labels is None:
     #     class_labels = ["Class 0", "Class 1"]
@@ -381,15 +381,15 @@ def plot_conf_matrix(
     # Setup grid if enabled
     if grid:
         n_cols = kwargs.get("n_cols", 2)
-        n_rows = (len(pipelines_or_models) + n_cols - 1) // n_cols
+        n_rows = (len(model) + n_cols - 1) // n_cols
         fig, axes = plt.subplots(
             n_rows, n_cols, figsize=(figsize[0] * n_cols, figsize[1] * n_rows)
         )
         axes = axes.flatten()
     else:
-        axes = [None] * len(pipelines_or_models)
+        axes = [None] * len(model)
 
-    for idx, (model, ax) in enumerate(zip(pipelines_or_models, axes)):
+    for idx, (model, ax) in enumerate(zip(model, axes)):
         # Determine the model name
         if model_titles:
             name = model_titles[idx]
@@ -521,7 +521,7 @@ def plot_conf_matrix(
             plt.show()
 
     if grid:
-        for ax in axes[len(pipelines_or_models) :]:
+        for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(
@@ -531,7 +531,7 @@ def plot_conf_matrix(
 
 
 def plot_roc_auc(
-    pipelines_or_models,
+    model,
     X,
     y,
     xlabel="False Positive Rate",
@@ -557,7 +557,7 @@ def plot_roc_auc(
     Plot ROC curves for models or pipelines with optional styling and grid layout.
 
     Parameters:
-    - pipelines_or_models: list
+    - model: list
         List of models or pipelines to plot.
     - X: array-like
         Features for prediction.
@@ -609,20 +609,20 @@ def plot_roc_auc(
             "a custom title for this plot, use the `title` input."
         )
 
-    if not isinstance(pipelines_or_models, list):
-        pipelines_or_models = [pipelines_or_models]
+    if not isinstance(model, list):
+        model = [model]
 
     if model_titles is None:
-        model_titles = extract_model_titles(pipelines_or_models)
+        model_titles = extract_model_titles(model)
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
-        curve_styles = [{}] * len(pipelines_or_models)
+        curve_styles = [{}] * len(model)
 
-    if len(curve_styles) != len(pipelines_or_models):
+    if len(curve_styles) != len(model):
         raise ValueError("The length of `curve_kwgs` must match the number of models.")
 
     if overlay:
@@ -631,14 +631,14 @@ def plot_roc_auc(
     if grid and not overlay:
         import math
 
-        n_rows = math.ceil(len(pipelines_or_models) / n_cols)
+        n_rows = math.ceil(len(model) / n_cols)
         fig, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
 
     for idx, (model, name, curve_style) in enumerate(
-        zip(pipelines_or_models, model_titles, curve_styles)
+        zip(model, model_titles, curve_styles)
     ):
         y_true, y_prob, y_pred, threshold = get_predictions(
             model, X, y, None, None, None
@@ -743,7 +743,7 @@ def plot_roc_auc(
         save_plot_images("Overlay_ROC", save_plot, image_path_png, image_path_svg)
         plt.show()
     elif grid:
-        for ax in axes[len(pipelines_or_models) :]:
+        for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
         save_plot_images("Grid_ROC", save_plot, image_path_png, image_path_svg)
@@ -751,7 +751,7 @@ def plot_roc_auc(
 
 
 def plot_pr_auc(
-    pipelines_or_models,
+    model,
     X,
     y,
     xlabel="Recall",
@@ -776,7 +776,7 @@ def plot_pr_auc(
     Plot PR curves for models or pipelines with optional styling and grid layout.
 
     Parameters:
-    - pipelines_or_models: list
+    - model: list
         List of models or pipelines to plot.
     - X: array-like
         Features for prediction.
@@ -822,20 +822,20 @@ def plot_pr_auc(
             "a custom title for this plot, use the `title` input."
         )
 
-    if not isinstance(pipelines_or_models, list):
-        pipelines_or_models = [pipelines_or_models]
+    if not isinstance(model, list):
+        model = [model]
 
     if model_titles is None:
-        model_titles = extract_model_titles(pipelines_or_models)
+        model_titles = extract_model_titles(model)
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
-        curve_styles = [{}] * len(pipelines_or_models)
+        curve_styles = [{}] * len(model)
 
-    if len(curve_styles) != len(pipelines_or_models):
+    if len(curve_styles) != len(model):
         raise ValueError("The length of `curve_kwgs` must match the number of models.")
 
     if overlay:
@@ -844,14 +844,14 @@ def plot_pr_auc(
     if grid and not overlay:
         import math
 
-        n_rows = math.ceil(len(pipelines_or_models) / n_cols)
+        n_rows = math.ceil(len(model) / n_cols)
         fig, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()  # Flatten axes for easy iteration
 
     for idx, (model, name, curve_style) in enumerate(
-        zip(pipelines_or_models, model_titles, curve_styles)
+        zip(model, model_titles, curve_styles)
     ):
         y_true, y_prob, y_pred, threshold = get_predictions(
             model, X, y, None, None, None
@@ -929,7 +929,7 @@ def plot_pr_auc(
         save_plot_images("Overlay_PR", save_plot, image_path_png, image_path_svg)
         plt.show()
     elif grid:
-        for ax in axes[len(pipelines_or_models) :]:
+        for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
         save_plot_images("Grid_PR", save_plot, image_path_png, image_path_svg)
@@ -937,7 +937,7 @@ def plot_pr_auc(
 
 
 def plot_calibration_curve(
-    pipelines_or_models,
+    model,
     X,
     y,
     xlabel="Mean Predicted Probability",
@@ -967,7 +967,7 @@ def plot_calibration_curve(
     grid layout.
 
     Parameters:
-    - pipelines_or_models: list
+    - model: list
         List of models or pipelines to plot.
     - X: array-like
         Features for prediction.
@@ -1010,20 +1010,20 @@ def plot_calibration_curve(
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
 
-    if not isinstance(pipelines_or_models, list):
-        pipelines_or_models = [pipelines_or_models]
+    if not isinstance(model, list):
+        model = [model]
 
     if model_titles is None:
-        model_titles = extract_model_titles(pipelines_or_models)
+        model_titles = extract_model_titles(model)
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
-        curve_styles = [{}] * len(pipelines_or_models)
+        curve_styles = [{}] * len(model)
 
-    if len(curve_styles) != len(pipelines_or_models):
+    if len(curve_styles) != len(model):
         raise ValueError("The length of `curve_kwgs` must match the number of models.")
 
     if overlay:
@@ -1032,14 +1032,14 @@ def plot_calibration_curve(
     if grid and not overlay:
         import math
 
-        n_rows = math.ceil(len(pipelines_or_models) / n_cols)
+        n_rows = math.ceil(len(model) / n_cols)
         fig, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
 
     for idx, (model, name, curve_style) in enumerate(
-        zip(pipelines_or_models, model_titles, curve_styles)
+        zip(model, model_titles, curve_styles)
     ):
         y_true, y_prob, y_pred, threshold = get_predictions(
             model, X, y, None, None, None
@@ -1172,7 +1172,7 @@ def plot_calibration_curve(
         )
         plt.show()
     elif grid:
-        for ax in axes[len(pipelines_or_models) :]:
+        for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(

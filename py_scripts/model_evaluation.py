@@ -68,7 +68,7 @@ model_titles = [
 
 ## Step 5. Summarize Model Performance
 model_summary = summarize_model_performance(
-    pipelines_or_models=pipelines_or_models,
+    model=pipelines_or_models,
     X=X_test,
     y=y_test,
     model_titles=model_titles,
@@ -84,7 +84,7 @@ print(f"\n{model_summary}")
 
 # Plot calibration curves in overlay mode
 plot_calibration_curve(
-    pipelines_or_models=pipelines_or_models,
+    model=pipelines_or_models,
     X=X_test,
     y=y_test,
     model_titles=model_titles,
@@ -107,7 +107,7 @@ plot_calibration_curve(
 ## Step 7. Plot the confusion matrix
 
 plot_conf_matrix(
-    pipelines_or_models=pipelines_or_models,
+    model=pipelines_or_models,
     X=X_test,
     y=y_test,
     model_titles=model_titles,
