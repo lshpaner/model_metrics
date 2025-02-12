@@ -22,7 +22,6 @@ from model_metrics import (
 )
 
 plt.ion()  # enables interactive mode
-plt.rcParams["figure.max_open_warning"] = 50  # or some other threshold
 
 ## Step 2. Append the correct paths
 # Add the parent directory to sys.path to access relevant .py scripts
