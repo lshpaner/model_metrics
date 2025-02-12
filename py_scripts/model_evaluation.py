@@ -17,8 +17,8 @@ import model_tuner
 from eda_toolkit import ensure_directory
 from model_metrics import (
     summarize_model_performance,
-    plot_calibration_curve,
-    plot_conf_matrix,
+    show_calibration_curve,
+    show_confusion_matrix,
 )
 
 plt.ion()  # enables interactive mode
@@ -83,7 +83,7 @@ print(f"\n{model_summary}")
 ## Step 6. Plot the calibration curve
 
 # Plot calibration curves in overlay mode
-plot_calibration_curve(
+show_calibration_curve(
     model=pipelines_or_models,
     X=X_test,
     y=y_test,
@@ -106,7 +106,7 @@ plot_calibration_curve(
 
 ## Step 7. Plot the confusion matrix
 
-plot_conf_matrix(
+show_confusion_matrix(
     model=pipelines_or_models,
     X=X_test,
     y=y_test,
