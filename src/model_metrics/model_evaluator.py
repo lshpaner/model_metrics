@@ -426,7 +426,6 @@ def plot_conf_matrix(
 
         # updated_class_labels = conf_matrix_df.index.tolist()
         # Plot the confusion matrix
-        # disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_labels)
         # Use ConfusionMatrixDisplay with custom class_labels
         if class_labels:
             disp = ConfusionMatrixDisplay(
@@ -442,6 +441,10 @@ def plot_conf_matrix(
         else:
             fig, ax = plt.subplots(figsize=figsize)
             disp.plot(cmap=cmap, ax=ax, colorbar=kwargs.get("show_colorbar", True))
+
+        if hasattr(disp, "text_") and disp.text_ is not None:
+            for text_obj in disp.text_.ravel():  # Iterate over each text object
+                text_obj.set_text("")  # Remove the default text
 
         # Adjust title wrapping
         title = f"Confusion Matrix: {name} (Threshold = {threshold:.2f})"
@@ -497,10 +500,11 @@ def plot_conf_matrix(
                     + 0.7152 * rgba_color[1]
                     + 0.0722 * rgba_color[2]
                 )
+
                 ax.text(
                     j,
                     i,  # Exact position for numeric value
-                    f"{cm[i, j]}",
+                    f"{cm[i, j]:,}",
                     ha="center",
                     va="center",
                     fontsize=inner_fontsize,

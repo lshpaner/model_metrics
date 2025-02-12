@@ -5,6 +5,7 @@ import sys
 
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
+from eda_toolkit import ensure_directory
 from model_tuner import Model, dumpObjects
 import model_tuner
 
@@ -17,13 +18,25 @@ print(f"Model Tuner version: {model_tuner.__version__}")
 print(f"Model Tuner authors: {model_tuner.__author__} \n")
 
 
-os.makedirs("../results", exist_ok=True)
+## Define base paths
+## `base_path`` represents the parent directory of your current working directory
+base_path = os.path.join(os.pardir)
+## Go up one level from 'notebooks' to the parent directory, then into the
+## 'results' folder
 
-results = "../results"
+model_path = os.path.join(os.pardir, "model_files")
+image_path_png = os.path.join(base_path, "images", "png_images")
+image_path_svg = os.path.join(base_path, "images", "svg_images")
+
+# Use the function to ensure the 'data' directory exists
+ensure_directory(model_path)
+ensure_directory(image_path_png)
+ensure_directory(image_path_svg)
+
 
 # Generate a synthetic dataset
 X, y = make_classification(
-    n_samples=10000,  # Number of samples
+    n_samples=100000,  # Number of samples
     n_features=50,  # Number of features
     n_informative=25,  # Number of informative features
     n_classes=2,  # Number of classes (binary classification)
@@ -64,7 +77,6 @@ model = Model(
     grid=tuned_parameters,
     randomized_grid=False,
     scoring=["roc_auc"],
-    n_splits=10,
     n_jobs=-2,
     random_state=42,
 )
@@ -77,10 +89,10 @@ X_test, y_test = model.get_test_data(X, y)
 X_valid, y_valid = model.get_valid_data(X, y)
 
 ### Parquet the validation and test data
-X_test.to_parquet(os.path.join(results, "X_test.parquet"))
-y_test.to_frame().to_parquet(os.path.join(results, "y_test.parquet"))
-X_valid.to_parquet(os.path.join(results, "X_valid.parquet"))
-y_valid.to_frame().to_parquet(os.path.join(results, "y_valid.parquet"))
+X_test.to_parquet(os.path.join(model_path, "X_test.parquet"))
+y_test.to_frame().to_parquet(os.path.join(model_path, "y_test.parquet"))
+X_valid.to_parquet(os.path.join(model_path, "X_valid.parquet"))
+y_valid.to_frame().to_parquet(os.path.join(model_path, "y_valid.parquet"))
 
 model.fit(X_train, y_train)
 
@@ -120,7 +132,7 @@ model.return_metrics(
 
 
 # Define the path to save the pickled model
-model_filename = os.path.join("../results", "logistic_regression_model.pkl")
+model_filename = os.path.join(model_path, "logistic_regression_model.pkl")
 
 # Save the model
 dumpObjects(model, model_filename)
