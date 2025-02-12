@@ -337,7 +337,7 @@ def extract_model_name(pipeline_or_model):
     return pipeline_or_model.__class__.__name__  # Individual model class name
 
 
-def plot_conf_matrix(
+def show_confusion_matrix(
     model,
     X,
     y,
@@ -936,7 +936,7 @@ def plot_pr_auc(
         plt.show()
 
 
-def plot_calibration_curve(
+def show_calibration_curve(
     model,
     X,
     y,
