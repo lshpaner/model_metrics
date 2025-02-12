@@ -11,7 +11,6 @@ import textwrap
 from sklearn.calibration import calibration_curve
 
 from sklearn.metrics import (
-    accuracy_score,
     precision_score,
     average_precision_score,
     recall_score,
@@ -530,7 +529,7 @@ def show_confusion_matrix(
         plt.show()
 
 
-def plot_roc_auc(
+def show_roc_curve(
     model,
     X,
     y,
@@ -750,7 +749,7 @@ def plot_roc_auc(
         plt.show()
 
 
-def plot_pr_auc(
+def show_pr_curve(
     model,
     X,
     y,
