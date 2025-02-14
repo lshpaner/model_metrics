@@ -397,7 +397,12 @@ class ModelCalculator:
             print("Computing global SHAP values...")
             shap_values_accumulated = []
             try:
-                for row_batch in tqdm(
+                # for row_batch in tqdm(
+                #     X_transformed.itertuples(index=False, name=None),
+                #     total=len(X_transformed),
+                #     desc="Global SHAP Progress",
+                # ):
+                for row_batch in tqdm.tqdm(
                     X_transformed.itertuples(index=False, name=None),
                     total=len(X_transformed),
                     desc="Global SHAP Progress",
