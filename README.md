@@ -4,7 +4,7 @@
 
 <br>
 
-<img src="https://raw.githubusercontent.com/lshpaner/model_metrics/refs/heads/main/assets/model_metrics_logo.svg" width="300" style="border: none; outline: none; box-shadow: none;" oncontextmenu="return false;">
+<img src="https://raw.githubusercontent.com/lshpaner/model_metrics/refs/heads/main/assets/mm_logo.svg" width="300" style="border: none; outline: none; box-shadow: none;" oncontextmenu="return false;">
 
 <br> 
 
