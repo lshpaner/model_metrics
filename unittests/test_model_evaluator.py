@@ -1,8 +1,13 @@
 import pytest
+from unittest.mock import patch
+import os
 import pandas as pd
 import numpy as np
-import os
+from sklearn.svm import SVC
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
+from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from model_metrics.model_evaluator import (
@@ -10,6 +15,9 @@ from model_metrics.model_evaluator import (
     get_predictions,
     summarize_model_performance,
     show_confusion_matrix,
+    show_roc_curve,
+    show_pr_curve,
+    show_calibration_curve,
     get_model_probabilities,
     extract_model_titles,
     extract_model_name,
@@ -92,3 +100,274 @@ def test_extract_model_name(trained_model):
     """Test extracting model names."""
     name = extract_model_name(trained_model)
     assert name == "LogisticRegression"
+
+
+@patch("matplotlib.pyplot.show")  # Prevents figures from displaying during testing
+def test_show_confusion_matrix_single_model(mock_show, trained_model, sample_data):
+    """Test if show_confusion_matrix runs correctly for a single model."""
+    X, y = sample_data
+
+    try:
+        show_confusion_matrix(trained_model, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_confusion_matrix raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_confusion_matrix_multiple_models(mock_show, trained_model, sample_data):
+    """Test if show_confusion_matrix runs correctly for multiple models."""
+    X, y = sample_data
+    models = [trained_model, trained_model]  # Using the same model twice for simplicity
+
+    try:
+        show_confusion_matrix(models, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_confusion_matrix failed for multiple models: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_confusion_matrix_saves_plot(
+    mock_show, trained_model, sample_data, tmp_path
+):
+    """Test if show_confusion_matrix saves the plot when save_plot=True."""
+    X, y = sample_data
+    image_path_png = tmp_path / "confusion_matrix.png"
+    image_path_svg = tmp_path / "confusion_matrix.svg"
+
+    try:
+        show_confusion_matrix(
+            trained_model,
+            X,
+            y,
+            save_plot=True,
+            image_path_png=str(image_path_png),
+            image_path_svg=str(image_path_svg),
+        )
+    except Exception as e:
+        pytest.fail(f"show_confusion_matrix failed when saving plots: {e}")
+
+    assert image_path_png.exists(), "PNG image was not saved."
+    assert image_path_svg.exists(), "SVG image was not saved."
+
+
+patch("matplotlib.pyplot.show")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_single(mock_show, trained_model, sample_data):
+    """Test if show_roc_curve runs correctly for a single model."""
+    X, y = sample_data
+    try:
+        show_roc_curve(trained_model, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_roc_curve raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_multiple(mock_show, trained_model, sample_data):
+    """Test if show_roc_curve runs without errors for multiple models."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    try:
+        show_roc_curve(models, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_roc_curve raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_overlay(mock_show, trained_model, sample_data):
+    """Test if show_roc_curve runs correctly with overlay enabled."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    try:
+        show_roc_curve(models, X, y, overlay=True, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_roc_curve raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_grid(mock_show, trained_model, sample_data):
+    """Test if show_roc_curve runs correctly with grid enabled."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    try:
+        show_roc_curve(models, X, y, grid=True, n_cols=2, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_roc_curve raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_single(mock_show, trained_model, sample_data):
+    """Test if show_pr_curve runs correctly for a single model."""
+    X, y = sample_data
+    try:
+        show_pr_curve(trained_model, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_pr_curve raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_multiple(mock_show, trained_model, sample_data):
+    """Test if show_pr_curve runs without errors for multiple models."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    try:
+        show_pr_curve(models, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_pr_curve raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_overlay(mock_show, trained_model, sample_data):
+    """Test if show_pr_curve runs correctly with overlay enabled."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    try:
+        show_pr_curve(models, X, y, overlay=True, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_pr_curve raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_grid(mock_show, trained_model, sample_data):
+    """Test if show_pr_curve runs correctly with grid enabled."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    try:
+        show_pr_curve(models, X, y, grid=True, n_cols=2, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_pr_curve raised an exception: {e}")
+
+
+def test_show_calibration_curve_basic(trained_model, sample_data):
+    """Test basic functionality of the calibration curve."""
+    X, y = sample_data
+    try:
+        show_calibration_curve(trained_model, X, y)
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed unexpectedly: {e}")
+
+
+def test_show_calibration_curve_overlay(trained_model, sample_data):
+    """Test overlaying multiple models on one calibration plot."""
+    X, y = sample_data
+    models = [trained_model, trained_model]  # Use the same model twice
+    try:
+        show_calibration_curve(models, X, y, overlay=True, title="Overlay Test")
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed on overlay: {e}")
+
+
+def test_show_calibration_curve_grid(trained_model, sample_data):
+    """Test grid layout with multiple models."""
+    X, y = sample_data
+    models = [trained_model, trained_model]  # Ensure it's a list
+    try:
+        show_calibration_curve(model=models, X=X, y=y, grid=True, n_cols=2)
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed on grid layout: {e}")
+
+
+def test_show_calibration_curve_invalid_overlay_grid(trained_model, sample_data):
+    """Ensure ValueError is raised if both overlay and grid are set to True."""
+    X, y = sample_data
+    with pytest.raises(
+        ValueError, match="`grid` cannot be set to True when `overlay` is True."
+    ):
+        show_calibration_curve(
+            [trained_model, trained_model], X, y, overlay=True, grid=True
+        )
+
+
+def test_show_calibration_curve_save_plot(trained_model, sample_data, tmp_path):
+    """Test saving the calibration curve plot."""
+    X, y = sample_data
+    save_path = str(tmp_path / "calibration.png")
+
+    try:
+        show_calibration_curve(
+            trained_model, X, y, save_plot=True, image_path_png=save_path
+        )
+        assert os.path.exists(save_path), "Plot was not saved correctly"
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed when saving plot: {e}")
+
+
+def test_show_calibration_curve_brier_score(trained_model, sample_data):
+    """Test calculation of Brier score."""
+    X, y = sample_data
+    try:
+        show_calibration_curve(trained_model, X, y, show_brier_score=True)
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed with Brier score enabled: {e}")
+
+
+def test_show_calibration_curve_custom_titles(trained_model, sample_data):
+    """Test custom model titles for grid layout."""
+    X, y = sample_data
+    models = [trained_model, trained_model]  # Ensure it's a list
+    titles = ["Model 1", "Model 2"]  # Titles must match models length
+    try:
+        show_calibration_curve(model=models, X=X, y=y, model_titles=titles, grid=True)
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed with custom titles: {e}")
+
+
+def test_get_model_probabilities_predict_proba(trained_model, sample_data):
+    """Test direct model with `predict_proba()`."""
+    X, _ = sample_data
+    probabilities = get_model_probabilities(trained_model, X, "Logistic Model")
+    assert probabilities.shape == (X.shape[0],)  # Should return 1D array
+    assert np.all(
+        (probabilities >= 0) & (probabilities <= 1)
+    )  # Valid probability range
+
+
+def test_get_model_probabilities_pipeline(sample_data):
+    """Test pipeline where final step has `predict_proba()`."""
+    X, y = sample_data
+    pipeline = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("classifier", LogisticRegression()),  # Has predict_proba()
+        ]
+    )
+    pipeline.fit(X, y)
+
+    probabilities = get_model_probabilities(pipeline, X, "Pipeline Model")
+    assert probabilities.shape == (X.shape[0],)
+    assert np.all(
+        (probabilities >= 0) & (probabilities <= 1)
+    )  # Valid probability range
+
+
+def test_get_model_probabilities_decision_function(sample_data):
+    """Test standalone model that has only `decision_function()`."""
+    X, y = sample_data
+    model = SVC(probability=False)  # No predict_proba(), only decision_function()
+    model.fit(X, y)
+
+    probabilities = get_model_probabilities(model, X, "SVM Model")
+    assert probabilities.shape == (X.shape[0],)
+    assert np.all(
+        (probabilities >= 0) & (probabilities <= 1)
+    )  # Probability conversion check
+
+
+def test_get_model_probabilities_invalid_model():
+    """Test model that does not support probability-based predictions."""
+
+    class DummyModel:
+        def fit(self, X, y):
+            pass
+
+        def predict(self, X):
+            return np.ones(len(X))
+
+    model = DummyModel()
+    X = np.random.rand(5, 3)
+
+    with pytest.raises(
+        ValueError, match="does not support probability-based prediction"
+    ):
+        get_model_probabilities(model, X, "Dummy Model")
