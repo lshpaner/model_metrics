@@ -12,9 +12,6 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from model_metrics import ModelCalculator
 
-# from py_scripts.model_classification import model
-
-
 import shap
 
 ## Define base paths
@@ -28,9 +25,9 @@ model_path = os.path.join(os.pardir, "model_files")
 # Use the function to ensure the 'data' directory exists
 ensure_directory(model_path)
 
-csv_filename_per_row = "per_row_shap.csv"
-
-model_arg_name = "model"
+csv_filename_coeff = "results_coefficients.csv"
+csv_filename_per_row = "results_per_row_shap.csv"
+csv_global_shap = "results_global_shap.csv"
 
 ##################### Hard-coded paths for debugging #######################
 
@@ -48,11 +45,7 @@ model_name = loadObjects(
     )
 )
 
-print(model_name.estimator.named_steps["lg"])
 model = model_name.estimator.named_steps["lg"]
-
-print("Loaded model object:", model_name)
-print("Original model argument:", model_arg_name)
 
 ############################################################################
 ############################# Read in Data #################################
@@ -61,25 +54,28 @@ print("Original model argument:", model_arg_name)
 X_valid = pd.read_parquet(os.path.join(model_path, "X_valid.parquet"))
 y_valid = pd.read_parquet(os.path.join(model_path, "y_valid.parquet"))
 
+outcome = y_valid.columns[0]
+
+X_valid = {outcome: X_valid}
+
 ################################################################################
 ############################# Model Calculator #################################
 ################################################################################
+outcome = "target"
+model_dict = {"model": {outcome: model_name}}
+
 
 ## Initialize the ModelCalculator
 calculator = ModelCalculator(
-    model_dict=model,
-    outcomes=y_valid,
+    model_dict=model_dict,
+    outcomes=[outcome],
     top_n=5,
 )
 
-print(calculator)
-print(X_valid)
+############################# Model Coefficients ###############################
 
-
-############################### Row-wise SHAP ##################################
-
-## Generate the predictions and SHAP contributions
-results_df_per_row = calculator.generate_predictions(
+## Generate the predictions and model coefficients
+results_df_coeff = calculator.generate_predictions(
     X_test=X_valid,
     y_test=y_valid,
     calculate_shap=False,
@@ -87,32 +83,35 @@ results_df_per_row = calculator.generate_predictions(
     include_contributions=False,
     subset_results=True,
 )
+print(os.path.join(model_path, csv_filename_coeff))
+results_df_coeff.to_csv(os.path.join(model_path, csv_filename_coeff))
+
+################################ Row-wise SHAP #################################
+## Generate the predictions and SHAP contributions
+results_df_per_row = calculator.generate_predictions(
+    X_test=X_valid,
+    y_test=y_valid,
+    calculate_shap=True,
+    use_coefficients=False,
+    include_contributions=False,
+    subset_results=True,
+)
 print(os.path.join(model_path, csv_filename_per_row))
+
 results_df_per_row.to_csv(os.path.join(model_path, csv_filename_per_row))
 
-print(results_df_per_row)
-quit()
-########################## Overall Coefficients/SHAP ###########################
 
-# Use the original model argument name to check for logistic regression
-print(model_arg_name)
-if model_arg_name == "model":
-    print()
-    print("Calculating global coefficients for Logistic Regression...")
-    print()
-    results_df = calculator.generate_predictions(
-        X_test=X_valid,
-        y_test=y_valid,
-        global_coefficients=True,  # Only calculate coefficients
-    )
-else:
-    print()
-    print("Calculating SHAP values for other models...")
-    print()
-    results_df = calculator.generate_predictions(
-        X_test=X_valid,
-        y_test=y_valid,
-        global_shap=True,  # Only calculate SHAP values
-    )
-# Save the results
-results_df.to_csv(os.path.join(model_path, csv_filename_per_row))
+################################# Global SHAP ##################################
+## Generate the predictions and SHAP contributions
+results_df_per_row = calculator.generate_predictions(
+    X_test=X_valid,
+    y_test=y_valid,
+    calculate_shap=False,
+    global_shap=True,
+    use_coefficients=False,
+    include_contributions=False,
+    subset_results=False,
+)
+
+print(os.path.join(model_path, csv_global_shap))
+results_df_per_row.to_csv(os.path.join(model_path, csv_global_shap))

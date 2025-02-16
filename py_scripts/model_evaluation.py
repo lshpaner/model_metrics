@@ -19,6 +19,8 @@ from model_metrics import (
     summarize_model_performance,
     show_calibration_curve,
     show_confusion_matrix,
+    show_roc_curve,
+    show_pr_curve,
 )
 
 plt.ion()  # enables interactive mode
@@ -127,6 +129,51 @@ show_confusion_matrix(
     class_report=True,
     # custom_threshold=0.5,
     # labels=False,
+)
+
+# Plot ROC curves
+show_roc_curve(
+    models=pipelines_or_models,
+    X=X_test,
+    y=y_test,
+    overlay=False,
+    model_titles=model_titles,
+    decimal_places=3,
+    # n_cols=3,
+    # n_rows=1,
+    # curve_kwgs={
+    #     "Logistic Regression": {"color": "blue", "linewidth": 2},
+    #     "SVM": {"color": "red", "linestyle": "--", "linewidth": 1.5},
+    # },
+    # linestyle_kwgs={"color": "grey", "linestyle": "--"},
+    save_plot=True,
+    grid=True,
+    figsize=(10, 12),
+    # label_fontsize=16,
+    # tick_fontsize=16,
+    image_path_png=image_path_png,
+    image_path_svg=image_path_svg,
+    # gridlines=False,
+)
+
+# Plot PR curves
+show_pr_curve(
+    models=pipelines_or_models,
+    X=X_test,
+    y=y_test,
+    # x_label="Hello",
+    model_titles=model_titles,
+    decimal_places=3,
+    overlay=False,
+    grid=True,
+    save_plot=True,
+    image_path_png=image_path_png,
+    image_path_svg=image_path_svg,
+    figsize=(10, 10),
+    # tick_fontsize=16,
+    # label_fontsize=16,
+    # grid=True,
+    # gridlines=False,
 )
 
 input("Press ENTER to quit...")

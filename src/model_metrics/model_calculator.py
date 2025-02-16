@@ -1,33 +1,7 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import sys
-import os
-import re
 import tqdm
-
 import shap
-
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    average_precision_score,
-    recall_score,
-    f1_score,
-    classification_report,
-    confusion_matrix,
-    ConfusionMatrixDisplay,
-    roc_auc_score,
-    roc_curve,
-    precision_recall_curve,
-    brier_score_loss,
-)
-
-
-################################################################################
-######### ModelCalculator Class to calculate SHAP values,
-######### model coefficients(where applicable), tp,fn,fn,fp, and pred_probas
-################################################################################
 
 
 class ModelCalculator:
@@ -183,7 +157,8 @@ class ModelCalculator:
                     estimator, X_test_m, global_coefficients=True
                 )
                 print(f"Global Coefficients for {outcome}:\n{global_coeff_df}")
-                return global_coeff_df  # Immediately return the global coefficients DataFrame
+                return global_coeff_df  # Immediately return the global
+                # coefficients DataFrame
 
             ## Handle Global SHAP Values
             if global_shap:
@@ -192,7 +167,8 @@ class ModelCalculator:
                     estimator, X_test_m, global_shap=True
                 )
                 print(f"Global SHAP Values for {outcome}:\n{global_shap_df}")
-                return global_shap_df  # Immediately return the global SHAP DataFrame
+                return global_shap_df  # Immediately return the global SHAP
+                # DataFrame
 
             ## Row-wise Calculations
             if hasattr(model, "threshold"):
@@ -200,7 +176,6 @@ class ModelCalculator:
                 print(f"Using optimal threshold {threshold}")
                 y_pred_proba = model.predict_proba(X_test_m)[:, 1]
                 y_pred = 1 * (y_pred_proba > threshold)
-                print("total predicted positive:", y_pred.sum())
             else:
                 y_pred = model.predict(X_test_m)
 
@@ -245,7 +220,14 @@ class ModelCalculator:
                 if calculate_shap
                 else f"top_{self.top_n}_coefficients"
             )
-            subset_cols = ["TP", "FN", "FP", "TN", "y_pred_proba", top_features_col]
+            subset_cols = [
+                "TP",
+                "FN",
+                "FP",
+                "TN",
+                "y_pred_proba",
+                top_features_col,
+            ]
             results_df = results_df[subset_cols]
 
         print(f"Shape of results_df: {results_df.shape}")
@@ -334,6 +316,8 @@ class ModelCalculator:
             The feature matrix with metrics added.
         """
         metrics_df = X_test_m.copy()
+        if type(y_test_m) == pd.DataFrame:
+            y_test_m = y_test_m.squeeze(axis=0)
         metrics_df["TP"] = ((y_test_m == 1) & (y_pred == 1)).astype(int)
         metrics_df["FN"] = ((y_test_m == 1) & (y_pred == 0)).astype(int)
         metrics_df["FP"] = ((y_test_m == 0) & (y_pred == 1)).astype(int)
@@ -353,7 +337,8 @@ class ModelCalculator:
         """
         Calculate SHAP values for a given model or pipeline.
 
-        Dynamically handles standalone models and pipelines by extracting the final estimator.
+        Dynamically handles standalone models and pipelines by extracting the
+        final estimator.
         """
         if X_test_m.index.name is not None:
             X_test_m = X_test_m.reset_index(drop=True)
@@ -397,11 +382,6 @@ class ModelCalculator:
             print("Computing global SHAP values...")
             shap_values_accumulated = []
             try:
-                # for row_batch in tqdm(
-                #     X_transformed.itertuples(index=False, name=None),
-                #     total=len(X_transformed),
-                #     desc="Global SHAP Progress",
-                # ):
                 for row_batch in tqdm.tqdm(
                     X_transformed.itertuples(index=False, name=None),
                     total=len(X_transformed),
@@ -444,19 +424,7 @@ class ModelCalculator:
         # Row-wise SHAP calculation
         shap_values = []
         try:
-            # for row in tqdm(
-            #     X_transformed.itertuples(index=False),
-            #     total=len(X_transformed),
-            #     desc="SHAP Progress",
-            # ):
-            #     shap_values.append(
-            #         explainer(
-            #             pd.DataFrame([row], columns=X_test_m.columns),
-            #         ).values[0]
-            #     )
-            # X_transformed.columns = X_test_m.columns
             print(X_transformed)
-
             shap_values = explainer(
                 pd.DataFrame(X_transformed.values, columns=X_test_m.columns)
             ).values
@@ -529,101 +497,3 @@ class ModelCalculator:
             ).sort_values(by="Importance", key=abs, ascending=False)
 
         raise ValueError(f"Model {type(final_model)} does not support coefficients.")
-
-    # def _calculate_coefficients(
-    #     self,
-    #     model,
-    #     X_test_m,
-    #     include_contributions=False,
-    #     global_coefficients=False,
-    # ):
-    #     """
-    #     Calculate feature contributions for models with `coef_`.
-
-    #     Parameters:
-    #     -----------
-    #     model : trained model
-    #         The trained model, which must have a `coef_` attribute.
-
-    #     X_test_m : pd.DataFrame
-    #         The feature matrix with possibly additional columns.
-
-    #     include_contributions : bool, optional (default=False)
-    #         Whether to include contribution values alongside feature names.
-
-    #     global_coefficients : bool, optional (default=False)
-    #         Whether to calculate global coefficients for the model.
-
-    #     Returns:
-    #     --------
-    #     - If global_coefficients is True: Dictionary of feature names and coefficients.
-    #     - If global_coefficients is False: Per-row contributions (existing functionality).
-    #     """
-    #     ## Extract the final model
-    #     if hasattr(model, "estimator"):
-    #         wrapped_estimator = model.estimator
-    #         if isinstance(wrapped_estimator, CalibratedClassifierCV):
-    #             pipeline = wrapped_estimator.estimator
-    #             final_model = (
-    #                 pipeline.steps[-1][1]
-    #                 if hasattr(
-    #                     pipeline,
-    #                     "steps",
-    #                 )
-    #                 else pipeline
-    #             )
-    #         else:
-    #             final_model = wrapped_estimator
-    #     else:
-    #         final_model = model
-
-    #     if not hasattr(final_model, "coef_"):
-    #         raise ValueError(f"The model {type(final_model)} does not support `coef_`.")
-
-    #     ## Retrieve coefficients
-    #     coefficients = final_model.coef_
-    #     if len(coefficients.shape) > 1:
-    #         ## Use the first class if it's a multi-class model
-    #         coefficients = coefficients[0]
-
-    #     ## Global Coefficients: Return as a dictionary
-    #     if global_coefficients:
-    #         feature_names = (
-    #             final_model.feature_names_in_
-    #             if hasattr(final_model, "feature_names_in_")
-    #             else X_test_m.columns[: len(coefficients)]
-    #         )
-    #         coeff_df = pd.DataFrame(
-    #             {"Feature": feature_names, "Coefficient": coefficients}
-    #         ).sort_values(by="Coefficient", key=abs, ascending=False)
-    #         return coeff_df.reset_index(drop=True)
-
-    #     ## Per-Row Contributions: Existing functionality
-    #     feature_names = (
-    #         final_model.feature_names_in_
-    #         if hasattr(final_model, "feature_names_in_")
-    #         else X_test_m.columns[: len(coefficients)]
-    #     )
-    #     X_test_features = X_test_m[feature_names]
-    #     contributions = X_test_features.values * coefficients
-
-    #     ## Collect top features per row with tqdm for progress tracking
-    #     top_coeff_features = []
-    #     for row_contributions in tqdm(
-    #         contributions,
-    #         desc="Calculating Coefficients",
-    #         total=len(X_test_features),
-    #     ):
-    #         sorted_features = sorted(
-    #             zip(feature_names, row_contributions),
-    #             key=lambda x: abs(x[1]),  ## Sort by absolute contribution
-    #             reverse=True,
-    #         )[: self.top_n]
-    #         if include_contributions:
-    #             top_coeff_features.append(
-    #                 {feature: value for feature, value in sorted_features}
-    #             )
-    #         else:
-    #             top_coeff_features.append([feature for feature, _ in sorted_features])
-
-    #     return top_coeff_features
