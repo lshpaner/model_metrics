@@ -31,29 +31,19 @@ The Model Metrics library is designed to facilitate the evaluation and interpret
 ## Features
 
 * Prediction & Model Evaluation:
-
     * Supports multiple models and outcomes.
-
     * Computes metrics like precision, recall, F1-score, specificity, AUC-ROC, Brier Score, and Average Precision.
-
     * Allows for k-fold cross-validation evaluation.
 
 * SHAP & Feature Importance:
-
     * Calculates SHAP values at both global and per-row levels.
-
     * Supports extraction of top-N most important features per row.
-
     * Computes model coefficients for feature importance assessment.
 
 * Visualization & Reporting:
-
     * Confusion Matrix visualization with enhanced labeling.
-
     * ROC Curve, Precision-Recall Curve, and Calibration Curve plotting.
-
     * Grid-based layout for multi-model comparisons.
-
     * Customizable styling for plots, including overlays.
 
 ## Installation
