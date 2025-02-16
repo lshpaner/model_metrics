@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import sys
 import os
@@ -529,7 +530,7 @@ def show_confusion_matrix(
 
 
 def show_roc_curve(
-    model,
+    models,
     X,
     y,
     xlabel="False Positive Rate",
@@ -607,20 +608,20 @@ def show_roc_curve(
             "a custom title for this plot, use the `title` input."
         )
 
-    if not isinstance(model, list):
-        model = [model]
+    if not isinstance(models, list):
+        models = [models]
 
     if model_titles is None:
-        model_titles = extract_model_titles(model)
+        model_titles = extract_model_titles(models)
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
-        curve_styles = [{}] * len(model)
+        curve_styles = [{}] * len(models)
 
-    if len(curve_styles) != len(model):
+    if len(curve_styles) != len(models):
         raise ValueError("The length of `curve_kwgs` must match the number of models.")
 
     if overlay:
@@ -629,14 +630,14 @@ def show_roc_curve(
     if grid and not overlay:
         import math
 
-        n_rows = math.ceil(len(model) / n_cols)
+        n_rows = math.ceil(len(models) / n_cols)
         fig, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
 
     for idx, (model, name, curve_style) in enumerate(
-        zip(model, model_titles, curve_styles)
+        zip(models, model_titles, curve_styles)
     ):
         y_true, y_prob, y_pred, threshold = get_predictions(
             model, X, y, None, None, None
@@ -741,7 +742,7 @@ def show_roc_curve(
         save_plot_images("Overlay_ROC", save_plot, image_path_png, image_path_svg)
         plt.show()
     elif grid:
-        for ax in axes[len(model) :]:
+        for ax in axes[len(models) :]:
             ax.axis("off")
         plt.tight_layout()
         save_plot_images("Grid_ROC", save_plot, image_path_png, image_path_svg)
@@ -749,7 +750,7 @@ def show_roc_curve(
 
 
 def show_pr_curve(
-    model,
+    models,
     X,
     y,
     xlabel="Recall",
@@ -820,20 +821,20 @@ def show_pr_curve(
             "a custom title for this plot, use the `title` input."
         )
 
-    if not isinstance(model, list):
-        model = [model]
+    if not isinstance(models, list):
+        models = [models]
 
     if model_titles is None:
-        model_titles = extract_model_titles(model)
+        model_titles = extract_model_titles(models)
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
-        curve_styles = [{}] * len(model)
+        curve_styles = [{}] * len(models)
 
-    if len(curve_styles) != len(model):
+    if len(curve_styles) != len(models):
         raise ValueError("The length of `curve_kwgs` must match the number of models.")
 
     if overlay:
@@ -842,14 +843,14 @@ def show_pr_curve(
     if grid and not overlay:
         import math
 
-        n_rows = math.ceil(len(model) / n_cols)
+        n_rows = math.ceil(len(models) / n_cols)
         fig, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()  # Flatten axes for easy iteration
 
     for idx, (model, name, curve_style) in enumerate(
-        zip(model, model_titles, curve_styles)
+        zip(models, model_titles, curve_styles)
     ):
         y_true, y_prob, y_pred, threshold = get_predictions(
             model, X, y, None, None, None
@@ -927,7 +928,7 @@ def show_pr_curve(
         save_plot_images("Overlay_PR", save_plot, image_path_png, image_path_svg)
         plt.show()
     elif grid:
-        for ax in axes[len(model) :]:
+        for ax in axes[len(models) :]:
             ax.axis("off")
         plt.tight_layout()
         save_plot_images("Grid_PR", save_plot, image_path_png, image_path_svg)
@@ -1170,7 +1171,8 @@ def show_calibration_curve(
         )
         plt.show()
     elif grid:
-        for ax in axes[len(model) :]:
+        num_models = len(model) if isinstance(model, list) else 1
+        for ax in axes[num_models:]:
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(
