@@ -1,4 +1,5 @@
 import pytest
+import builtins
 from unittest.mock import patch
 import os
 import pandas as pd
@@ -6,6 +7,7 @@ import numpy as np
 from sklearn.svm import SVC
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+import matplotlib
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
@@ -22,6 +24,9 @@ from model_metrics.model_evaluator import (
     extract_model_titles,
     extract_model_name,
 )
+
+
+matplotlib.use("Agg")  # Set non-interactive backend
 
 
 @pytest.fixture
@@ -371,3 +376,17 @@ def test_get_model_probabilities_invalid_model():
         ValueError, match="does not support probability-based prediction"
     ):
         get_model_probabilities(model, X, "Dummy Model")
+
+
+def test_custom_help(capsys):
+    # Capture the help output
+    help()
+    captured = capsys.readouterr()
+
+    # Check if the ASCII art and detailed documentation are present
+    assert "Welcome to Model Metrics!" in captured.out
+    assert "PyPI: https://pypi.org/project/model-metrics/" in captured.out
+
+    # Ensure built-in help still works
+    original_help = builtins.help
+    assert original_help is not None
