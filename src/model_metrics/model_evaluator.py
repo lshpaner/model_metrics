@@ -2,10 +2,11 @@ import pandas as pd
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.colorbar as mcolorbar
 import sys
 import os
 import re
-import tqdm
+from tqdm import tqdm
 import textwrap
 
 from sklearn.calibration import calibration_curve
@@ -374,9 +375,6 @@ def show_confusion_matrix(
     if model_titles is None:
         model_titles = [extract_model_name(model) for model in model]
 
-    # if class_labels is None:
-    #     class_labels = ["Class 0", "Class 1"]
-
     # Setup grid if enabled
     if grid:
         n_cols = kwargs.get("n_cols", 2)
@@ -388,15 +386,15 @@ def show_confusion_matrix(
     else:
         axes = [None] * len(model)
 
-    for idx, (model, ax) in enumerate(zip(model, axes)):
+    for idx, (m, ax) in enumerate(zip(model, axes)):
         # Determine the model name
         if model_titles:
             name = model_titles[idx]
         else:
-            name = extract_model_name(model)
+            name = extract_model_name(m)  # Change 'model' to 'm'
 
         y_true, y_prob, y_pred, threshold = get_predictions(
-            model, X, y, model_threshold, custom_threshold, score
+            m, X, y, model_threshold, custom_threshold, score  # Change 'model' to 'm'
         )
 
         # Compute confusion matrix
@@ -435,15 +433,51 @@ def show_confusion_matrix(
             disp = ConfusionMatrixDisplay(
                 confusion_matrix=cm, display_labels=["0", "1"]
             )
+        show_colorbar = kwargs.get("show_colorbar", True)  # Extract boolean value
+
         if grid:
-            disp.plot(cmap=cmap, ax=ax, colorbar=kwargs.get("show_colorbar", True))
+            if "colorbar" in disp.plot.__code__.co_varnames:
+                disp.plot(cmap=cmap, ax=ax, colorbar=show_colorbar)
+            else:
+                disp.plot(cmap=cmap, ax=ax)
         else:
             fig, ax = plt.subplots(figsize=figsize)
-            disp.plot(cmap=cmap, ax=ax, colorbar=kwargs.get("show_colorbar", True))
+            if "colorbar" in disp.plot.__code__.co_varnames:
+                disp.plot(cmap=cmap, ax=ax, colorbar=show_colorbar)
+            else:
+                disp.plot(cmap=cmap, ax=ax)
 
+        # Ensure text annotations are not duplicated
         if hasattr(disp, "text_") and disp.text_ is not None:
-            for text_obj in disp.text_.ravel():  # Iterate over each text object
-                text_obj.set_text("")  # Remove the default text
+            unique_texts = set()
+            for text_obj in disp.text_.ravel():
+                text_value = text_obj.get_text()
+                if text_value in unique_texts:
+                    text_obj.set_text("")  # Clear duplicate text
+                else:
+                    unique_texts.add(text_value)
+
+        # Re-annotate correctly
+        fmt = ".0f"  # Adjust format if needed
+        for i in range(disp.text_.shape[0]):
+            for j in range(disp.text_.shape[1]):
+                new_value = disp.confusion_matrix[i, j]
+                disp.text_[i, j].set_text(f"{new_value:,}")  # Properly format numbers
+
+        # **Forcefully Remove the Colorbar If It Exists**
+        if not show_colorbar:
+            # Locate colorbar within the figure and remove it
+            for cb in ax.figure.get_axes():
+                if isinstance(cb, mcolorbar.Colorbar):
+                    cb.remove()
+
+            # Additional safeguard: clear colorbar from the ConfusionMatrixDisplay
+            if hasattr(disp, "im_") and disp.im_ is not None:
+                if hasattr(disp.im_, "colorbar") and disp.im_.colorbar is not None:
+                    try:
+                        disp.im_.colorbar.remove()
+                    except Exception as e:
+                        print(f"Warning: Failed to remove colorbar: {e}")
 
         # Adjust title wrapping
         title = f"Confusion Matrix: {name} (Threshold = {threshold:.2f})"

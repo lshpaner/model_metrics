@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import tqdm
+from tqdm import tqdm
 import shap
 
 
@@ -382,7 +382,7 @@ class ModelCalculator:
             print("Computing global SHAP values...")
             shap_values_accumulated = []
             try:
-                for row_batch in tqdm.tqdm(
+                for row_batch in tqdm(
                     X_transformed.itertuples(index=False, name=None),
                     total=len(X_transformed),
                     desc="Global SHAP Progress",

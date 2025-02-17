@@ -2,6 +2,7 @@ import pytest
 import builtins
 from unittest.mock import patch
 import os
+from tqdm import tqdm
 import pandas as pd
 import numpy as np
 from sklearn.svm import SVC
@@ -11,6 +12,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
 from model_metrics.model_evaluator import (
     save_plot_images,
@@ -24,7 +26,6 @@ from model_metrics.model_evaluator import (
     extract_model_titles,
     extract_model_name,
 )
-
 
 matplotlib.use("Agg")  # Set non-interactive backend
 
@@ -74,6 +75,88 @@ def test_get_predictions(trained_model, sample_data):
     assert 0 <= threshold <= 1
 
 
+def test_get_predictions_single_model_proba(trained_model, sample_data):
+    """Test get_predictions using a single model with predict_proba."""
+    X, y = sample_data
+    y_true, y_prob, y_pred, threshold = get_predictions(
+        trained_model, X, y, None, None, None
+    )
+
+    assert len(y_true) == len(y_prob) == len(y_pred)
+    assert threshold == 0.5  # Default threshold
+
+
+def test_get_predictions_single_model_no_proba(sample_data):
+    """Test get_predictions with a model lacking predict_proba."""
+
+    class CustomModel:
+        def fit(self, X, y):
+            pass
+
+        def predict(self, X):
+            return np.random.randint(0, 2, size=len(X))
+
+    model = CustomModel()
+    X, y = sample_data
+    y_true, y_prob, y_pred, threshold = get_predictions(
+        model,
+        X,
+        y,
+        None,
+        None,
+        None,
+    )
+
+    assert len(y_true) == len(y_prob) == len(y_pred)
+
+
+def test_get_predictions_with_custom_threshold(trained_model, sample_data):
+    """Test get_predictions with a custom threshold."""
+    X, y = sample_data
+    custom_threshold = 0.7
+    _, _, y_pred, threshold = get_predictions(
+        trained_model, X, y, None, custom_threshold, None
+    )
+
+    assert threshold == custom_threshold
+
+
+def test_get_predictions_kfold(sample_data):
+    """Test get_predictions with a model using K-Fold cross-validation."""
+
+    class KFoldModel:
+        def __init__(self):
+            self.kfold = True
+            self.kf = KFold(n_splits=5)
+
+        def fit(self, X, y):
+            pass
+
+        def predict_proba(self, X):
+            return np.random.rand(len(X), 2)
+
+        def predict(self, X):
+            return np.random.randint(0, 2, size=len(X))
+
+    model = KFoldModel()
+    X, y = sample_data
+    y = pd.Series(y)  # Ensure y is a Pandas Series to avoid 'iloc' issues
+
+    y_true, y_prob, y_pred, threshold = get_predictions(
+        model,
+        X,
+        y,
+        None,
+        None,
+        None,
+    )
+
+    assert len(y_true) > 0
+    assert len(y_prob) > 0
+    assert len(y_pred) > 0
+    assert isinstance(threshold, float)
+
+
 def test_summarize_model_performance(trained_model, sample_data):
     """Test summarize_model_performance function."""
     X, y = sample_data
@@ -97,7 +180,10 @@ def test_get_model_probabilities(trained_model, sample_data):
 
 def test_extract_model_titles(trained_model):
     """Test extracting model titles."""
-    titles = extract_model_titles([trained_model], model_titles=["LogisticRegression"])
+    titles = extract_model_titles(
+        [trained_model],
+        model_titles=["LogisticRegression"],
+    )
     assert titles == ["LogisticRegression"]
 
 
@@ -108,7 +194,11 @@ def test_extract_model_name(trained_model):
 
 
 @patch("matplotlib.pyplot.show")  # Prevents figures from displaying during testing
-def test_show_confusion_matrix_single_model(mock_show, trained_model, sample_data):
+def test_show_confusion_matrix_single_model(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_confusion_matrix runs correctly for a single model."""
     X, y = sample_data
 
@@ -119,7 +209,11 @@ def test_show_confusion_matrix_single_model(mock_show, trained_model, sample_dat
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_confusion_matrix_multiple_models(mock_show, trained_model, sample_data):
+def test_show_confusion_matrix_multiple_models(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_confusion_matrix runs correctly for multiple models."""
     X, y = sample_data
     models = [trained_model, trained_model]  # Using the same model twice for simplicity
@@ -155,7 +249,111 @@ def test_show_confusion_matrix_saves_plot(
     assert image_path_svg.exists(), "SVG image was not saved."
 
 
-patch("matplotlib.pyplot.show")
+@patch("matplotlib.pyplot.show")  # Prevents figures from displaying during testing
+def test_show_confusion_matrix_with_class_labels(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test if show_confusion_matrix correctly handles custom class labels."""
+    X, y = sample_data
+    custom_labels = ["Negative", "Positive"]
+
+    try:
+        show_confusion_matrix(
+            trained_model, X, y, class_labels=custom_labels, save_plot=False
+        )
+    except Exception as e:
+        pytest.fail(f"show_confusion_matrix failed with custom class labels: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_confusion_matrix_default_labels(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test if show_confusion_matrix correctly handles default class labels."""
+    X, y = sample_data
+
+    try:
+        show_confusion_matrix(trained_model, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_confusion_matrix failed with default class labels: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_confusion_matrix_with_colorbar(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test if show_confusion_matrix runs without raising an error when
+    enabling/disabling the colorbar.
+    """
+    X, y = sample_data
+
+    try:
+        show_confusion_matrix(
+            trained_model,
+            X,
+            y,
+            save_plot=False,
+            show_colorbar=True,
+        )
+        show_confusion_matrix(
+            trained_model,
+            X,
+            y,
+            save_plot=False,
+            show_colorbar=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_confusion_matrix failed: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_confusion_matrix_grid(mock_show, trained_model, sample_data):
+    """Test if show_confusion_matrix correctly handles grid layout."""
+    X, y = sample_data
+
+    # Pass a list of models explicitly
+    models = [trained_model, trained_model]
+
+    print(f"DEBUG: models type = {type(models)}")  # Should be a list
+    print(f"DEBUG: models[0] type = {type(models[0])}")  # Should be LogisticRegression
+
+    try:
+        show_confusion_matrix(models, X, y, save_plot=False, grid=True, n_cols=2)
+    except TypeError as e:
+        pytest.fail(f"show_confusion_matrix failed due to TypeError: {e}")
+    except Exception as e:
+        pytest.fail(f"show_confusion_matrix failed unexpectedly: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_confusion_matrix_saves_plot(
+    mock_show, trained_model, sample_data, tmp_path
+):
+    """Test if show_confusion_matrix saves the plot when save_plot=True."""
+    X, y = sample_data
+    image_path_png = tmp_path / "confusion_matrix.png"
+    image_path_svg = tmp_path / "confusion_matrix.svg"
+
+    try:
+        show_confusion_matrix(
+            trained_model,
+            X,
+            y,
+            save_plot=True,
+            image_path_png=str(image_path_png),
+            image_path_svg=str(image_path_svg),
+        )
+    except Exception as e:
+        pytest.fail(f"show_confusion_matrix failed when saving plots: {e}")
+
+    assert image_path_png.exists(), "PNG image was not saved."
+    assert image_path_svg.exists(), "SVG image was not saved."
 
 
 @patch("matplotlib.pyplot.show")
@@ -313,7 +511,13 @@ def test_show_calibration_curve_custom_titles(trained_model, sample_data):
     models = [trained_model, trained_model]  # Ensure it's a list
     titles = ["Model 1", "Model 2"]  # Titles must match models length
     try:
-        show_calibration_curve(model=models, X=X, y=y, model_titles=titles, grid=True)
+        show_calibration_curve(
+            model=models,
+            X=X,
+            y=y,
+            model_titles=titles,
+            grid=True,
+        )
     except Exception as e:
         pytest.fail(f"show_calibration_curve failed with custom titles: {e}")
 
