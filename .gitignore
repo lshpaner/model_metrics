@@ -106,6 +106,7 @@ instance/
 docs/
 docs/_build/
 src/*.doctree
+source/
 *.doctree
 .doctrees/
 docs/**/*.doctrees
