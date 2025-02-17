@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import math
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colorbar as mcolorbar
@@ -24,6 +25,10 @@ from sklearn.metrics import (
     precision_recall_curve,
     brier_score_loss,
 )
+
+################################################################################
+############################## Helper Functions ################################
+################################################################################
 
 
 def save_plot_images(filename, save_plot, image_path_png, image_path_svg):
@@ -128,6 +133,89 @@ def get_predictions(model, X, y, model_threshold, custom_threshold, score):
             aggregated_y_pred = (aggregated_y_prob > threshold).astype(int)
 
     return aggregated_y_true, aggregated_y_prob, aggregated_y_pred, threshold
+
+
+def get_model_probabilities(model, X, name):
+    """
+    Extract probabilities for the positive class from the model.
+    """
+    if hasattr(model, "predict_proba"):  # Direct model with predict_proba
+        return model.predict_proba(X)[:, 1]
+    elif hasattr(model, "named_steps"):  # Pipeline
+        final_model = list(model.named_steps.values())[-1]
+        if hasattr(final_model, "predict_proba"):
+            return model.predict_proba(X)[:, 1]
+        elif hasattr(final_model, "decision_function"):
+            y_scores = final_model.decision_function(X)
+            return 1 / (1 + np.exp(-y_scores))  # Convert to probabilities
+    elif hasattr(model, "decision_function"):  # Standalone model with decision_function
+        y_scores = model.decision_function(X)
+        return 1 / (1 + np.exp(-y_scores))  # Convert to probabilities
+    else:
+        raise ValueError(f"Model {name} does not support probability-based prediction.")
+
+
+# Helper function
+def extract_model_titles(models_or_pipelines, model_titles=None):
+    """
+    Extract titles from models or pipelines using an optional external list of
+    model titles.
+
+    Parameters:
+    -----------
+    models_or_pipelines : list
+        A list of model or pipeline objects.
+
+    model_titles : list, optional
+        A list of human-readable model titles to map class names to.
+
+    Returns:
+    --------
+    list
+        A list of extracted or matched model titles.
+    """
+    titles = []
+    for model in models_or_pipelines:
+        try:
+            if hasattr(model, "estimator"):
+                model = model.estimator
+            if hasattr(model, "named_steps"):  # Check if it's a pipeline
+                final_model = list(model.named_steps.values())[-1]
+                class_name = final_model.__class__.__name__
+            else:
+                class_name = model.__class__.__name__
+
+            # If model_titles is provided, attempt to map class_name
+            if model_titles:
+                matched_title = next(
+                    (title for title in model_titles if class_name in title),
+                    class_name,
+                )
+            else:
+                matched_title = (
+                    class_name  # Default to class_name if no titles are provided
+                )
+
+            titles.append(matched_title)
+        except AttributeError:
+            titles.append("Unknown Model")
+
+    return titles
+
+
+# Helper function
+def extract_model_name(pipeline_or_model):
+    """Extracts the final model name from a pipeline or standalone model."""
+    if hasattr(pipeline_or_model, "steps"):  # It's a pipeline
+        return pipeline_or_model.steps[-1][
+            1
+        ].__class__.__name__  # Final estimator's class name
+    return pipeline_or_model.__class__.__name__  # Individual model class name
+
+
+################################################################################
+######################### Summarize Model Performance ##########################
+################################################################################
 
 
 def summarize_model_performance(
@@ -262,79 +350,9 @@ def summarize_model_performance(
         print(row)
 
 
-def get_model_probabilities(model, X, name):
-    """
-    Extract probabilities for the positive class from the model.
-    """
-    if hasattr(model, "predict_proba"):  # Direct model with predict_proba
-        return model.predict_proba(X)[:, 1]
-    elif hasattr(model, "named_steps"):  # Pipeline
-        final_model = list(model.named_steps.values())[-1]
-        if hasattr(final_model, "predict_proba"):
-            return model.predict_proba(X)[:, 1]
-        elif hasattr(final_model, "decision_function"):
-            y_scores = final_model.decision_function(X)
-            return 1 / (1 + np.exp(-y_scores))  # Convert to probabilities
-    elif hasattr(model, "decision_function"):  # Standalone model with decision_function
-        y_scores = model.decision_function(X)
-        return 1 / (1 + np.exp(-y_scores))  # Convert to probabilities
-    else:
-        raise ValueError(f"Model {name} does not support probability-based prediction.")
-
-
-def extract_model_titles(models_or_pipelines, model_titles=None):
-    """
-    Extract titles from models or pipelines using an optional external list of model titles.
-
-    Parameters:
-    -----------
-    models_or_pipelines : list
-        A list of model or pipeline objects.
-
-    model_titles : list, optional
-        A list of human-readable model titles to map class names to.
-
-    Returns:
-    --------
-    list
-        A list of extracted or matched model titles.
-    """
-    titles = []
-    for model in models_or_pipelines:
-        try:
-            if hasattr(model, "estimator"):
-                model = model.estimator
-            if hasattr(model, "named_steps"):  # Check if it's a pipeline
-                final_model = list(model.named_steps.values())[-1]
-                class_name = final_model.__class__.__name__
-            else:
-                class_name = model.__class__.__name__
-
-            # If model_titles is provided, attempt to map class_name
-            if model_titles:
-                matched_title = next(
-                    (title for title in model_titles if class_name in title),
-                    class_name,
-                )
-            else:
-                matched_title = (
-                    class_name  # Default to class_name if no titles are provided
-                )
-
-            titles.append(matched_title)
-        except AttributeError:
-            titles.append("Unknown Model")
-
-    return titles
-
-
-# Helper function to extract detailed model names from pipelines or models
-def extract_model_name(pipeline_or_model):
-    if hasattr(pipeline_or_model, "steps"):  # It's a pipeline
-        return pipeline_or_model.steps[-1][
-            1
-        ].__class__.__name__  # Final estimator's class name
-    return pipeline_or_model.__class__.__name__  # Individual model class name
+################################################################################
+############################## COnfusion Matrix ################################
+################################################################################
 
 
 def show_confusion_matrix(
@@ -342,6 +360,7 @@ def show_confusion_matrix(
     X,
     y,
     model_titles=None,
+    title=None,
     model_threshold=None,
     custom_threshold=None,
     class_labels=None,
@@ -361,10 +380,34 @@ def show_confusion_matrix(
     **kwargs,
 ):
     """
-    Compute and plot confusion matrices for multiple pipelines or models.
+    Generate and display confusion matrices for one or multiple models.
+
+    This function computes confusion matrices for classifiers and visualizes
+    them with customizable formatting, threshold adjustments, and optional
+    classification reports. Supports both individual and grid-based plots.
 
     Parameters:
-    (Documentation remains unchanged...)
+    - model (list or estimator): A single model or a list of models/pipelines.
+    - X (array-like): Feature matrix for predictions.
+    - y (array-like): True labels.
+    - model_titles (list, optional): Custom titles for models.
+    - model_threshold (float, optional): Threshold for predictions.
+    - custom_threshold (float, optional): User-defined threshold override.
+    - class_labels (list, optional): Custom labels for the confusion matrix.
+    - cmap (str, default="Blues"): Colormap for visualization.
+    - save_plot (bool, default=False): Whether to save plots.
+    - image_path_png (str, optional): Path to save PNG images.
+    - image_path_svg (str, optional): Path to save SVG images.
+    - text_wrap (int, optional): Max title width before wrapping.
+    - figsize (tuple, default=(8,6)): Figure size for each confusion matrix.
+    - labels (bool, default=True): Whether to display TN, FP, FN, TP labels.
+    - label_fontsize (int, default=12): Font size for axis labels.
+    - tick_fontsize (int, default=10): Font size for tick labels.
+    - inner_fontsize (int, default=10): Font size for matrix values.
+    - grid (bool, default=False): Whether to display multiple plots in a grid.
+    - score (str, optional): Metric to optimize when selecting a threshold.
+    - class_report (bool, default=False): Whether to print classification reports.
+    - **kwargs: Additional options for plot customization.
 
     Returns:
     - None
@@ -391,10 +434,10 @@ def show_confusion_matrix(
         if model_titles:
             name = model_titles[idx]
         else:
-            name = extract_model_name(m)  # Change 'model' to 'm'
+            name = extract_model_name(m)
 
         y_true, y_prob, y_pred, threshold = get_predictions(
-            m, X, y, model_threshold, custom_threshold, score  # Change 'model' to 'm'
+            m, X, y, model_threshold, custom_threshold, score
         )
 
         # Compute confusion matrix
@@ -421,7 +464,6 @@ def show_confusion_matrix(
             print(f"Classification Report for {name}: \n")
             print(classification_report(y_true, y_pred))
 
-        # updated_class_labels = conf_matrix_df.index.tolist()
         # Plot the confusion matrix
         # Use ConfusionMatrixDisplay with custom class_labels
         if class_labels:
@@ -433,8 +475,7 @@ def show_confusion_matrix(
             disp = ConfusionMatrixDisplay(
                 confusion_matrix=cm, display_labels=["0", "1"]
             )
-        show_colorbar = kwargs.get("show_colorbar", True)  # Extract boolean value
-
+        show_colorbar = kwargs.get("show_colorbar", True)
         if grid:
             if "colorbar" in disp.plot.__code__.co_varnames:
                 disp.plot(cmap=cmap, ax=ax, colorbar=show_colorbar)
@@ -462,7 +503,7 @@ def show_confusion_matrix(
         for i in range(disp.text_.shape[0]):
             for j in range(disp.text_.shape[1]):
                 new_value = disp.confusion_matrix[i, j]
-                disp.text_[i, j].set_text(f"{new_value:,}")  # Properly format numbers
+                disp.text_[i, j].set_text(f"{new_value:,}")
 
         # **Forcefully Remove the Colorbar If It Exists**
         if not show_colorbar:
@@ -479,11 +520,23 @@ def show_confusion_matrix(
                     except Exception as e:
                         print(f"Warning: Failed to remove colorbar: {e}")
 
-        # Adjust title wrapping
-        title = f"Confusion Matrix: {name} (Threshold = {threshold:.2f})"
-        if text_wrap is not None and isinstance(text_wrap, int):
-            title = "\n".join(textwrap.wrap(title, width=text_wrap))
-        ax.set_title(title, fontsize=label_fontsize)
+        if title is None:
+            final_title = f"Confusion Matrix: {name} (Threshold = {threshold:.2f})"
+        elif title == "":
+            final_title = None  # Explicitly set no title
+        else:
+            final_title = title  # Use provided custom title
+
+        # Apply text wrapping if needed
+        if (
+            final_title is not None
+            and text_wrap is not None
+            and isinstance(text_wrap, int)
+        ):
+            final_title = "\n".join(textwrap.wrap(final_title, width=text_wrap))
+
+        if final_title is not None:
+            ax.set_title(final_title, fontsize=label_fontsize)
 
         # Adjust font sizes for axis labels and tick labels
         ax.xaxis.label.set_size(label_fontsize)
@@ -563,6 +616,11 @@ def show_confusion_matrix(
         plt.show()
 
 
+################################################################################
+##################### ROC AUC and Precision Recall Curves ######################
+################################################################################
+
+
 def show_roc_curve(
     models,
     X,
@@ -597,8 +655,8 @@ def show_roc_curve(
     - y: array-like
         True labels.
     - model_titles: list of str, optional
-        Titles for individual models. Required when providing a nested dictionary for
-        `curve_kwgs`.
+        Titles for individual models. Required when providing a nested
+        dictionary for `curve_kwgs`.
     - overlay: bool
         Whether to overlay multiple models on a single plot.
     - title: str, optional
@@ -612,10 +670,11 @@ def show_roc_curve(
     - text_wrap: int, optional
         Max width for wrapping titles.
     - curve_kwgs: list or dict, optional
-        Styling for individual model curves. If `model_titles` is specified as a list
-        of titles, `curve_kwgs` must be a nested dictionary with model titles as keys
-        and their respective style dictionaries as values. Otherwise, `curve_kwgs`
-        must be a list of style dictionaries corresponding to the models.
+        Styling for individual model curves. If `model_titles` is specified as a
+        list of titles, `curve_kwgs` must be a nested dictionary with model
+        titles as keys and their respective style dictionaries as values.
+        Otherwise, `curve_kwgs` must be a list of style dictionaries
+        corresponding to the models.
     - linestyle_kwgs: dict, optional
         Styling for the random guess diagonal line.
     - grid: bool, optional
@@ -635,18 +694,11 @@ def show_roc_curve(
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
 
-    if overlay and model_titles is not None:
-        raise ValueError(
-            "`model_titles` can only be provided when plotting models as "
-            "separate plots (when `overlay=False`). If you want to specify "
-            "a custom title for this plot, use the `title` input."
-        )
-
     if not isinstance(models, list):
         models = [models]
 
     if model_titles is None:
-        model_titles = extract_model_titles(models)
+        model_titles = [f"Model {i+1}" for i in range(len(models))]
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
@@ -655,16 +707,18 @@ def show_roc_curve(
     else:
         curve_styles = [{}] * len(models)
 
-    if len(curve_styles) != len(models):
-        raise ValueError("The length of `curve_kwgs` must match the number of models.")
+    linestyle_kwgs = linestyle_kwgs or {
+        "color": "gray",
+        "linestyle": "--",
+        "linewidth": 2,
+    }
 
     if overlay:
         plt.figure(figsize=figsize or (8, 6))
 
     if grid and not overlay:
-        import math
-
-        n_rows = math.ceil(len(models) / n_cols)
+        if n_rows is None:
+            n_rows = math.ceil(len(models) / n_cols)
         fig, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
@@ -680,101 +734,101 @@ def show_roc_curve(
         fpr, tpr, _ = roc_curve(y_true, y_prob)
         roc_auc = roc_auc_score(y_true, y_prob)
 
-        print(f"AUC for {name}: {roc_auc:.{decimal_places}f}")
+        print(f"AUC for {name}: {roc_auc:.3f}")
 
         if overlay:
             plt.plot(
                 fpr,
                 tpr,
-                label=f"{name} (AUC = {roc_auc:.{decimal_places}f})",
+                label=f"{name} (AUC = {roc_auc:.3f})",
                 **curve_style,
             )
         elif grid:
             ax = axes[idx]
-            ax.plot(
-                fpr,
-                tpr,
-                label=f"ROC Curve (AUC = {roc_auc:.{decimal_places}f})",
-                **curve_style,
-            )
-            linestyle_kwgs = linestyle_kwgs or {}
-            linestyle_kwgs.setdefault("color", "gray")
-            linestyle_kwgs.setdefault("linestyle", "--")
-            ax.plot(
-                [0, 1],
-                [0, 1],
-                label="Random Guess",
-                **linestyle_kwgs,
-            )
+            ax.plot(fpr, tpr, label=f"ROC Curve", **curve_style)
+            ax.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
-            if text_wrap:
-                grid_title = "\n".join(
-                    textwrap.wrap(f"ROC Curve: {name}", width=text_wrap)
-                )
+            if title is None:
+                grid_title = f"ROC Curve: {name}"  # Default title
+            elif title == "":
+                grid_title = None  # Disable the title
             else:
-                grid_title = f"ROC Curve: {name}"
-            if grid_title != "":
+                grid_title = title  # Use provided custom title
+
+            if grid_title and text_wrap:
+                grid_title = "\n".join(
+                    textwrap.wrap(grid_title, width=text_wrap),
+                )
+
+            if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
             ax.legend(loc="lower right", fontsize=tick_fontsize)
             ax.grid(visible=gridlines)
         else:
             plt.figure(figsize=figsize or (8, 6))
-            plt.plot(
-                fpr,
-                tpr,
-                label=f"ROC Curve (AUC = {roc_auc:.{decimal_places}f})",
-                **curve_style,
-            )
-            linestyle_kwgs = linestyle_kwgs or {}
-            linestyle_kwgs.setdefault("color", "gray")
-            linestyle_kwgs.setdefault("linestyle", "--")
-            plt.plot(
-                [0, 1],
-                [0, 1],
-                label="Random Guess",
-                **linestyle_kwgs,
-            )
+            plt.plot(fpr, tpr, label=f"ROC Curve", **curve_style)
+            plt.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
             plt.tick_params(axis="both", labelsize=tick_fontsize)
-            if text_wrap:
-                title = "\n".join(textwrap.wrap(f"ROC Curve: {name}", width=text_wrap))
+            if title is None:
+                plot_title = f"ROC Curve: {name}"  # Default title
+            elif title == "":
+                plot_title = None  # Disable the title
             else:
-                title = f"ROC Curve: {name}"
-            if title != "":
-                plt.title(title, fontsize=label_fontsize)
+                plot_title = title  # Use provided custom title
+
+            if plot_title and text_wrap:
+                plot_title = "\n".join(
+                    textwrap.wrap(plot_title, width=text_wrap),
+                )
+
+            if plot_title:  # Only set title if not explicitly disabled
+                plt.title(plot_title, fontsize=label_fontsize)
+
+            plt.title(plot_title, fontsize=label_fontsize)
             plt.legend(loc="lower right", fontsize=tick_fontsize)
-            plt.grid()
-            save_plot_images(f"{name}_ROC", save_plot, image_path_png, image_path_svg)
+            plt.grid(visible=gridlines)
+            save_plot_images(
+                f"{name}_ROC",
+                save_plot,
+                image_path_png,
+                image_path_svg,
+            )
             plt.show()
 
     if overlay:
-        linestyle_kwgs = linestyle_kwgs or {}
-        linestyle_kwgs.setdefault("color", "gray")
-        linestyle_kwgs.setdefault("linestyle", "--")
-        plt.plot(
-            [0, 1],
-            [0, 1],
-            label="Random Guess",
-            **linestyle_kwgs,
-        )
+        plt.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
         plt.xlabel(xlabel, fontsize=label_fontsize)
         plt.ylabel(ylabel, fontsize=label_fontsize)
         plt.tick_params(axis="both", labelsize=tick_fontsize)
-        if text_wrap:
-            title = "\n".join(
-                textwrap.wrap(title or "ROC Curves: Overlay", width=text_wrap)
-            )
+        if title is None:
+            overlay_title = "ROC Curves: Overlay"  # Default title
+        elif title == "":
+            overlay_title = None  # Disable the title
         else:
-            title = title or "ROC Curves: Overlay"
-        if title != "":
-            plt.title(title, fontsize=label_fontsize)
+            overlay_title = title  # Use provided custom title
+
+        if overlay_title and text_wrap:
+            overlay_title = "\n".join(
+                textwrap.wrap(overlay_title, width=text_wrap),
+            )
+
+        if overlay_title:  # Only set title if not explicitly disabled
+            plt.title(overlay_title, fontsize=label_fontsize)
+
         plt.legend(loc="lower right", fontsize=tick_fontsize)
-        plt.grid(visible=gridlines)
-        save_plot_images("Overlay_ROC", save_plot, image_path_png, image_path_svg)
+        plt.grid()
+        save_plot_images(
+            "Overlay_ROC",
+            save_plot,
+            image_path_png,
+            image_path_svg,
+        )
         plt.show()
+
     elif grid:
         for ax in axes[len(models) :]:
             ax.axis("off")
@@ -848,18 +902,11 @@ def show_pr_curve(
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
 
-    if overlay and model_titles is not None:
-        raise ValueError(
-            "`model_titles` can only be provided when plotting models as "
-            "separate plots (when `overlay=False`). If you want to specify "
-            "a custom title for this plot, use the `title` input."
-        )
-
     if not isinstance(models, list):
         models = [models]
 
     if model_titles is None:
-        model_titles = extract_model_titles(models)
+        model_titles = [f"Model {i+1}" for i in range(len(models))]
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
@@ -868,20 +915,16 @@ def show_pr_curve(
     else:
         curve_styles = [{}] * len(models)
 
-    if len(curve_styles) != len(models):
-        raise ValueError("The length of `curve_kwgs` must match the number of models.")
-
     if overlay:
-        plt.figure(figsize=figsize or (8, 6))  # Use figsize if provided
+        plt.figure(figsize=figsize or (8, 6))
 
     if grid and not overlay:
-        import math
-
-        n_rows = math.ceil(len(models) / n_cols)
+        if n_rows is None:
+            n_rows = math.ceil(len(models) / n_cols)
         fig, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
-        axes = axes.flatten()  # Flatten axes for easy iteration
+        axes = axes.flatten()
 
     for idx, (model, name, curve_style) in enumerate(
         zip(models, model_titles, curve_styles)
@@ -904,69 +947,539 @@ def show_pr_curve(
             )
         elif grid:
             ax = axes[idx]
-            ax.plot(
-                recall,
-                precision,
-                label=f"PR Curve (AP = {avg_precision:.{decimal_places}f})",
-                **curve_style,
-            )
+            ax.plot(recall, precision, label=f"PR Curve", **curve_style)
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
-            if text_wrap:
-                grid_title = "\n".join(
-                    textwrap.wrap(f"PR Curve: {name}", width=text_wrap)
-                )
+            if title is None:
+                grid_title = f"PR Curve: {name}"  # Default title
+            elif title == "":
+                grid_title = None  # Disable the title
             else:
-                grid_title = f"PR Curve: {name}"
-            if grid_title != "":
+                grid_title = title  # Use provided custom title
+
+            if grid_title and text_wrap:
+                grid_title = "\n".join(
+                    textwrap.wrap(grid_title, width=text_wrap),
+                )
+
+            if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
+
             ax.legend(loc="lower left", fontsize=tick_fontsize)
             ax.grid(visible=gridlines)
         else:
-            plt.figure(figsize=figsize or (8, 6))  # Use figsize if provided
-            plt.plot(
-                recall,
-                precision,
-                label=f"PR Curve (AP = {avg_precision:.{decimal_places}f})",
-                **curve_style,
-            )
+            plt.figure(figsize=figsize or (8, 6))
+            plt.plot(recall, precision, label=f"PR Curve", **curve_style)
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
             plt.tick_params(axis="both", labelsize=tick_fontsize)
-            if text_wrap:
-                title = "\n".join(textwrap.wrap(f"PR Curve: {name}", width=text_wrap))
+            if title is None:
+                plot_title = f"PR Curve: {name}"  # Default title
+            elif title == "":
+                plot_title = None  # Disable the title
             else:
-                title = f"PR Curve: {name}"
-            if title != "":
-                plt.title(title, fontsize=label_fontsize)
+                plot_title = title  # Use provided custom title
+
+            if plot_title and text_wrap:
+                plot_title = "\n".join(
+                    textwrap.wrap(plot_title, width=text_wrap),
+                )
+
+            if plot_title:  # Only set title if not explicitly disabled
+                plt.title(plot_title, fontsize=label_fontsize)
+
             plt.legend(loc="lower left", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
-            save_plot_images(f"{name}_PR", save_plot, image_path_png, image_path_svg)
+            save_plot_images(
+                f"{name}_PR",
+                save_plot,
+                image_path_png,
+                image_path_svg,
+            )
             plt.show()
 
     if overlay:
         plt.xlabel(xlabel, fontsize=label_fontsize)
         plt.ylabel(ylabel, fontsize=label_fontsize)
         plt.tick_params(axis="both", labelsize=tick_fontsize)
-        if text_wrap:
-            title = "\n".join(
-                textwrap.wrap(title or "PR Curves: Overlay", width=text_wrap)
-            )
+        if title is None:
+            overlay_title = "PR Curves: Overlay"  # Default title
+        elif title == "":
+            overlay_title = None  # Disable the title
         else:
-            title = title or "PR Curves: Overlay"
-        if title != "":
-            plt.title(title, fontsize=label_fontsize)
+            overlay_title = title  # Use provided custom title
+
+        if overlay_title and text_wrap:
+            overlay_title = "\n".join(
+                textwrap.wrap(overlay_title, width=text_wrap),
+            )
+
+        if overlay_title:  # Only set title if not explicitly disabled
+            plt.title(overlay_title, fontsize=label_fontsize)
+
         plt.legend(loc="lower left", fontsize=tick_fontsize)
         plt.grid()
-        save_plot_images("Overlay_PR", save_plot, image_path_png, image_path_svg)
+        save_plot_images(
+            "Overlay_PR",
+            save_plot,
+            image_path_png,
+            image_path_svg,
+        )
         plt.show()
+
     elif grid:
         for ax in axes[len(models) :]:
             ax.axis("off")
         plt.tight_layout()
         save_plot_images("Grid_PR", save_plot, image_path_png, image_path_svg)
         plt.show()
+
+
+################################################################################
+########################## Lift Charts and Gain Charts #########################
+################################################################################
+
+
+def show_lift_chart(
+    models,
+    X,
+    y,
+    xlabel="Percentage of Sample",
+    ylabel="Lift",
+    model_titles=None,
+    overlay=False,
+    title=None,
+    save_plot=False,
+    image_path_png=None,
+    image_path_svg=None,
+    text_wrap=None,
+    curve_kwgs=None,
+    linestyle_kwgs=None,
+    grid=False,
+    n_cols=2,
+    n_rows=None,
+    figsize=None,
+    label_fontsize=12,
+    tick_fontsize=10,
+    gridlines=True,
+):
+    """
+    Generate and display Lift charts for one or multiple models.
+
+    A Lift chart measures the effectiveness of a predictive model by comparing
+    the lift of positive instances in sorted predictions versus random selection.
+    Supports multiple models with overlay or grid layouts and customizable styling.
+
+    Parameters:
+    - models (list or estimator): One or more trained models.
+    - X (array-like): Feature matrix.
+    - y (array-like): True labels.
+    - xlabel (str, default="Percentage of Sample"): Label for the x-axis.
+    - ylabel (str, default="Lift"): Label for the y-axis.
+    - model_titles (list, optional): Custom titles for models.
+    - overlay (bool, default=False): Whether to overlay multiple models in one plot.
+    - title (str, optional): Custom title; set to `""` to disable.
+    - save_plot (bool, default=False): Whether to save the plot.
+    - image_path_png (str, optional): Path to save PNG image.
+    - image_path_svg (str, optional): Path to save SVG image.
+    - text_wrap (int, optional): Maximum title width before wrapping.
+    - curve_kwgs (dict or list, optional): Styling options for model curves.
+    - linestyle_kwgs (dict, optional): Styling options for the baseline.
+    - grid (bool, default=False): Display multiple plots in a grid layout.
+    - n_cols (int, default=2): Number of columns in the grid layout.
+    - n_rows (int, optional): Number of rows in the grid layout.
+    - figsize (tuple, optional): Figure size.
+    - label_fontsize (int, default=12): Font size for axis labels.
+    - tick_fontsize (int, default=10): Font size for tick labels.
+    - gridlines (bool, default=True): Whether to show grid lines.
+
+    Raises:
+    - ValueError: If `grid=True` and `overlay=True` are both set.
+
+    Returns:
+    - None
+    """
+
+    if overlay and grid:
+        raise ValueError("`grid` cannot be set to True when `overlay` is True.")
+
+    if not isinstance(models, list):
+        models = [models]
+
+    if model_titles is None:
+        model_titles = [f"Model {i+1}" for i in range(len(models))]
+
+    if isinstance(curve_kwgs, dict):
+        curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
+    elif isinstance(curve_kwgs, list):
+        curve_styles = curve_kwgs
+    else:
+        curve_styles = [{}] * len(models)
+
+    linestyle_kwgs = linestyle_kwgs or {
+        "color": "gray",
+        "linestyle": "--",
+        "linewidth": 2,
+    }
+
+    if overlay:
+        plt.figure(figsize=figsize or (8, 6))
+
+    if grid and not overlay:
+        if n_rows is None:
+            n_rows = math.ceil(len(models) / n_cols)
+        fig, axes = plt.subplots(
+            n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
+        )
+        axes = axes.flatten()
+
+    for idx, (model, name, curve_style) in enumerate(
+        zip(models, model_titles, curve_styles)
+    ):
+        y_probs = model.predict_proba(X)[:, 1]
+        sorted_indices = np.argsort(y_probs)[::-1]
+        y_true_sorted = np.array(y)[sorted_indices]
+
+        cumulative_gains = np.cumsum(y_true_sorted) / np.sum(y_true_sorted)
+        percentages = np.linspace(
+            1 / len(y_true_sorted),
+            1,
+            len(y_true_sorted),
+        )
+
+        lift_values = cumulative_gains / percentages
+
+        if overlay:
+            plt.plot(
+                percentages,
+                lift_values,
+                label=f"{name}",
+                **curve_style,
+            )
+        elif grid:
+            ax = axes[idx]
+            ax.plot(
+                percentages,
+                lift_values,
+                label=f"Lift Curve",
+                **curve_style,
+            )
+            ax.plot([0, 1], [1, 1], label="Baseline", **linestyle_kwgs)
+            ax.set_xlabel(xlabel, fontsize=label_fontsize)
+            ax.set_ylabel(ylabel, fontsize=label_fontsize)
+            ax.tick_params(axis="both", labelsize=tick_fontsize)
+            if title is None:
+                grid_title = f"Lift Chart: {name}"  # Default title
+            elif title == "":
+                grid_title = None  # Disable the title
+            else:
+                grid_title = title  # Use provided custom title
+
+            if grid_title and text_wrap:
+                grid_title = "\n".join(
+                    textwrap.wrap(grid_title, width=text_wrap),
+                )
+
+            if grid_title:  # Only set title if not explicitly disabled
+                ax.set_title(grid_title, fontsize=label_fontsize)
+
+            ax.legend(loc="upper right", fontsize=tick_fontsize)
+            ax.grid(visible=gridlines)
+        else:
+            plt.figure(figsize=figsize or (8, 6))
+            plt.plot(
+                percentages,
+                lift_values,
+                label=f"Lift Curve",
+                **curve_style,
+            )
+            plt.plot([0, 1], [1, 1], label="Baseline", **linestyle_kwgs)
+            plt.xlabel(xlabel, fontsize=label_fontsize)
+            plt.ylabel(ylabel, fontsize=label_fontsize)
+            plt.tick_params(axis="both", labelsize=tick_fontsize)
+            if title is None:
+                plot_title = f"Lift Chart: {name}"  # Default title
+            elif title == "":
+                plot_title = None  # Disable the title
+            else:
+                plot_title = title  # Use provided custom title
+
+            if plot_title and text_wrap:
+                plot_title = "\n".join(
+                    textwrap.wrap(plot_title, width=text_wrap),
+                )
+
+            if plot_title:  # Only set title if not explicitly disabled
+                plt.title(plot_title, fontsize=label_fontsize)
+
+            plt.title(plot_title, fontsize=label_fontsize)
+            plt.legend(loc="upper right", fontsize=tick_fontsize)
+            plt.grid(visible=gridlines)
+            save_plot_images(
+                f"{name}_Lift",
+                save_plot,
+                image_path_png,
+                image_path_svg,
+            )
+            plt.show()
+
+    if overlay:
+        plt.plot([0, 1], [1, 1], label="Baseline", **linestyle_kwgs)
+        plt.xlabel(xlabel, fontsize=label_fontsize)
+        plt.ylabel(ylabel, fontsize=label_fontsize)
+        plt.tick_params(axis="both", labelsize=tick_fontsize)
+        if title is None:
+            overlay_title = "Lift Charts: Overlay"  # Default title
+        elif title == "":
+            overlay_title = None  # Disable the title
+        else:
+            overlay_title = title  # Use provided custom title
+
+        if overlay_title and text_wrap:
+            overlay_title = "\n".join(
+                textwrap.wrap(overlay_title, width=text_wrap),
+            )
+
+        if overlay_title:  # Only set title if not explicitly disabled
+            plt.title(overlay_title, fontsize=label_fontsize)
+
+        plt.legend(loc="upper right", fontsize=tick_fontsize)
+        plt.grid(visible=gridlines)
+        save_plot_images(
+            "Overlay_Lift",
+            save_plot,
+            image_path_png,
+            image_path_svg,
+        )
+        plt.show()
+
+    elif grid:
+        for ax in axes[len(models) :]:
+            ax.axis("off")
+        plt.tight_layout()
+        save_plot_images("Grid_Lift", save_plot, image_path_png, image_path_svg)
+        plt.show()
+
+
+def show_gain_chart(
+    models,
+    X,
+    y,
+    xlabel="Percentage of Sample",
+    ylabel="Cumulative Gain",
+    model_titles=None,
+    overlay=False,
+    title=None,
+    save_plot=False,
+    image_path_png=None,
+    image_path_svg=None,
+    text_wrap=None,
+    curve_kwgs=None,
+    linestyle_kwgs=None,
+    grid=False,
+    n_cols=2,
+    n_rows=None,
+    figsize=None,
+    label_fontsize=12,
+    tick_fontsize=10,
+    gridlines=True,
+):
+    """
+    Generate and display Gain charts for one or multiple models.
+
+    A Gain chart evaluates model effectiveness by comparing the cumulative gain
+    of positive instances in sorted predictions versus random selection.
+    Supports multiple models with overlay or grid layouts and customizable styling.
+
+    Parameters:
+    - models (list or estimator): One or more trained models.
+    - X (array-like): Feature matrix.
+    - y (array-like): True labels.
+    - xlabel (str, default="Percentage of Sample"): Label for the x-axis.
+    - ylabel (str, default="Cumulative Gain"): Label for the y-axis.
+    - model_titles (list, optional): Custom titles for models.
+    - overlay (bool, default=False): Whether to overlay multiple models in one plot.
+    - title (str, optional): Custom title; set to `""` to disable.
+    - save_plot (bool, default=False): Whether to save the plot.
+    - image_path_png (str, optional): Path to save PNG image.
+    - image_path_svg (str, optional): Path to save SVG image.
+    - text_wrap (int, optional): Maximum title width before wrapping.
+    - curve_kwgs (dict or list, optional): Styling options for model curves.
+    - linestyle_kwgs (dict, optional): Styling options for the baseline.
+    - grid (bool, default=False): Display multiple plots in a grid layout.
+    - n_cols (int, default=2): Number of columns in the grid layout.
+    - n_rows (int, optional): Number of rows in the grid layout.
+    - figsize (tuple, optional): Figure size.
+    - label_fontsize (int, default=12): Font size for axis labels.
+    - tick_fontsize (int, default=10): Font size for tick labels.
+    - gridlines (bool, default=True): Whether to show grid lines.
+
+    Raises:
+    - ValueError: If `grid=True` and `overlay=True` are both set.
+
+    Returns:
+    - None
+    """
+
+    if overlay and grid:
+        raise ValueError("`grid` cannot be set to True when `overlay` is True.")
+
+    if not isinstance(models, list):
+        models = [models]
+
+    if model_titles is None:
+        model_titles = [f"Model {i+1}" for i in range(len(models))]
+
+    if isinstance(curve_kwgs, dict):
+        curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
+    elif isinstance(curve_kwgs, list):
+        curve_styles = curve_kwgs
+    else:
+        curve_styles = [{}] * len(models)
+
+    linestyle_kwgs = linestyle_kwgs or {
+        "color": "gray",
+        "linestyle": "--",
+        "linewidth": 2,
+    }
+
+    if overlay:
+        plt.figure(figsize=figsize or (8, 6))
+
+    if grid and not overlay:
+        if n_rows is None:
+            n_rows = math.ceil(len(models) / n_cols)
+        fig, axes = plt.subplots(
+            n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
+        )
+        axes = axes.flatten()
+
+    for idx, (model, name, curve_style) in enumerate(
+        zip(models, model_titles, curve_styles)
+    ):
+        y_probs = model.predict_proba(X)[:, 1]
+        sorted_indices = np.argsort(y_probs)[::-1]
+        y_true_sorted = np.array(y)[sorted_indices]
+
+        cumulative_gains = np.cumsum(y_true_sorted) / np.sum(y_true_sorted)
+        percentages = np.linspace(0, 1, len(y_true_sorted))
+
+        if overlay:
+            plt.plot(
+                percentages,
+                cumulative_gains,
+                label=f"{name}",
+                **curve_style,
+            )
+        elif grid:
+            ax = axes[idx]
+            ax.plot(
+                percentages,
+                cumulative_gains,
+                label=f"Gain Curve",
+                **curve_style,
+            )
+            ax.plot([0, 1], [0, 1], label="Baseline", **linestyle_kwgs)
+            ax.set_xlabel(xlabel, fontsize=label_fontsize)
+            ax.set_ylabel(ylabel, fontsize=label_fontsize)
+            ax.tick_params(axis="both", labelsize=tick_fontsize)
+            if title is None:
+                grid_title = f"Gain Chart: {name}"  # Default title
+            elif title == "":
+                grid_title = None  # Disable the title
+            else:
+                grid_title = title  # Use provided custom title
+
+            if grid_title and text_wrap:
+                grid_title = "\n".join(
+                    textwrap.wrap(grid_title, width=text_wrap),
+                )
+
+            if grid_title:  # Only set title if not explicitly disabled
+                ax.set_title(grid_title, fontsize=label_fontsize)
+
+            ax.legend(loc="lower right", fontsize=tick_fontsize)
+            ax.grid(visible=gridlines)
+        else:
+            plt.figure(figsize=figsize or (8, 6))
+            plt.plot(
+                percentages,
+                cumulative_gains,
+                label=f"Gain Curve",
+                **curve_style,
+            )
+            plt.plot([0, 1], [0, 1], label="Baseline", **linestyle_kwgs)
+            plt.xlabel(xlabel, fontsize=label_fontsize)
+            plt.ylabel(ylabel, fontsize=label_fontsize)
+            plt.tick_params(axis="both", labelsize=tick_fontsize)
+            if title is None:
+                plot_title = f"Gain Chart: {name}"  # Default title
+            elif title == "":
+                plot_title = None  # Disable the title
+            else:
+                plot_title = title  # Use provided custom title
+
+            if plot_title and text_wrap:
+                plot_title = "\n".join(
+                    textwrap.wrap(plot_title, width=text_wrap),
+                )
+
+            if plot_title:  # Only set title if not explicitly disabled
+                plt.title(plot_title, fontsize=label_fontsize)
+
+            plt.title(plot_title, fontsize=label_fontsize)
+            plt.legend(loc="lower right", fontsize=tick_fontsize)
+            plt.grid(visible=gridlines)
+            save_plot_images(
+                f"{name}_Gain",
+                save_plot,
+                image_path_png,
+                image_path_svg,
+            )
+            plt.show()
+
+    if overlay:
+        plt.plot([0, 1], [0, 1], label="Baseline", **linestyle_kwgs)
+        plt.xlabel(xlabel, fontsize=label_fontsize)
+        plt.ylabel(ylabel, fontsize=label_fontsize)
+        plt.tick_params(axis="both", labelsize=tick_fontsize)
+        if title is None:
+            overlay_title = "Gain Charts: Overlay"  # Default title
+        elif title == "":
+            overlay_title = None  # Disable the title
+        else:
+            overlay_title = title  # Use provided custom title
+
+        if overlay_title and text_wrap:
+            overlay_title = "\n".join(
+                textwrap.wrap(overlay_title, width=text_wrap),
+            )
+
+        if overlay_title:  # Only set title if not explicitly disabled
+            plt.title(overlay_title, fontsize=label_fontsize)
+
+        plt.legend(loc="lower right", fontsize=tick_fontsize)
+        plt.grid(visible=gridlines)
+        save_plot_images(
+            "Overlay_Gain",
+            save_plot,
+            image_path_png,
+            image_path_svg,
+        )
+        plt.show()
+
+    elif grid:
+        for ax in axes[len(models) :]:
+            ax.axis("off")
+        plt.tight_layout()
+        save_plot_images("Grid_Gain", save_plot, image_path_png, image_path_svg)
+        plt.show()
+
+
+################################################################################
+############################## Calibration Curve ###############################
+################################################################################
 
 
 def show_calibration_curve(
@@ -1116,17 +1629,21 @@ def show_calibration_curve(
             )
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
-            if text_wrap:
-                grid_title = "\n".join(
-                    textwrap.wrap(
-                        f"Calibration Curve: {name}",
-                        width=text_wrap,
-                    )
-                )
+            if title is None:
+                grid_title = f"Calibration Curve: {name}"  # Default title
+            elif title == "":
+                grid_title = None  # Disable the title
             else:
-                grid_title = f"Calibration Curve: {name}"
-            if grid_title:
+                grid_title = title  # Use provided custom title
+
+            if grid_title and text_wrap:
+                grid_title = "\n".join(
+                    textwrap.wrap(grid_title, width=text_wrap),
+                )
+
+            if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
+
             ax.legend(loc="upper left", fontsize=tick_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
             ax.grid(visible=gridlines)
@@ -1151,17 +1668,21 @@ def show_calibration_curve(
             )
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
-            if text_wrap:
-                title = "\n".join(
-                    textwrap.wrap(
-                        f"Calibration Curve: {name}",
-                        width=text_wrap,
-                    )
-                )
+            if title is None:
+                plot_title = f"Calibration Curve: {name}"  # Default title
+            elif title == "":
+                plot_title = None  # Disable the title
             else:
-                title = f"Calibration Curve: {name}"
-            if title:
-                plt.title(title, fontsize=label_fontsize)
+                plot_title = title  # Use provided custom title
+
+            if plot_title and text_wrap:
+                plot_title = "\n".join(
+                    textwrap.wrap(plot_title, width=text_wrap),
+                )
+
+            if plot_title:  # Only set title if not explicitly disabled
+                plt.title(plot_title, fontsize=label_fontsize)
+
             plt.legend(loc="upper left", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
@@ -1184,17 +1705,21 @@ def show_calibration_curve(
         )
         plt.xlabel(xlabel, fontsize=label_fontsize)
         plt.ylabel(ylabel, fontsize=label_fontsize)
-        if text_wrap:
-            title = "\n".join(
-                textwrap.wrap(
-                    title or "Calibration Curves: Overlay",
-                    width=text_wrap,
-                )
-            )
+        if title is None:
+            overlay_title = "Calibration Curves: Overlay"  # Default title
+        elif title == "":
+            overlay_title = None  # Disable the title
         else:
-            title = title or "Calibration Curves: Overlay"
-        if title:
-            plt.title(title, fontsize=label_fontsize)
+            overlay_title = title  # Use provided custom title
+
+        if overlay_title and text_wrap:
+            overlay_title = "\n".join(
+                textwrap.wrap(overlay_title, width=text_wrap),
+            )
+
+        if overlay_title:  # Only set title if not explicitly disabled
+            plt.title(overlay_title, fontsize=label_fontsize)
+
         plt.legend(loc="upper left", fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
