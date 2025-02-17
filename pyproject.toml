@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "model_metrics"
-version = "0.0.0a5"
+version = "0.0.1a"
 description = "A Python library for model evaluation, performance tracking, and metric visualizations, supporting classification and regression models with robust analytics and reporting."
 readme = { file = "README_min.md", content-type = "text/markdown" }
 authors = [
