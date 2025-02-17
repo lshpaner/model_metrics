@@ -1,4 +1,4 @@
-[![PyPI](https://img.shields.io/pypi/v/model_metris.svg)](https://pypi.org/project/model_metrics/)
+[![PyPI](https://img.shields.io/pypi/v/model_metrics)](https://pypi.org/project/model_metrics/)
 [![Downloads](https://pepy.tech/badge/model_metrics)](https://pepy.tech/project/model_metrics)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/lshpaner/model_metrics/blob/main/LICENSE.md)
 
@@ -54,3 +54,32 @@ https://lshpaner.github.io/model_metrics
 Gratitude goes to Dr. Ebrahim Tarshizi for his mentorship during the University of San Diego M.S. Applied Data Science Program, as well as the Shiley-Marcos School of Engineering for its support.
 
 Special thanks to Dr. Alex Bui for his invaluable guidance and support, and to Panayiotis Petousis and Arthur Funell for their exceptional teamwork in maintaining a solid data science foundation at UCLA CTSI. Special thanks to those who have contributed to the development of this library, provided guidance, and supported a strong data science foundation. This work is built upon a collaborative effort that values knowledge sharing, teamwork, and dedication to advancing model evaluation practices.
+
+## ⚖️ License
+
+`model_metrics` is distributed under the MIT License. See [LICENSE](https://github.com/lshpaner/model_metrics/blob/main/LICENSE.md) for more information.
+
+
+## 🛟 Support
+
+If you have any questions or issues with `model_metrics`, please open an issue on this GitHub repository.
+
+
+## 📚 Citing `model_metrics`
+
+If you use `model_metrics` in your research or projects, please consider citing it.
+
+```bibtex
+
+@software{shpaner_2025_14879819,
+  author       = {Shpaner, Leonid},
+  title        = {Model Metrics},
+  month        = feb,
+  year         = 2025,
+  publisher    = {Zenodo},
+  version      = {0.0.1a},
+  doi          = {10.5281/zenodo.14879819},
+  url          = {https://doi.org/10.5281/zenodo.14879819}
+}
+
+```
