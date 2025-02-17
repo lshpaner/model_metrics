@@ -25,6 +25,8 @@ from model_metrics.model_evaluator import (
     get_model_probabilities,
     extract_model_titles,
     extract_model_name,
+    show_lift_chart,
+    show_gain_chart,
 )
 
 matplotlib.use("Agg")  # Set non-interactive backend
@@ -440,6 +442,158 @@ def test_show_pr_curve_grid(mock_show, trained_model, sample_data):
         show_pr_curve(models, X, y, grid=True, n_cols=2, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_pr_curve raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_lift_chart_single(mock_show, trained_model, sample_data):
+    """Test if show_lift_chart runs correctly for a single model."""
+    X, y = sample_data
+    try:
+        show_lift_chart(trained_model, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_lift_chart raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_lift_chart_multiple(mock_show, trained_model, sample_data):
+    """Test if show_lift_chart runs without errors for multiple models."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    try:
+        show_lift_chart(models, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_lift_chart raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_lift_chart_overlay(mock_show, trained_model, sample_data):
+    """Test if show_lift_chart runs correctly with overlay enabled."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    try:
+        show_lift_chart(models, X, y, overlay=True, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_lift_chart raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_lift_chart_grid(mock_show, trained_model, sample_data):
+    """Test if show_lift_chart runs correctly with grid enabled."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    try:
+        show_lift_chart(models, X, y, grid=True, n_cols=2, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_lift_chart raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_lift_chart_invalid_overlay_grid(mock_show, trained_model, sample_data):
+    """Ensure ValueError is raised if both overlay and grid are set to True."""
+    X, y = sample_data
+    with pytest.raises(
+        ValueError, match="`grid` cannot be set to True when `overlay` is True."
+    ):
+        show_lift_chart([trained_model, trained_model], X, y, overlay=True, grid=True)
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_gain_chart_single(mock_show, trained_model, sample_data):
+    """Test if show_gain_chart runs correctly for a single model."""
+    X, y = sample_data
+    try:
+        show_gain_chart(trained_model, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_gain_chart raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_gain_chart_multiple(mock_show, trained_model, sample_data):
+    """Test if show_gain_chart runs without errors for multiple models."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    try:
+        show_gain_chart(models, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_gain_chart raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_gain_chart_overlay(mock_show, trained_model, sample_data):
+    """Test if show_gain_chart runs correctly with overlay enabled."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    try:
+        show_gain_chart(models, X, y, overlay=True, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_gain_chart raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_gain_chart_grid(mock_show, trained_model, sample_data):
+    """Test if show_gain_chart runs correctly with grid enabled."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    try:
+        show_gain_chart(models, X, y, grid=True, n_cols=2, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_gain_chart raised an exception: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_gain_chart_invalid_overlay_grid(mock_show, trained_model, sample_data):
+    """Ensure ValueError is raised if both overlay and grid are set to True."""
+    X, y = sample_data
+    with pytest.raises(
+        ValueError, match="`grid` cannot be set to True when `overlay` is True."
+    ):
+        show_gain_chart([trained_model, trained_model], X, y, overlay=True, grid=True)
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_lift_chart_saves_plot(mock_show, trained_model, sample_data, tmp_path):
+    """Test if show_lift_chart saves the plot when save_plot=True."""
+    X, y = sample_data
+    image_path_png = tmp_path / "lift_chart.png"
+    image_path_svg = tmp_path / "lift_chart.svg"
+
+    try:
+        show_lift_chart(
+            trained_model,
+            X,
+            y,
+            save_plot=True,
+            image_path_png=str(image_path_png),
+            image_path_svg=str(image_path_svg),
+        )
+    except Exception as e:
+        pytest.fail(f"show_lift_chart failed when saving plots: {e}")
+
+    assert image_path_png.exists(), "PNG image was not saved."
+    assert image_path_svg.exists(), "SVG image was not saved."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_gain_chart_saves_plot(mock_show, trained_model, sample_data, tmp_path):
+    """Test if show_gain_chart saves the plot when save_plot=True."""
+    X, y = sample_data
+    image_path_png = tmp_path / "gain_chart.png"
+    image_path_svg = tmp_path / "gain_chart.svg"
+
+    try:
+        show_gain_chart(
+            trained_model,
+            X,
+            y,
+            save_plot=True,
+            image_path_png=str(image_path_png),
+            image_path_svg=str(image_path_svg),
+        )
+    except Exception as e:
+        pytest.fail(f"show_gain_chart failed when saving plots: {e}")
+
+    assert image_path_png.exists(), "PNG image was not saved."
+    assert image_path_svg.exists(), "SVG image was not saved."
 
 
 def test_show_calibration_curve_basic(trained_model, sample_data):
