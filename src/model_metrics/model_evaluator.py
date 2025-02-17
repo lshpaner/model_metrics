@@ -638,6 +638,7 @@ def show_roc_curve(
     curve_kwgs=None,
     linestyle_kwgs=None,
     grid=False,  # Grid layout option
+    n_rows=None,
     n_cols=2,  # Number of columns for the grid
     figsize=None,  # User-defined figure size
     label_fontsize=12,  # Font size for title and axis labels
@@ -679,6 +680,9 @@ def show_roc_curve(
         Styling for the random guess diagonal line.
     - grid: bool, optional
         Whether to organize plots in a grid layout (default: False).
+    - n_rows: int, optional
+        Number of rows in the grid layout. If not specified, it is automatically
+        calculated based on the number of models and `n_cols`.
     - n_cols: int, optional
         Number of columns in the grid layout (default: 2).
     - figsize: tuple, optional
@@ -853,6 +857,7 @@ def show_pr_curve(
     text_wrap=None,
     curve_kwgs=None,
     grid=False,  # Grid layout option
+    n_rows=None,
     n_cols=2,  # Number of columns for the grid
     figsize=None,  # User-defined figure size
     label_fontsize=12,  # Font size for title and axis labels
@@ -887,6 +892,9 @@ def show_pr_curve(
         Styling for individual model curves.
     - grid: bool, optional
         Whether to organize plots in a grid layout (default: False).
+    - n_rows: int, optional
+        Number of rows in the grid layout. If not specified, it is automatically
+        calculated based on the number of models and `n_cols`.
     - n_cols: int, optional
         Number of columns in the grid layout (default: 2).
     - figsize: tuple, optional
