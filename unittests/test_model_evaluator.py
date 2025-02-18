@@ -10,8 +10,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 import matplotlib
 import matplotlib.pyplot as plt
-from sklearn.datasets import make_classification
-from sklearn.linear_model import LogisticRegression
+from sklearn.datasets import make_classification, make_regression
+from sklearn.linear_model import LogisticRegression, Lasso
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
 from model_metrics.model_evaluator import (
@@ -48,6 +48,28 @@ def trained_model(sample_data):
     model = LogisticRegression()
     model.fit(X, y)
     return model
+
+
+@pytest.fixture
+def classification_model():
+    """Returns a trained classification model and test data."""
+    X, y = make_classification(n_samples=500, n_features=10, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+    model = LogisticRegression().fit(X_train, y_train)
+    return model, (X_test, y_test)
+
+
+@pytest.fixture
+def regression_model():
+    """Returns a trained regression model and test data."""
+    X, y = make_regression(n_samples=500, n_features=5, noise=0.1, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+    model = Lasso().fit(X_train, y_train)
+    return model, (X_test, y_test)
 
 
 def test_save_plot_images(tmp_path):
@@ -196,14 +218,97 @@ def test_summarize_model_performance(trained_model, sample_data, capsys):
     print("All tests passed for formatted output.")
 
 
-# def test_summarize_model_performance(trained_model, sample_data):
-#     """Test summarize_model_performance function."""
-#     X, y = sample_data
-#     df = summarize_model_performance([trained_model], X, y, return_df=True)
+def test_summarize_model_performance_classification(classification_model, capsys):
+    """Test summarize_model_performance function for classification models."""
+    trained_model, sample_data = classification_model
+    X, y = sample_data
+    df = summarize_model_performance(
+        [trained_model], X, y, model_type="classification", return_df=True
+    )
 
-#     assert isinstance(df, pd.DataFrame)
-#     assert "Precision/PPV" in df.index
-#     assert "AUC ROC" in df.index
+    # Ensure output is a DataFrame
+    assert isinstance(df, pd.DataFrame), "Output should be a pandas DataFrame."
+
+    # Ensure key classification metrics exist in the index
+    expected_metrics = ["Precision/PPV", "AUC ROC", "F1-Score", "Sensitivity/Recall"]
+    for metric in expected_metrics:
+        assert metric in df.index, f"Missing expected classification metric: {metric}"
+
+    # Capture printed output
+    summarize_model_performance(
+        [trained_model], X, y, model_type="classification", return_df=False
+    )
+    captured = capsys.readouterr().out
+
+    # Check separator line presence
+    header_line = captured.split("\n")[1]
+    separator = "-" * len(header_line.strip())
+    assert separator in captured, "Separator line missing"
+
+    print("All classification tests passed.")
+
+
+def test_summarize_model_performance_regression(regression_model, capsys):
+    """Test summarize_model_performance function for regression models."""
+    trained_model, sample_data = regression_model
+    X, y = sample_data
+    df = summarize_model_performance(
+        [trained_model], X, y, model_type="regression", return_df=True
+    )
+
+    # Ensure output is a DataFrame
+    assert isinstance(df, pd.DataFrame), "Output should be a pandas DataFrame."
+
+    # Ensure regression metrics exist in the index
+    expected_metrics = [
+        "MAE",
+        "MAPE (%)",
+        "MSE",
+        "RMSE",
+        "Explained Variance",
+        "R^2 Score",
+    ]
+    for metric in expected_metrics:
+        assert metric in df.index, f"Missing expected regression metric: {metric}"
+
+    # Check if "Lasso" is present in the transposed DataFrame (model names are columns)
+    assert "Lasso" in df.columns, "Model name 'Lasso' is missing from the DataFrame."
+
+    # Ensure coefficients and p-values exist as separate rows
+    coef_rows = df.loc[df.index.str.startswith("Coef_")]
+    pval_rows = df.loc[df.index.str.startswith("P-Value_")]
+
+    assert not coef_rows.empty, "Coefficient rows are missing from the DataFrame."
+    assert not pval_rows.empty, "P-Value rows are missing from the DataFrame."
+    assert len(coef_rows) == len(
+        pval_rows
+    ), "Mismatch between coefficient and p-value rows."
+
+    # Ensure all coefficients and p-values are numeric
+    assert np.all(
+        pd.notna(pd.to_numeric(coef_rows.values.flatten(), errors="coerce"))
+    ), "Non-numeric values found in coefficients."
+    assert np.all(
+        pd.notna(pd.to_numeric(pval_rows.values.flatten(), errors="coerce"))
+    ), "Non-numeric values found in p-values."
+
+    # Capture printed output
+    summarize_model_performance(
+        [trained_model], X, y, model_type="regression", return_df=False
+    )
+    captured = capsys.readouterr().out
+
+    # Ensure numeric values are properly formatted
+    decimal_places = 3
+    for col in df.columns:
+        for value in df[col].dropna():  # Drop NaN values before checking
+            if isinstance(value, float):
+                formatted_value = f"{value:.{decimal_places}f}"
+                assert (
+                    formatted_value in captured
+                ), f"Value {value} not formatted correctly"
+
+    print("All regression tests passed.")
 
 
 def test_get_model_probabilities(trained_model, sample_data):
