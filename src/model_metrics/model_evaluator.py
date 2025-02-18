@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import statsmodels.api as sm
 import math
 import matplotlib
 import matplotlib.pyplot as plt
@@ -351,6 +352,12 @@ def summarize_model_performance(
             else:
                 mape = np.nan  # If all y-values are zero, return NaN
 
+            # Compute coefficients and p-values using statsmodels
+            X_with_intercept = sm.add_constant(X)  # Add intercept for OLS
+            ols_model = sm.OLS(y, X_with_intercept).fit()
+            p_values = pd.Series(ols_model.pvalues.round(decimal_places)).to_dict()
+            coefficients = pd.Series(ols_model.params.round(decimal_places)).to_dict()
+
             # Store regression metrics
             model_metrics = {
                 "Model": name,
@@ -361,6 +368,13 @@ def summarize_model_performance(
                 "Explained Variance": round(exp_var, decimal_places),
                 "R^2 Score": round(r2, decimal_places),
             }
+
+            # Add coefficients and p-values to the model metrics
+            for feature, coef in coefficients.items():
+                model_metrics[f"Coef_{feature}"] = coef
+            for feature, p_val in p_values.items():
+                model_metrics[f"P-Value_{feature}"] = p_val
+
         metrics_data.append(model_metrics)
 
     # Create a DataFrame
