@@ -159,14 +159,51 @@ def test_get_predictions_kfold(sample_data):
     assert isinstance(threshold, float)
 
 
-def test_summarize_model_performance(trained_model, sample_data):
-    """Test summarize_model_performance function."""
+def test_summarize_model_performance(trained_model, sample_data, capsys):
+    """Test summarize_model_performance function with formatted output."""
     X, y = sample_data
     df = summarize_model_performance([trained_model], X, y, return_df=True)
 
-    assert isinstance(df, pd.DataFrame)
-    assert "Precision/PPV" in df.index
-    assert "AUC ROC" in df.index
+    # Ensure output is a DataFrame
+    assert isinstance(df, pd.DataFrame), "Output should be a pandas DataFrame."
+
+    # Ensure key performance metrics exist in the index
+    expected_metrics = ["Precision/PPV", "AUC ROC"]
+    for metric in expected_metrics:
+        assert metric in df.index, f"Missing expected metric: {metric}"
+
+    # Capture printed output
+    summarize_model_performance([trained_model], X, y, return_df=False)
+    captured = capsys.readouterr().out
+
+    # Validate column headers formatting
+    header_line = captured.split("\n")[1]  # Second line contains headers
+    assert "Metric".center(len("Metric")) in header_line, "Header misalignment detected"
+
+    # Ensure numeric values are properly formatted
+    for col in df.columns:
+        for value in df[col]:
+            if isinstance(value, float):
+                formatted_value = f"{value:.4f}"
+                assert (
+                    formatted_value in captured
+                ), f"Value {value} not formatted correctly"
+
+    # Check separator line presence
+    separator = "-" * len(header_line.strip())
+    assert separator in captured, "Separator line missing"
+
+    print("All tests passed for formatted output.")
+
+
+# def test_summarize_model_performance(trained_model, sample_data):
+#     """Test summarize_model_performance function."""
+#     X, y = sample_data
+#     df = summarize_model_performance([trained_model], X, y, return_df=True)
+
+#     assert isinstance(df, pd.DataFrame)
+#     assert "Precision/PPV" in df.index
+#     assert "AUC ROC" in df.index
 
 
 def test_get_model_probabilities(trained_model, sample_data):

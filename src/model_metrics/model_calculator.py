@@ -65,9 +65,9 @@ class ModelCalculator:
             for SHAP or coefficient calculations.
 
         subset_results : bool, optional (default=False)
-            Whether to return a subset of columns (e.g., metrics and top-n features)
-            for row-wise results. Only applicable when `calculate_shap` or
-            `use_coefficients` is True.
+            If True, returns only `TP`, `FN`, `FP`, `TN`, and `y_pred_proba`.
+            Includes top-N SHAP or coefficient features if `calculate_shap` or
+            `use_coefficients` is enabled. Ignored for global SHAP or coefficients.
 
         global_shap : bool, optional (default=False)
             Whether to compute global SHAP values across the entire dataset.
@@ -109,19 +109,23 @@ class ModelCalculator:
         conflicts = [
             (
                 calculate_shap and use_coefficients,
-                "Both 'calculate_shap' and 'use_coefficients' cannot be True simultaneously.",
+                "Both 'calculate_shap' and 'use_coefficients' cannot be True "
+                "simultaneously.",
             ),
             (
                 global_coefficients and global_shap,
-                "Both 'global_shap' and 'global_coefficients' cannot be True simultaneously.",
+                "Both 'global_shap' and 'global_coefficients' cannot be True "
+                "simultaneously.",
             ),
             (
                 global_coefficients and subset_results,
-                "Both 'global_coefficients' and 'subset_results' cannot be True simultaneously.",
+                "Both 'global_coefficients' and 'subset_results' cannot be True "
+                "simultaneously.",
             ),
             (
                 global_shap and subset_results,
-                "Both 'global_shap' and 'subset_results' cannot be True simultaneously.",
+                "Both 'global_shap' and 'subset_results' cannot be True "
+                "simultaneously.",
             ),
         ]
 
@@ -205,7 +209,13 @@ class ModelCalculator:
                     X_test_m,
                     include_contributions=include_contributions,
                 )
-                X_test_with_metrics[f"top_{self.top_n}_coefficients"] = coeff_values
+                if isinstance(coeff_values, pd.DataFrame):
+                    # Convert DataFrame to a list of tuples (or dicts) for each row
+                    X_test_with_metrics[f"top_{self.top_n}_coefficients"] = (
+                        coeff_values.apply(lambda row: row.to_dict(), axis=1)
+                    )
+                else:
+                    X_test_with_metrics[f"top_{self.top_n}_coefficients"] = coeff_values
 
             results.append(X_test_with_metrics)
 
@@ -215,20 +225,24 @@ class ModelCalculator:
         ## Subset results only for row-wise data
         if subset_results:
             print("Subset results only applies to row-wise outputs.")
-            top_features_col = (
-                f"top_{self.top_n}_features"
-                if calculate_shap
-                else f"top_{self.top_n}_coefficients"
-            )
-            subset_cols = [
-                "TP",
-                "FN",
-                "FP",
-                "TN",
-                "y_pred_proba",
-                top_features_col,
-            ]
-            results_df = results_df[subset_cols]
+
+            # Default subset columns
+            subset_cols = ["TP", "FN", "FP", "TN", "y_pred_proba"]
+
+            # Only add SHAP or coefficient columns if they were actually computed
+            if calculate_shap:
+                top_features_col = f"top_{self.top_n}_features"
+                if top_features_col in results_df.columns:
+                    subset_cols.append(top_features_col)
+
+            elif use_coefficients:
+                top_coefficients_col = f"top_{self.top_n}_coefficients"
+                if top_coefficients_col in results_df.columns:
+                    subset_cols.append(top_coefficients_col)
+
+            # Select only the columns that exist
+            existing_cols = [col for col in subset_cols if col in results_df.columns]
+            results_df = results_df[existing_cols]
 
         print(f"Shape of results_df: {results_df.shape}")
         return results_df
@@ -424,11 +438,27 @@ class ModelCalculator:
         # Row-wise SHAP calculation
         shap_values = []
         try:
-            print(X_transformed)
-            shap_values = explainer(
-                pd.DataFrame(X_transformed.values, columns=X_test_m.columns)
-            ).values
-            # quit()
+            shap_output = explainer(
+                pd.DataFrame(X_transformed, columns=X_test_m.columns)
+            )
+
+            # Ensure SHAP values are always a NumPy array
+            if isinstance(shap_output, np.ndarray):
+                shap_values = shap_output  # Use as is if already an array
+            elif hasattr(shap_output, "values"):
+                shap_values = shap_output.values  # Extract values from SHAP Explanation
+            elif isinstance(shap_output, list):
+                shap_values = np.array(shap_output)  # Convert list to NumPy array
+            else:
+                raise ValueError(f"Unexpected SHAP output type: {type(shap_output)}")
+
+            # 🔹 Convert to NumPy array before checking shape
+            shap_values = np.array(shap_values)
+
+            # 🔹 Now check for unexpected shapes
+            if len(shap_values.shape) not in {2, 3}:
+                raise ValueError(f"Unexpected SHAP values shape: {shap_values.shape}")
+
         except KeyboardInterrupt:
             print("\nKeyboardInterrupt detected. Returning results calculated so far.")
             return shap_values

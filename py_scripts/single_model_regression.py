@@ -4,8 +4,8 @@ import os
 from pathlib import Path
 import sys
 
-from sklearn.datasets import make_classification
-from sklearn.linear_model import LogisticRegression
+from sklearn.datasets import load_diabetes
+from sklearn.linear_model import Lasso
 from eda_toolkit import ensure_directory
 from model_tuner import Model, dumpObjects
 import model_tuner
@@ -30,9 +30,7 @@ if __name__ == "__main__":
     ## Go up one level from 'notebooks' to the parent directory, then into the
     ## 'results' folder
 
-    model_path = os.path.join(
-        os.pardir, "model_files/single_model_classification_results"
-    )
+    model_path = os.path.join(os.pardir, "model_files/single_model_regression_results")
     image_path_png = os.path.join(base_path, "images", "png_images")
     image_path_svg = os.path.join(base_path, "images", "svg_images")
 
@@ -48,50 +46,57 @@ if __name__ == "__main__":
     model_path.mkdir(parents=True, exist_ok=True)
 
     # Define the path to save the pickled model
-    model_filename = model_path / "logistic_regression_model.pkl"
+    model_filename = model_path / "lasso_regression_model.pkl"
 
-    # Generate a synthetic dataset
-    X, y = make_classification(
-        n_samples=100000,  # Number of samples
-        n_features=50,  # Number of features
-        n_informative=25,  # Number of informative features
-        n_classes=2,  # Number of classes (binary classification)
-        random_state=42,  # Reproducibility
-    )
+    # Load the dataset with frame=True to get a DataFrame
+    diabetes = load_diabetes(as_frame=True)["frame"]
 
-    # Convert to a DataFrame
-    df = pd.DataFrame(X, columns=[f"feature_{i}" for i in range(50)])
-    df["target"] = y
+    print(diabetes)
 
-    # Convert y into a DataFrame
-    y = pd.DataFrame(y, columns=["target"]).squeeze()
+    X = diabetes[[col for col in diabetes.columns if "target" not in col]]
 
-    # Convert X into a DataFrame
-    X = pd.DataFrame(X, columns=[f"feature_{i}" for i in range(X.shape[1])])
+    y = diabetes["target"]
 
-    lr = LogisticRegression(class_weight="balanced", max_iter=1000)
-
-    estimator_name = "lg"
-    # Set the parameters by cross-validation
-    tuned_parameters = [
+    lasso_name = "lasso"
+    lasso = Lasso(random_state=3)
+    tuned_parameters_lasso = [
         {
-            estimator_name + "__C": np.logspace(-4, 0, 3),
+            f"{lasso_name}__fit_intercept": [True, False],
+            f"{lasso_name}__precompute": [True, False],
+            f"{lasso_name}__copy_X": [True, False],
+            f"{lasso_name}__max_iter": [100, 500, 1000, 2000],
+            f"{lasso_name}__tol": [1e-4, 1e-3],
+            f"{lasso_name}__warm_start": [True, False],
+            f"{lasso_name}__positive": [True, False],
         }
     ]
+    lasso_definition = {
+        "clc": lasso,
+        "estimator_name": lasso_name,
+        "tuned_parameters": tuned_parameters_lasso,
+        "randomized_grid": False,
+        "early": False,
+    }
+    model_definitions = {lasso_name: lasso_definition}
+
+    model_type = "lasso"
+    clc = model_definitions[model_type]["clc"]
+    estimator_name = model_definitions[model_type]["estimator_name"]
+
     kfold = False
     calibrate = False
 
     model = Model(
         name="Logistic Regression",
         estimator_name=estimator_name,
-        model_type="classification",
+        model_type="regression",
         calibrate=calibrate,
-        estimator=lr,
+        estimator=clc,
         kfold=kfold,
         stratify_y=False,
-        grid=tuned_parameters,
+        grid=tuned_parameters_lasso,
         randomized_grid=False,
-        scoring=["roc_auc"],
+        scoring=["r2"],
         n_jobs=-2,
         random_state=42,
     )
@@ -114,8 +119,6 @@ if __name__ == "__main__":
     model.return_metrics(
         X_valid,
         y_valid,
-        optimal_threshold=True,
-        print_threshold=True,
         model_metrics=True,
     )
     print()
@@ -123,25 +126,7 @@ if __name__ == "__main__":
     model.return_metrics(
         X_test,
         y_test,
-        optimal_threshold=True,
-        print_threshold=True,
         model_metrics=True,
-    )
-
-    y_prob = model.predict_proba(X_test)
-
-    ### F1 Weighted
-    y_pred = model.predict(X_test, optimal_threshold=True)
-
-    ### Report Model Metrics
-
-    model.return_metrics(
-        X_test,
-        y_test,
-        optimal_threshold=True,
-        print_threshold=True,
-        model_metrics=True,
-        return_dict=False,
     )
 
     dumpObjects(model, model_filename)
