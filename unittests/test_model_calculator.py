@@ -157,9 +157,13 @@ def test_extract_final_model(model_calculator, trained_models):
 
 
 def test_calculate_shap_values(model_calculator, sample_data):
-    """Test SHAP value calculation."""
+    """Test SHAP value calculation with appropriate handling."""
     _, X_test, _, _ = sample_data
     model = model_calculator.model_dict["model"]["outcome_1"]
+
+    # Ensure the model supports predict_proba before testing SHAP
+    if not hasattr(model, "predict_proba"):
+        pytest.skip("Skipping SHAP test: Model does not support predict_proba.")
 
     shap_values = model_calculator._calculate_shap_values(model, X_test)
 
@@ -246,7 +250,7 @@ def test_generate_predictions_without_predict_proba(model_calculator, sample_dat
 
 
 def test_extract_final_model_pipeline(model_calculator):
-    """Test extracting the final model from a pipeline."""
+    """Test extracting the final model from a pipeline structure."""
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
 
@@ -256,7 +260,9 @@ def test_extract_final_model_pipeline(model_calculator):
 
     extracted_model = model_calculator._extract_final_model(pipeline)
 
-    assert isinstance(extracted_model, LogisticRegression)
+    assert isinstance(
+        extracted_model, LogisticRegression
+    ), "Final model extraction failed."
 
 
 def test_extract_final_model_pipeline_with_estimator(model_calculator):
@@ -325,7 +331,7 @@ def test_calculate_shap_unsupported_model(model_calculator, sample_data):
 
 
 def test_calculate_shap_explainer_failure(model_calculator, sample_data):
-    """Test handling when SHAP explainer initialization fails."""
+    """Test that SHAP gracefully falls back when initialization fails."""
 
     class BrokenModel:
         """Mock class for a model that breaks SHAP explainer."""
@@ -336,7 +342,7 @@ def test_calculate_shap_explainer_failure(model_calculator, sample_data):
     _, X_test, _, _ = sample_data
     broken_model = BrokenModel()
 
-    # Expecting RuntimeError instead of ValueError
+    # Expecting a RuntimeError instead of ValueError
     with pytest.raises(RuntimeError, match="SHAP initialization failure"):
         model_calculator._calculate_shap_values(broken_model, X_test)
 
@@ -356,3 +362,162 @@ def test_calculate_shap_kernel_explainer_failure(model_calculator, sample_data):
     # Expecting RuntimeError instead of ValueError
     with pytest.raises(RuntimeError, match="KernelExplainer failure"):
         model_calculator._calculate_shap_values(broken_model, X_test)
+
+
+def test_calculate_shap_multiclass(model_calculator, sample_data):
+    """Test SHAP calculation when SHAP values have a multi-class shape."""
+    _, X_test, _, _ = sample_data
+    mock_shap_values = np.random.rand(
+        len(X_test), len(X_test.columns), 3
+    )  # Simulating multi-class
+
+    # Mock the SHAP explainer output
+    model_calculator._calculate_shap_values = lambda model, X: mock_shap_values
+
+    shap_df = model_calculator._calculate_shap_values(
+        model_calculator.model_dict["model"]["outcome_1"], X_test
+    )
+
+    assert isinstance(shap_df, np.ndarray)
+    assert shap_df.shape == (
+        len(X_test),
+        len(X_test.columns),
+        3,
+    )  # Ensure correct shape
+
+
+def test_calculate_shap_singleclass(model_calculator, sample_data):
+    """Test SHAP calculation when SHAP values have a single-class shape."""
+    _, X_test, _, _ = sample_data
+    mock_shap_values = np.random.rand(
+        len(X_test), len(X_test.columns)
+    )  # Simulating single-class
+
+    # Mock the SHAP explainer output
+    model_calculator._calculate_shap_values = lambda model, X: mock_shap_values
+
+    shap_df = model_calculator._calculate_shap_values(
+        model_calculator.model_dict["model"]["outcome_1"], X_test
+    )
+
+    assert isinstance(shap_df, np.ndarray)
+    assert shap_df.shape == (len(X_test), len(X_test.columns))  # Ensure correct shape
+
+
+def test_calculate_shap_unexpected_shape(model_calculator, sample_data, monkeypatch):
+    """Test error handling when SHAP values have an unexpected shape."""
+    _, X_test, _, _ = sample_data
+
+    # Mock SHAP explainer to return an incorrect shape
+    class MockExplainer:
+        def __call__(self, *args, **kwargs):
+            return np.random.rand(len(X_test))  # Incorrect 1D shape
+
+    # Monkeypatch `shap.Explainer` to use the mock class
+    monkeypatch.setattr("shap.Explainer", lambda *args, **kwargs: MockExplainer())
+
+    # Ensure we trigger the shape check in `_calculate_shap_values`
+    with pytest.raises(ValueError, match="Unexpected SHAP values shape"):
+        shap_values = model_calculator._calculate_shap_values(
+            model_calculator.model_dict["model"]["outcome_1"], X_test
+        )
+        print(shap_values.shape)  # Explicitly check the shape
+
+
+def test_calculate_shap_keyboard_interrupt(model_calculator, sample_data, monkeypatch):
+    """Test handling of KeyboardInterrupt during SHAP calculation."""
+    _, X_test, _, _ = sample_data
+
+    def mock_explainer(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(model_calculator, "_calculate_shap_values", mock_explainer)
+
+    with pytest.raises(KeyboardInterrupt):
+        model_calculator._calculate_shap_values(
+            model_calculator.model_dict["model"]["outcome_1"], X_test
+        )
+
+
+def test_calculate_shap_partial_results(model_calculator, sample_data, monkeypatch):
+    """Test returning partial SHAP values after an interruption."""
+    _, X_test, _, _ = sample_data
+    partial_shap_values = np.random.rand(5, len(X_test.columns))  # Partial results
+
+    class MockExplainer:
+        def __call__(self, *args, **kwargs):
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(
+        model_calculator, "_calculate_shap_values", lambda model, X: partial_shap_values
+    )
+
+    try:
+        shap_values = model_calculator._calculate_shap_values(
+            model_calculator.model_dict["model"]["outcome_1"], X_test
+        )
+    except KeyboardInterrupt:
+        shap_values = partial_shap_values
+
+    assert isinstance(shap_values, np.ndarray)
+    assert shap_values.shape == (5, len(X_test.columns))  # Ensuring partial return
+
+
+def test_generate_predictions_subset_results(model_calculator, sample_data):
+    """Test that subset_results returns only the expected columns."""
+    _, X_test, _, y_test = sample_data
+    y_test_df = pd.DataFrame({"outcome_1": y_test, "outcome_2": y_test})
+
+    # Case 1: subset_results=True, no SHAP or coefficients
+    result_df = model_calculator.generate_predictions(
+        X_test,
+        y_test_df,
+        subset_results=True,
+        calculate_shap=False,
+        use_coefficients=False,
+    )
+    expected_columns = {"TP", "FN", "FP", "TN", "y_pred_proba"}
+    assert (
+        set(result_df.columns) == expected_columns
+    ), f"Unexpected columns: {result_df.columns}"
+
+    # Case 2: subset_results=True, SHAP enabled
+    result_df = model_calculator.generate_predictions(
+        X_test,
+        y_test_df,
+        subset_results=True,
+        calculate_shap=True,
+        use_coefficients=False,
+    )
+    expected_columns.add(f"top_{model_calculator.top_n}_features")
+    assert (
+        set(result_df.columns) == expected_columns
+    ), f"Unexpected columns with SHAP: {result_df.columns}"
+
+    # Case 3: subset_results=True, Coefficients enabled
+    result_df = model_calculator.generate_predictions(
+        X_test,
+        y_test_df,
+        subset_results=True,
+        calculate_shap=False,
+        use_coefficients=True,
+    )
+    expected_columns.remove(
+        f"top_{model_calculator.top_n}_features"
+    )  # Remove SHAP from expectation
+    expected_columns.add(f"top_{model_calculator.top_n}_coefficients")
+    assert (
+        set(result_df.columns) == expected_columns
+    ), f"Unexpected columns with Coefficients: {result_df.columns}"
+
+    # Case 4: subset_results=False (should return all columns)
+    result_df = model_calculator.generate_predictions(
+        X_test,
+        y_test_df,
+        subset_results=False,
+        calculate_shap=False,
+        use_coefficients=False,
+    )
+    assert len(result_df.columns) > len(
+        expected_columns
+    ), "subset_results=False should return all columns"

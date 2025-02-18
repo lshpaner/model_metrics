@@ -11,7 +11,6 @@ from tqdm import tqdm
 import textwrap
 
 from sklearn.calibration import calibration_curve
-
 from sklearn.metrics import (
     precision_score,
     average_precision_score,
@@ -24,6 +23,11 @@ from sklearn.metrics import (
     roc_curve,
     precision_recall_curve,
     brier_score_loss,
+    average_precision_score,
+    mean_absolute_error,
+    mean_squared_error,
+    r2_score,
+    explained_variance_score,
 )
 
 ################################################################################
@@ -222,11 +226,13 @@ def summarize_model_performance(
     model,
     X,
     y,
+    model_type="classification",
     model_threshold=None,
     model_titles=None,
     custom_threshold=None,
     score=None,
     return_df=False,
+    decimal_places=3,
 ):
     """
     Summarize key performance metrics for multiple models.
@@ -274,6 +280,12 @@ def summarize_model_performance(
     if not isinstance(model, list):
         model = [model]
 
+    model_type = model_type.lower()
+    if model_type not in ["classification", "regression"]:
+        raise ValueError(
+            "Invalid model_type. Must be 'classification' or 'regression'."
+        )
+
     metrics_data = []
 
     for i, model in enumerate(model):
@@ -283,31 +295,72 @@ def summarize_model_performance(
         else:
             name = extract_model_name(model)  # Extract detailed name
 
-        y_true, y_prob, y_pred, threshold = get_predictions(
-            model, X, y, model_threshold, custom_threshold, score
-        )
+        if model_type == "classification":
+            y_true, y_prob, y_pred, threshold = get_predictions(
+                model, X, y, model_threshold, custom_threshold, score
+            )
 
-        # Compute metrics
-        precision = precision_score(y_true, y_pred)
-        recall = recall_score(y_true, y_pred)  # Sensitivity
-        specificity = recall_score(y_true, y_pred, pos_label=0)
-        auc_roc = roc_auc_score(y_true, y_prob)
-        brier = brier_score_loss(y_true, y_prob)
-        avg_precision = average_precision_score(y_true, y_prob)
-        f1 = f1_score(y_true, y_pred)
+            # Compute metrics
+            precision = precision_score(y_true, y_pred)
+            recall = recall_score(y_true, y_pred)  # Sensitivity
+            specificity = recall_score(y_true, y_pred, pos_label=0)
+            auc_roc = roc_auc_score(y_true, y_prob)
+            brier = brier_score_loss(y_true, y_prob)
+            avg_precision = average_precision_score(y_true, y_prob)
+            f1 = f1_score(y_true, y_pred)
 
-        # Append metrics for this model
-        model_metrics = {
-            "Model": name,
-            "Precision/PPV": precision,
-            "Average Precision": avg_precision,
-            "Sensitivity/Recall": recall,
-            "Specificity": specificity,
-            "F1-Score": f1,
-            "AUC ROC": auc_roc,
-            "Brier Score": brier,
-            "Model Threshold": threshold,
-        }
+            # Append metrics for this model
+            model_metrics = {
+                "Model": name,
+                "Precision/PPV": round(precision, decimal_places),
+                "Average Precision": round(avg_precision, decimal_places),
+                "Sensitivity/Recall": round(recall, decimal_places),
+                "Specificity": round(specificity, decimal_places),
+                "F1-Score": round(f1, decimal_places),
+                "AUC ROC": round(auc_roc, decimal_places),
+                "Brier Score": round(brier, decimal_places),
+                "Model Threshold": (
+                    round(threshold, decimal_places) if threshold is not None else None
+                ),
+            }
+
+        elif model_type == "regression":
+            y_pred = model.predict(X)
+
+            # Ensure y and y_pred are 1D NumPy arrays
+            y = np.asarray(y).ravel()
+            y_pred = np.asarray(y_pred).ravel()
+
+            # Compute regression metrics
+            mae = mean_absolute_error(y, y_pred)
+            mse = mean_squared_error(y, y_pred)
+            rmse = np.sqrt(mse)
+            exp_var = explained_variance_score(y, y_pred)
+            r2 = r2_score(y, y_pred)
+            # Handle MAPE safely to avoid division errors
+            nonzero_mask = y != 0  # Avoid division by zero
+            if np.any(nonzero_mask):  # Ensure at least one valid value
+                mape = (
+                    np.mean(
+                        np.abs(
+                            (y[nonzero_mask] - y_pred[nonzero_mask]) / y[nonzero_mask]
+                        )
+                    )
+                    * 100
+                )
+            else:
+                mape = np.nan  # If all y-values are zero, return NaN
+
+            # Store regression metrics
+            model_metrics = {
+                "Model": name,
+                "MAE": round(mae, decimal_places),
+                "MAPE (%)": round(mape, decimal_places) if not np.isnan(mape) else None,
+                "MSE": round(mse, decimal_places),
+                "RMSE": round(rmse, decimal_places),
+                "Explained Variance": round(exp_var, decimal_places),
+                "R^2 Score": round(r2, decimal_places),
+            }
         metrics_data.append(model_metrics)
 
     # Create a DataFrame
