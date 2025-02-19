@@ -21,9 +21,9 @@ Before you install `model_metrics`, ensure your system meets the following requi
 
 Additionally, `model_metrics` depends on the following packages, which will be automatically installed when you install `model_metrics`:
 
-- `matplotlib`: version `3.5.3` or higher, but capped at `3.9.2`
+- `matplotlib`: version `3.5.3` or higher, but capped at `3.10.0`
 - `numpy`: version `1.21.6` or higher, but capped at `2.1.0`
-- `plotly`: version `5.18.0` or higher, but capped at `5.24.0`
+- `pandas`: version `1.3.5` or higher, but capped at `2.2.3`
 - `scikit-learn`: version `1.0.2` or higher, but capped at `1.5.2`
 - `seaborn`: version `0.12.2` or higher, but capped below `0.13.2`
 - `shap`: version `0.41.0` or higher, but capped below `0.46.0`
@@ -45,10 +45,9 @@ pip install model_metrics
 https://lshpaner.github.io/model_metrics 
 
 
-## 🌐 Authors' Website
+## 🌐 Author's Website
 
 1. [Leonid Shpaner](https://www.leonshpaner.com)
-
 
 ## 🙏 Acknowledgements
 
@@ -61,14 +60,15 @@ Special thanks to Dr. Alex Bui for his invaluable guidance and support, and to P
 `model_metrics` is distributed under the MIT License. See [LICENSE](https://github.com/lshpaner/model_metrics/blob/main/LICENSE.md) for more information.
 
 
-## 🛟 Support
+## ⚓ Support
 
-If you have any questions or issues with `model_metrics`, please open an issue on this GitHub repository.
+If you have any questions or issues with `model_metrics`, please open an issue on this [GitHub repository](https://github.com/lshpaner/model_metrics).
 
 
 ## 📚 Citing `model_metrics`
 
 If you use `model_metrics` in your research or projects, please consider citing it.
+
 
 ```bibtex
 
@@ -82,5 +82,4 @@ If you use `model_metrics` in your research or projects, please consider citing 
   doi          = {10.5281/zenodo.14879819},
   url          = {https://doi.org/10.5281/zenodo.14879819}
 }
-
 ```

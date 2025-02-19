@@ -233,49 +233,80 @@ def summarize_model_performance(
     custom_threshold=None,
     score=None,
     return_df=False,
+    overall_only=False,
     decimal_places=3,
 ):
     """
-    Summarize key performance metrics for multiple models.
+    Summarizes model performance metrics, including overall metrics and model coefficients.
 
     Parameters:
-    - model: list
-        A list of models or pipelines to evaluate.
-        Each pipeline should either end with a classifier or contain one.
-    - X: array-like
-        The input features for generating predictions.
-    - y_true: array-like
-        The true labels corresponding to the input features.
-    - model_threshold: dict or None, optional
-        A dictionary mapping model names to predefined thresholds for binary
-        classification. If provided, these thresholds will be displayed in
-        the table but not used for metric recalculations when `custom_threshold`
-        is set.
-    - model_titles: list or None, optional
-        A list of custom titles for individual models. If not provided, the
-        names of the models will be extracted automatically.
-    - custom_threshold: float or None, optional
-        A custom threshold to apply for recalculating metrics. If set, this
-        threshold will override the default threshold of 0.5 and any thresholds
-        from `model_threshold` for all models.
-        When specified, the "Model Threshold" row is omitted from the table.
-    - return_df: bool, optional
-        Whether to return the metrics as a pandas DataFrame instead of printing
-        them to the console. Default is False.
+    -----------
+    model : list or object
+        - A single trained model or a list of trained models.
+        - Supports classification and regression models.
+
+    X : pd.DataFrame
+        Feature matrix used for evaluation.
+
+    y : pd.Series or np.array
+        Target variable.
+
+    model_type : str, default="classification"
+        Specifies whether the models are classification or regression.
+        - Must be either `"classification"` or `"regression"`.
+
+    model_threshold : dict or None, default=None
+        - If provided, contains threshold values for classification models.
+        - Used when `custom_threshold` is not set.
+
+    model_titles : list or None, default=None
+        Custom model names for display. If None, model names are inferred.
+
+    custom_threshold : float or None, default=None
+        - If set, overrides `model_threshold` and applies a fixed threshold for classification.
+        - When set, the `"Model Threshold"` row is excluded.
+
+    score : str or None, default=None
+        - Custom scoring metric for classification models.
+
+    return_df : bool, default=False
+        - If True, returns a DataFrame instead of printing results.
+
+    overall_only : bool, default=False
+        - If True, returns only the `"Overall Metrics"` row.
+        - Removes `"Variable"`, `"Coefficient"`, and `"P-value"` columns.
+        - Ensures index removal for a clean DataFrame display.
+
+    decimal_places : int, default=3
+        Number of decimal places to round metrics.
 
     Returns:
-    - pd.DataFrame or None
-        If `return_df` is True, returns a DataFrame summarizing model performance
-        metrics, including precision, recall, specificity, F1-Score, AUC ROC,
-        and Brier Score. Otherwise, prints the metrics in a formatted table.
+    --------
+    pd.DataFrame or None
+        - If `return_df=True`, returns a DataFrame containing model performance metrics.
+        - Otherwise, prints the formatted table.
+
+    Raises:
+    -------
+    ValueError:
+        - If `model_type="classification"` and `overall_only=True`.
+        - If `model_type` is not `"classification"` or `"regression"`.
 
     Notes:
-    - If `model_threshold` is provided and `custom_threshold` is not set, the
-    "Model Threshold" row will display the values from `model_threshold`.
-    - If `custom_threshold` is set, it applies to all models for metric
-    recalculations, and the "Model Threshold" row is excluded from the table.
-    - Automatically extracts model names if `model_titles` is not provided.
-    - Models must support `predict_proba` or `decision_function` for predictions.
+    ------
+    - For classification models:
+        - Computes precision, recall, specificity, AUC ROC, F1-score,
+          Brier score, etc.
+        - Requires models supporting `predict_proba` or `decision_function`.
+
+    - For regression models:
+        - Computes MAE, MAPE, MSE, RMSE, Explained Variance, and R² Score.
+        - Uses `statsmodels.OLS` to extract coefficients and p-values.
+
+    - If `overall_only=True`, the DataFrame will:
+        - Contain only `"Overall Metrics"`.
+        - Drop unnecessary coefficient-related columns.
+        - Have an empty index to remove the leading row number.
     """
 
     if not isinstance(model, list):
@@ -285,6 +316,12 @@ def summarize_model_performance(
     if model_type not in ["classification", "regression"]:
         raise ValueError(
             "Invalid model_type. Must be 'classification' or 'regression'."
+        )
+
+    if model_type == "classification" and overall_only:
+        raise ValueError(
+            "The 'overall_only' option is only valid for regression models. "
+            "It cannot be used with classification."
         )
 
     metrics_data = []
@@ -325,6 +362,8 @@ def summarize_model_performance(
                 ),
             }
 
+            metrics_data.append(model_metrics)
+
         elif model_type == "regression":
             y_pred = model.predict(X)
 
@@ -353,42 +392,76 @@ def summarize_model_performance(
                 mape = np.nan  # If all y-values are zero, return NaN
 
             # Compute coefficients and p-values using statsmodels
-            X_with_intercept = sm.add_constant(X)  # Add intercept for OLS
+            X_with_intercept = sm.add_constant(X)
             ols_model = sm.OLS(y, X_with_intercept).fit()
-            p_values = pd.Series(ols_model.pvalues.round(decimal_places)).to_dict()
             coefficients = pd.Series(ols_model.params.round(decimal_places)).to_dict()
+            p_values = pd.Series(ols_model.pvalues.round(decimal_places)).to_dict()
+            # Append overall regression metrics as a single row
+            metrics_data.append(
+                {
+                    "Model": name,
+                    "Metric": "Overall Metrics",
+                    "Variable": "",
+                    "Coefficient": "",
+                    "P-value": "",
+                    "MAE": round(mae, decimal_places),
+                    "MAPE (%)": (
+                        round(mape, decimal_places) if not np.isnan(mape) else None
+                    ),
+                    "MSE": round(mse, decimal_places),
+                    "RMSE": round(rmse, decimal_places),
+                    "Explained Variance": (
+                        round(exp_var, decimal_places)
+                        if not np.isnan(exp_var)
+                        else None
+                    ),
+                    "R^2 Score": round(r2, decimal_places),
+                }
+            )
 
-            # Store regression metrics
-            model_metrics = {
-                "Model": name,
-                "MAE": round(mae, decimal_places),
-                "MAPE (%)": round(mape, decimal_places) if not np.isnan(mape) else None,
-                "MSE": round(mse, decimal_places),
-                "RMSE": round(rmse, decimal_places),
-                "Explained Variance": round(exp_var, decimal_places),
-                "R^2 Score": round(r2, decimal_places),
-            }
-
-            # Add coefficients and p-values to the model metrics
-            for feature, coef in coefficients.items():
-                model_metrics[f"Coef_{feature}"] = coef
-            for feature, p_val in p_values.items():
-                model_metrics[f"P-Value_{feature}"] = p_val
-
-        metrics_data.append(model_metrics)
+            # Append coefficient and p-value rows
+            for feature in coefficients:
+                metrics_data.append(
+                    {
+                        "Model": name,
+                        "Metric": "Coefficient",
+                        "Variable": feature,
+                        "Coefficient": coefficients[feature],
+                        "P-value": p_values[feature],
+                        "MAE": "",
+                        "MAPE (%)": "",
+                        "MSE": "",
+                        "RMSE": "",
+                        "Explained Variance": "",
+                        "R^2 Score": "",
+                    }
+                )
 
     # Create a DataFrame
     metrics_df = pd.DataFrame(metrics_data)
-    metrics_df.set_index("Model", inplace=True)
-    metrics_df = metrics_df.T
 
-    # Return the DataFrame if requested
+    if model_type == "classification":
+        metrics_df.set_index("Model", inplace=True)
+        metrics_df = metrics_df.T
+
+    if model_type == "regression":
+        metrics_df = metrics_df
+
+    if overall_only:
+        metrics_df = (
+            metrics_df[metrics_df["Metric"] == "Overall Metrics"]
+            .drop(columns=["Variable", "Coefficient", "P-value"], errors="ignore")
+            .reset_index(drop=True)
+        )
+
+        metrics_df.index = [""] * len(metrics_df)
+
     if return_df:
         return metrics_df
 
     # Adjust column widths for center alignment
     col_widths = {col: max(len(col), 8) + 2 for col in metrics_df.columns}
-    row_name_width = max(len(row) for row in metrics_df.index) + 2
+    row_name_width = max(len(str(row)) for row in metrics_df.index) + 2
 
     # Center-align headers
     headers = [
@@ -406,11 +479,11 @@ def summarize_model_performance(
 
     # Center-align rows
     for row_name, row_data in metrics_df.iterrows():
-        row = f"{row_name.center(row_name_width)}" + "".join(
+        row = f"{str(row_name).center(row_name_width)}" + "".join(
             (
                 f"{f'{value:.4f}'.center(col_widths[col])}"
                 if isinstance(value, float)
-                else f"{str(value).center(col_widths[col])}"
+                else f"{str(value).rjust(col_widths[col])}"  # Right-align numbers safely
             )
             for col, value in zip(metrics_df.columns, row_data)
         )

@@ -102,7 +102,7 @@ random_forest:
 	--exp-name rf \
 	2>&1 | tee model_files/results/random_forest.txt
 
-all_models: single_model_linear_reg single_model_logistic_reg \
+all_models: single_model_lasso_reg single_model_logistic_reg \
             logistic_regression decision_tree random_forest  
 
 ################################################################################
