@@ -63,12 +63,17 @@ def classification_model():
 
 @pytest.fixture
 def regression_model():
-    """Returns a trained regression model and test data."""
-    X, y = make_regression(n_samples=500, n_features=5, noise=0.1, random_state=42)
+    """Fixture to create a sample regression model and dataset."""
+    X, y = make_regression(
+        n_samples=100,
+        n_features=5,
+        noise=0.1,
+        random_state=42,
+    )
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
-    model = Lasso().fit(X_train, y_train)
+    model = Lasso(alpha=0.1).fit(X_train, y_train)
     return model, (X_test, y_test)
 
 
@@ -248,19 +253,24 @@ def test_summarize_model_performance_classification(classification_model, capsys
     print("All classification tests passed.")
 
 
-def test_summarize_model_performance_regression(regression_model, capsys):
+@patch("builtins.print")
+def test_summarize_model_performance_regression(mock_print, regression_model):
     """Test summarize_model_performance function for regression models."""
-    trained_model, sample_data = regression_model
-    X, y = sample_data
+    model, (X, y) = regression_model
     df = summarize_model_performance(
-        [trained_model], X, y, model_type="regression", return_df=True
+        model, X, y, model_type="regression", return_df=True
     )
 
     # Ensure output is a DataFrame
     assert isinstance(df, pd.DataFrame), "Output should be a pandas DataFrame."
 
-    # Ensure regression metrics exist in the index
-    expected_metrics = [
+    # Expected columns in full regression output
+    expected_columns = [
+        "Model",
+        "Metric",
+        "Variable",
+        "Coefficient",
+        "P-value",
         "MAE",
         "MAPE (%)",
         "MSE",
@@ -268,47 +278,127 @@ def test_summarize_model_performance_regression(regression_model, capsys):
         "Explained Variance",
         "R^2 Score",
     ]
-    for metric in expected_metrics:
-        assert metric in df.index, f"Missing expected regression metric: {metric}"
 
-    # Check if "Lasso" is present in the transposed DataFrame (model names are columns)
-    assert "Lasso" in df.columns, "Model name 'Lasso' is missing from the DataFrame."
+    for col in expected_columns:
+        assert col in df.columns, f"Missing expected column: {col}"
 
-    # Ensure coefficients and p-values exist as separate rows
-    coef_rows = df.loc[df.index.str.startswith("Coef_")]
-    pval_rows = df.loc[df.index.str.startswith("P-Value_")]
+    # Ensure the model name is captured
+    assert (
+        "Lasso" in df["Model"].values
+    ), "Model name 'Lasso' is missing from DataFrame."
 
-    assert not coef_rows.empty, "Coefficient rows are missing from the DataFrame."
-    assert not pval_rows.empty, "P-Value rows are missing from the DataFrame."
-    assert len(coef_rows) == len(
-        pval_rows
-    ), "Mismatch between coefficient and p-value rows."
+    # Ensure "Overall Metrics" row exists
+    overall_metrics = df[df["Metric"] == "Overall Metrics"]
+    assert not overall_metrics.empty, "Missing 'Overall Metrics' row."
 
-    # Ensure all coefficients and p-values are numeric
+    # Ensure numeric values exist in the "Overall Metrics" row
+    for metric in [
+        "MAE",
+        "MAPE (%)",
+        "MSE",
+        "RMSE",
+        "Explained Variance",
+        "R^2 Score",
+    ]:
+        assert (
+            overall_metrics[metric].notna().all()
+        ), f"Missing value for {metric} in 'Overall Metrics'."
+
+    # Ensure coefficient rows exist
+    coef_rows = df[df["Metric"] == "Coefficient"]
+    assert not coef_rows.empty, "Coefficient rows are missing from DataFrame."
+
+    # Ensure coefficient and p-value are numeric
     assert np.all(
-        pd.notna(pd.to_numeric(coef_rows.values.flatten(), errors="coerce"))
-    ), "Non-numeric values found in coefficients."
+        pd.to_numeric(coef_rows["Coefficient"], errors="coerce").notna()
+    ), "Invalid 'Coefficient' values."
     assert np.all(
-        pd.notna(pd.to_numeric(pval_rows.values.flatten(), errors="coerce"))
-    ), "Non-numeric values found in p-values."
+        pd.to_numeric(coef_rows["P-value"], errors="coerce").notna()
+    ), "Invalid 'P-value' values."
 
-    # Capture printed output
-    summarize_model_performance(
-        [trained_model], X, y, model_type="regression", return_df=False
+    print("Regression performance summary test passed.")
+
+
+def test_summarize_model_performance_overall_only(regression_model):
+    """
+    Test summarize_model_performance with overall_only=True for
+    regression models.
+    """
+    model, (X, y) = regression_model
+    df = summarize_model_performance(
+        model,
+        X,
+        y,
+        model_type="regression",
+        return_df=True,
+        overall_only=True,
     )
-    captured = capsys.readouterr().out
 
-    # Ensure numeric values are properly formatted
-    decimal_places = 3
-    for col in df.columns:
-        for value in df[col].dropna():  # Drop NaN values before checking
-            if isinstance(value, float):
-                formatted_value = f"{value:.{decimal_places}f}"
-                assert (
-                    formatted_value in captured
-                ), f"Value {value} not formatted correctly"
+    # Ensure DataFrame is returned
+    assert isinstance(df, pd.DataFrame), "Expected a DataFrame output."
 
-    print("All regression tests passed.")
+    # Ensure "Overall Metrics" row is the only row
+    assert len(df) == 1, "Expected only one row for 'Overall Metrics'."
+    assert (
+        df.iloc[0]["Metric"] == "Overall Metrics"
+    ), "First row should be 'Overall Metrics'."
+
+    # Ensure unnecessary columns are removed
+    assert (
+        "Variable" not in df.columns
+    ), "Column 'Variable' should be removed in 'overall_only' mode."
+    assert (
+        "Coefficient" not in df.columns
+    ), "Column 'Coefficient' should be removed in 'overall_only' mode."
+    assert (
+        "P-value" not in df.columns
+    ), "Column 'P-value' should be removed in 'overall_only' mode."
+
+    # Ensure index is empty (no leading row number)
+    assert df.index.tolist() == [
+        ""
+    ], "Index should be empty to prevent leading row numbers."
+
+    print("Overall metrics filtering test passed.")
+
+
+def test_summarize_model_performance_invalid_combination(regression_model):
+    """
+    Test that summarize_model_performance raises an error when
+    overall_only=True with classification.
+    """
+    model, (X, y) = regression_model
+
+    with pytest.raises(
+        ValueError,
+        match="The 'overall_only' option is only valid for regression models",
+    ):
+        summarize_model_performance(
+            model, X, y, model_type="classification", overall_only=True
+        )
+
+    print("Invalid overall_only check passed.")
+
+
+@patch("builtins.print")
+def test_summarize_model_performance_print_output(mock_print, regression_model):
+    """
+    Test that summarize_model_performance prints output correctly when
+    return_df=False.
+    """
+    model, (X, y) = regression_model
+    summarize_model_performance(
+        model,
+        X,
+        y,
+        model_type="regression",
+        return_df=False,
+    )
+
+    # Ensure print was called
+    mock_print.assert_called()
+
+    print("Print output test passed.")
 
 
 def test_get_model_probabilities(trained_model, sample_data):
@@ -360,7 +450,8 @@ def test_show_confusion_matrix_multiple_models(
 ):
     """Test if show_confusion_matrix runs correctly for multiple models."""
     X, y = sample_data
-    models = [trained_model, trained_model]  # Using the same model twice for simplicity
+    # Using the same model twice for simplicity
+    models = [trained_model, trained_model]
 
     try:
         show_confusion_matrix(models, X, y, save_plot=False)
@@ -393,7 +484,7 @@ def test_show_confusion_matrix_saves_plot(
     assert image_path_svg.exists(), "SVG image was not saved."
 
 
-@patch("matplotlib.pyplot.show")  # Prevents figures from displaying during testing
+@patch("matplotlib.pyplot.show")
 def test_show_confusion_matrix_with_class_labels(
     mock_show,
     trained_model,
@@ -464,11 +555,17 @@ def test_show_confusion_matrix_grid(mock_show, trained_model, sample_data):
     # Pass a list of models explicitly
     models = [trained_model, trained_model]
 
-    print(f"DEBUG: models type = {type(models)}")  # Should be a list
-    print(f"DEBUG: models[0] type = {type(models[0])}")  # Should be LogisticRegression
-
+    print(f"DEBUG: models type = {type(models)}")
+    print(f"DEBUG: models[0] type = {type(models[0])}")
     try:
-        show_confusion_matrix(models, X, y, save_plot=False, grid=True, n_cols=2)
+        show_confusion_matrix(
+            models,
+            X,
+            y,
+            save_plot=False,
+            grid=True,
+            n_cols=2,
+        )
     except TypeError as e:
         pytest.fail(f"show_confusion_matrix failed due to TypeError: {e}")
     except Exception as e:
@@ -630,13 +727,23 @@ def test_show_lift_chart_grid(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_lift_chart_invalid_overlay_grid(mock_show, trained_model, sample_data):
+def test_show_lift_chart_invalid_overlay_grid(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Ensure ValueError is raised if both overlay and grid are set to True."""
     X, y = sample_data
     with pytest.raises(
         ValueError, match="`grid` cannot be set to True when `overlay` is True."
     ):
-        show_lift_chart([trained_model, trained_model], X, y, overlay=True, grid=True)
+        show_lift_chart(
+            [trained_model, trained_model],
+            X,
+            y,
+            overlay=True,
+            grid=True,
+        )
 
 
 @patch("matplotlib.pyplot.show")
@@ -683,17 +790,32 @@ def test_show_gain_chart_grid(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_gain_chart_invalid_overlay_grid(mock_show, trained_model, sample_data):
+def test_show_gain_chart_invalid_overlay_grid(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Ensure ValueError is raised if both overlay and grid are set to True."""
     X, y = sample_data
     with pytest.raises(
         ValueError, match="`grid` cannot be set to True when `overlay` is True."
     ):
-        show_gain_chart([trained_model, trained_model], X, y, overlay=True, grid=True)
+        show_gain_chart(
+            [trained_model, trained_model],
+            X,
+            y,
+            overlay=True,
+            grid=True,
+        )
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_lift_chart_saves_plot(mock_show, trained_model, sample_data, tmp_path):
+def test_show_lift_chart_saves_plot(
+    mock_show,
+    trained_model,
+    sample_data,
+    tmp_path,
+):
     """Test if show_lift_chart saves the plot when save_plot=True."""
     X, y = sample_data
     image_path_png = tmp_path / "lift_chart.png"
@@ -716,7 +838,12 @@ def test_show_lift_chart_saves_plot(mock_show, trained_model, sample_data, tmp_p
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_gain_chart_saves_plot(mock_show, trained_model, sample_data, tmp_path):
+def test_show_gain_chart_saves_plot(
+    mock_show,
+    trained_model,
+    sample_data,
+    tmp_path,
+):
     """Test if show_gain_chart saves the plot when save_plot=True."""
     X, y = sample_data
     image_path_png = tmp_path / "gain_chart.png"

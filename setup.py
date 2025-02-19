@@ -22,7 +22,7 @@ setup(
     ],  # Classifiers for the package
     python_requires=">=3.7.4",  # Minimum version of Python required
     install_requires=[
-        "matplotlib>=3.5.3, <=3.9.2",
+        "matplotlib>=3.5.3, <=3.10.0",
         "numpy>=1.21.6, <=2.1.2",
         "pandas>=1.3.5, <=2.2.3",
         "scikit-learn>=1.0.2, <=1.5.2",
