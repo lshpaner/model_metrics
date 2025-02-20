@@ -1,3 +1,5 @@
+.. _getting_started:   
+
 .. Model Metrics documentation master file, created by
    sphinx-quickstart on Sun Feb 16 11:29:04 2025.
    You can adapt this file completely to your liking, but it should at least
@@ -22,24 +24,7 @@
    
    <div style="height: 100px;"></div>
 
-Table of Contents
-===================
+\
 
-.. toctree::
-   :maxdepth: 4
-   :caption: Getting Started
-
-   getting_started
-
-
-.. toctree::
-   :maxdepth: 4
-   :caption: About Model Metrics
-
-   acknowledgements
-   contributors
-   citations
-   changelog
-
-
-   
+Getting Started
+====================

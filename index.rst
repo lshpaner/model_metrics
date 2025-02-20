@@ -3,15 +3,59 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Model Metrics documentation
-===========================
+.. _target-link:
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+.. raw:: html
 
+   <div class="no-click">
+
+.. image:: ../assets/mm_logo.svg
+   :alt: Model Metrics Logo
+   :align: left
+   :width: 300px
+
+.. raw:: html
+
+   </div>
+
+.. raw:: html
+   
+   <div style="height: 100px;"></div>
+
+Table of Contents
+===================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 4
+   :caption: Getting Started
 
+   getting_started
+
+.. toctree::
+   :maxdepth: 4
+   :caption: Theoretical Overview
+
+   theoretical_overview
+
+.. toctree::
+   :maxdepth: 4
+   :caption: Data Management
+
+   data_management
+ 
+.. toctree::
+   :maxdepth: 4
+   :caption: Plotting Heuristics
+
+   eda_plots
+
+.. toctree::
+   :maxdepth: 4
+   :caption: About Model Metrics
+
+   acknowledgements
+   contributors
+   citations
+   changelog
+
+   
