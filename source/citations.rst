@@ -17,7 +17,21 @@
    
    <div style="height: 100px;"></div>
 
-\
 
-Citations
-===========
+Citing Model Metrics
+======================
+
+Shpaner, L. (2025). Model Metrics (0.0.1a). Zenodo. https://doi.org/10.5281/zenodo.14879819
+
+.. code:: text
+
+   @software{shpaner_2025_14879819,
+      author       = {Shpaner, Leonid},
+      title        = {Model Metrics},
+      month        = feb,
+      year         = 2025,
+      publisher    = {Zenodo},
+      version      = {0.0.1a},
+      doi          = {10.5281/zenodo.14879819},
+      url          = {https://doi.org/10.5281/zenodo.14879819}
+   }

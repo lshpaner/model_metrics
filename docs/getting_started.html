@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Getting Started &mdash; Model Metrics 0.0.0.a1 documentation</title>
+  <title>Welcome to the Model Metrics Python Library Documentation! &mdash; Model Metrics 0.0.0.a1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
@@ -51,13 +51,22 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Welcome to the Model Metrics Python Library Documentation!</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#project-links">Project Links</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#what-is-model-evaluation">What is Model Evaluation?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#purpose-of-model-metrics-library">Purpose of Model Metrics Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#description">Description</a></li>
+</ul>
+</li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">About Model Metrics</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="acknowledgements.html">Acknowledgements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributors.html">Contributors/Maintainers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="citations.html">Citations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citations.html">Citing Model Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 </ul>
 
@@ -75,7 +84,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Getting Started</li>
+      <li class="breadcrumb-item active">Welcome to the Model Metrics Python Library Documentation!</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -86,9 +95,95 @@
              
   <span class="target" id="getting-started"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" style="width: 300px;" />
 </a>
-</div><div style="height: 100px;"></div><p></p>
-<section id="id1">
-<h1>Getting Started<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
+</div><div style="height: 100px;"></div><section id="welcome-to-the-model-metrics-python-library-documentation">
+<h1>Welcome to the Model Metrics Python Library Documentation!<a class="headerlink" href="#welcome-to-the-model-metrics-python-library-documentation" title="Link to this heading"></a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This documentation is for <code class="docutils literal notranslate"><span class="pre">model_metrics</span></code> version <code class="docutils literal notranslate"><span class="pre">0.0.1a</span></code>.</p>
+</div>
+<p>Welcome to Model Metrics! Model Metrics is a versatile Python library designed
+to streamline the evaluation and interpretation of machine learning models. It
+provides a robust framework for generating predictions, computing model metrics,
+analyzing feature importance, and visualizing results. Whether you’re working
+with SHAP values, model coefficients, confusion matrices, ROC curves,
+precision-recall plots, and other key performance indicators.</p>
+<section id="project-links">
+<h2>Project Links<a class="headerlink" href="#project-links" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><a class="reference external" href="https://pypi.org/project/model_metrics/">PyPI Page</a></p></li>
+<li><p><a class="reference external" href="https://github.com/lshpaner/model_metrics">GitHub Repository</a></p></li>
+</ol>
+</section>
+<section id="what-is-model-evaluation">
+<h2>What is Model Evaluation?<a class="headerlink" href="#what-is-model-evaluation" title="Link to this heading"></a></h2>
+<p>Model evaluation is a fundamental aspect of the machine learning lifecycle.
+It involves assessing the performance of predictive models using various
+metrics to ensure accuracy, reliability, and fairness. Proper evaluation
+helps in understanding how well a model generalizes to unseen data, detects
+potential biases, and optimizes performance. This step is critical before
+deploying any model into production.</p>
+</section>
+<section id="purpose-of-model-metrics-library">
+<h2>Purpose of Model Metrics Library<a class="headerlink" href="#purpose-of-model-metrics-library" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">model_metrics</span></code> library is a robust framework designed to simplify and
+standardize the evaluation of machine learning models. It provides an extensive
+set of tools to assess model performance, compare different approaches, and
+validate results with statistical rigor. Key functionalities include:</p>
+<ul class="simple">
+<li><p><strong>Performance Metrics:</strong> A suite of functions to compute essential metrics such as accuracy, precision, recall, F1-score, ROC-AUC, log loss, and RMSE, among others.</p></li>
+<li><p><strong>Custom Evaluation Pipelines:</strong> Predefined and customizable pipelines for automating model evaluation workflows.</p></li>
+<li><p><strong>Visualization Tools:</strong> Functions to generate confusion matrices, ROC curves, precision-recall curves, calibration plots, and lift and gain charts.</p></li>
+<li><p><strong>Comparison and Benchmarking:</strong> Frameworks to compare multiple models based on key metrics and statistical significance tests.</p></li>
+</ul>
+</section>
+<section id="key-features">
+<h2>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Comprehensive Evaluation:</strong> Supports a wide range of model evaluation methods, ensuring a holistic assessment of predictive performance.</p></li>
+<li><p><strong>User-Friendly:</strong> Designed for ease of use, with intuitive functions and well-documented workflows.</p></li>
+<li><p><strong>Customizable and Extensible:</strong> Allows users to configure metric calculations and integrate with different machine learning frameworks.</p></li>
+<li><p><strong>Seamless Integration:</strong> Works with popular libraries such as <code class="docutils literal notranslate"><span class="pre">Scikit-Learn</span></code>, <code class="docutils literal notranslate"><span class="pre">XGBoost</span></code>, <code class="docutils literal notranslate"><span class="pre">LightGBM</span></code>, and <code class="docutils literal notranslate"><span class="pre">TensorFlow</span></code>, provided that model objects follow standard prediction interfaces like <code class="docutils literal notranslate"><span class="pre">predict()</span></code>, <code class="docutils literal notranslate"><span class="pre">predict_proba()</span></code>, or <code class="docutils literal notranslate"><span class="pre">decision_function()</span></code>. Special considerations may be required for deep learning models, time-series models, or custom transformers that return non-standard outputs.</p></li>
+<li><p><strong>Detailed Reports:</strong> Provides automated summaries and visual insights to aid in model selection and decision-making.</p></li>
+</ul>
+</section>
+<section id="prerequisites">
+<span id="id1"></span><h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<p>Before you install <code class="docutils literal notranslate"><span class="pre">model_metrics</span></code>, ensure your system meets the following requirements:</p>
+<ul class="simple">
+<li><p><strong>Python</strong>: version <code class="docutils literal notranslate"><span class="pre">3.7.4</span></code> or higher is required to run <code class="docutils literal notranslate"><span class="pre">model_metrics</span></code>.</p></li>
+</ul>
+<p>Additionally, <code class="docutils literal notranslate"><span class="pre">model_metrics</span></code> depends on the following packages, which will be automatically installed when you install <code class="docutils literal notranslate"><span class="pre">model_metrics</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">matplotlib</span></code>: version <code class="docutils literal notranslate"><span class="pre">3.5.3</span></code> or higher, but capped at <code class="docutils literal notranslate"><span class="pre">3.9.2</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">numpy</span></code>: version <code class="docutils literal notranslate"><span class="pre">1.21.6</span></code> or higher, but capped at <code class="docutils literal notranslate"><span class="pre">2.1.0</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">plotly</span></code>: version <code class="docutils literal notranslate"><span class="pre">5.18.0</span></code> or higher, but capped at <code class="docutils literal notranslate"><span class="pre">5.24.0</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scikit-learn</span></code>: version <code class="docutils literal notranslate"><span class="pre">1.0.2</span></code> or higher, but capped at <code class="docutils literal notranslate"><span class="pre">1.5.2</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seaborn`</span></code>: version <code class="docutils literal notranslate"><span class="pre">0.12.2</span></code> or higher, but capped below <code class="docutils literal notranslate"><span class="pre">0.13.2</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">shap</span></code>: version <code class="docutils literal notranslate"><span class="pre">0.41.0</span></code> or higher, but capped below <code class="docutils literal notranslate"><span class="pre">0.46.0</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tqdm`</span></code>: version <code class="docutils literal notranslate"><span class="pre">4.66.4</span></code> or higher, but capped below <code class="docutils literal notranslate"><span class="pre">4.67.1</span></code></p></li>
+</ul>
+</section>
+<section id="installation">
+<span id="id2"></span><h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<p>You can install <code class="docutils literal notranslate"><span class="pre">model_metrics</span></code> directly from PyPI:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>model_metrics
+</pre></div>
+</div>
+</section>
+<section id="description">
+<h2>Description<a class="headerlink" href="#description" title="Link to this heading"></a></h2>
+<p>This guide provides detailed instructions and examples for using the functions
+provided in the <code class="docutils literal notranslate"><span class="pre">model_metrics</span></code> library and how to use them effectively in your projects.</p>
+<p>For most of the ensuing examples, we will leverage the Census Income Data (1994) from
+the UCI Machine Learning Repository <a class="footnote-reference brackets" href="#id4" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>. This dataset provides a rich source of
+information for demonstrating the functionalities of the <code class="docutils literal notranslate"><span class="pre">model_metrics</span></code>.</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id4" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">1</a><span class="fn-bracket">]</span></span>
+<p>Kohavi, R. (1996). <em>Census Income</em>. UCI Machine Learning Repository. <a class="reference external" href="https://doi.org/10.24432/C5GP7S">https://doi.org/10.24432/C5GP7S</a>.</p>
+</aside>
+</aside>
+</section>
 </section>
 
 
