@@ -1,0 +1,274 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Model Performance Summary &mdash; Model Metrics 0.0.0.a1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=e83f046f" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=e83f046f" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.js?v=f9206548" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8f5df681"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=a0ccc04e"></script>
+      <script src="_static/custom.js?v=f9206548"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Acknowledgements" href="acknowledgements.html" />
+    <link rel="prev" title="Welcome to the Model Metrics Python Library Documentation!" href="getting_started.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Model Metrics
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Welcome to the Model Metrics Python Library Documentation!</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Performance Assessment</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Model Performance Summary</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#summarize_model_performance"><code class="docutils literal notranslate"><span class="pre">summarize_model_performance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementation-example">Implementation Example</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">About Model Metrics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="acknowledgements.html">Acknowledgements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributors.html">Contributors/Maintainers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citations.html">Citing Model Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Model Metrics</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Model Performance Summary</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <span class="target" id="performance-assessment"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" style="width: 300px;" />
+</a>
+</div><div style="height: 100px;"></div><section id="model-performance-summary">
+<h1>Model Performance Summary<a class="headerlink" href="#model-performance-summary" title="Link to this heading"></a></h1>
+<p><strong>Summarizes model performance metrics for classification and regression models.</strong></p>
+<dl class="py function">
+<dt class="sig sig-object py" id="summarize_model_performance">
+<span class="sig-name descname"><span class="pre">summarize_model_performance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'classification'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_titles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overall_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decimal_places</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#summarize_model_performance" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a>) – A trained model or a list of trained models.</p></li>
+<li><p><strong>X</strong> (<em>pd.DataFrame</em>) – Feature matrix used for evaluation.</p></li>
+<li><p><strong>y</strong> (<em>pd.Series</em><em> or </em><em>np.array</em>) – Target variable.</p></li>
+<li><p><strong>model_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Specifies whether the model is for classification or regression. Must be either <code class="docutils literal notranslate"><span class="pre">&quot;classification&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;regression&quot;</span></code>. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;classification&quot;</span></code>.</p></li>
+<li><p><strong>model_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>, </em><em>optional</em>) – Threshold values for classification models. If provided, this dictionary specifies thresholds per model. Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>model_titles</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>, </em><em>optional</em>) – Custom model names for display. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, names are inferred from the models. Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>custom_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – A fixed threshold for classification, overriding <code class="docutils literal notranslate"><span class="pre">model_threshold</span></code>. If set, the <cite>“Model Threshold”</cite> row is excluded. Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>score</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – A custom scoring metric for classification models. Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>return_df</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, returns a DataFrame instead of printing results. Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>overall_only</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, returns only the <cite>“Overall Metrics”</cite> row, removing coefficient-related columns for regression models. Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>decimal_places</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Number of decimal places to round numerical metrics. Defaults to <code class="docutils literal notranslate"><span class="pre">3</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A DataFrame containing model performance metrics if <code class="docutils literal notranslate"><span class="pre">return_df=True</span></code>. Otherwise, the metrics are printed in a formatted table.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame or None</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">model_type=&quot;classification&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">overall_only=True</span></code>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">model_type</span></code> is not <code class="docutils literal notranslate"><span class="pre">&quot;classification&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;regression&quot;</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>Classification Models:</strong></dt><dd><ul>
+<li><p>Computes precision, recall, specificity, AUC ROC, F1-score, Brier score, and other key metrics.</p></li>
+<li><p>Requires models supporting <code class="docutils literal notranslate"><span class="pre">predict_proba</span></code> or <code class="docutils literal notranslate"><span class="pre">decision_function</span></code>.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">custom_threshold</span></code> is set, it overrides <code class="docutils literal notranslate"><span class="pre">model_threshold</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Regression Models:</strong></dt><dd><ul>
+<li><p>Computes MAE, MAPE, MSE, RMSE, Explained Variance, and R² Score.</p></li>
+<li><p>Uses <code class="docutils literal notranslate"><span class="pre">statsmodels.OLS</span></code> to extract coefficients and p-values.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">overall_only=True</span></code>, the DataFrame retains only overall performance metrics.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">return_df=False</span></code>, the function prints results in a structured format with center-aligned headers.</p></li>
+</ul>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">summarize_model_performance</span></code> function provides a structured evaluation of classification and regression models, generating key performance metrics. For classification models, it computes precision, recall, specificity, F1-score, and AUC ROC. For regression models, it extracts coefficients and evaluates error metrics like MSE, RMSE, and R². The function allows specifying custom thresholds, metric rounding, and formatted display options.</p>
+<section id="implementation-example">
+<h2>Implementation Example<a class="headerlink" href="#implementation-example" title="Link to this heading"></a></h2>
+<p>Below is an example demonstrating how to evaluate multiple models using <code class="docutils literal notranslate"><span class="pre">summarize_model_performance</span></code>. The function calculates and presents metrics for classification and regression models.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_classification</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRegression</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.ensemble</span><span class="w"> </span><span class="kn">import</span> <span class="n">RandomForestClassifier</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">summarize_model_performance</span>
+
+<span class="c1"># Generate a synthetic dataset</span>
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">make_classification</span><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">n_features</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+
+<span class="c1"># Split into training and testing sets</span>
+<span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+
+<span class="c1"># Train models</span>
+<span class="n">model1</span> <span class="o">=</span> <span class="n">LogisticRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<span class="n">model2</span> <span class="o">=</span> <span class="n">RandomForestClassifier</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+
+<span class="n">model_titles</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Logistic Regression&quot;</span><span class="p">,</span> <span class="s2">&quot;Random Forest&quot;</span><span class="p">]</span>
+
+<span class="c1"># Evaluate model performance</span>
+<span class="n">model_performance</span> <span class="o">=</span> <span class="n">summarize_model_performance</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
+    <span class="n">model_titles</span><span class="o">=</span><span class="n">model_titles</span><span class="p">,</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
+    <span class="n">model_type</span><span class="o">=</span><span class="s2">&quot;classification&quot;</span><span class="p">,</span>
+    <span class="n">return_df</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
+<span class="n">model_performance</span>
+</pre></div>
+</div>
+<style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;}
+.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:12px;
+overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:12px;
+font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg .tg-7btt{border-color:inherit;font-weight:bold;text-align:center;vertical-align:top}
+.tg .tg-0pky{border-color:inherit;text-align:center;vertical-align:top}
+</style>
+<table class="tg"><thead>
+<tr>
+    <th class="tg-7btt">Model</th>
+    <th class="tg-7btt">Logistic Regression</th>
+    <th class="tg-7btt">Random Forest Classifier</th>
+</tr></thead>
+<tbody>
+<tr>
+    <td class="tg-0pky">Precision/PPV</td>
+    <td class="tg-0pky">0.867</td>
+    <td class="tg-0pky">0.914</td>
+</tr>
+<tr>
+    <td class="tg-0pky">Average Precision</td>
+    <td class="tg-0pky">0.937</td>
+    <td class="tg-0pky">0.967</td>
+</tr>
+<tr>
+    <td class="tg-0pky">Sensitivity/Recall</td>
+    <td class="tg-0pky">0.820</td>
+    <td class="tg-0pky">0.865</td>
+</tr>
+<tr>
+    <td class="tg-0pky">Specificity</td>
+    <td class="tg-0pky">0.843</td>
+    <td class="tg-0pky">0.899</td>
+</tr>
+<tr>
+    <td class="tg-0pky">F1-Score</td>
+    <td class="tg-0pky">0.843</td>
+    <td class="tg-0pky">0.889</td>
+</tr>
+<tr>
+    <td class="tg-0pky">AUC   ROC</td>
+    <td class="tg-0pky">0.913</td>
+    <td class="tg-0pky">0.950</td>
+</tr>
+</tbody>
+</table><div style="height: 40px;"></div></section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="getting_started.html" class="btn btn-neutral float-left" title="Welcome to the Model Metrics Python Library Documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="acknowledgements.html" class="btn btn-neutral float-right" title="Acknowledgements" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Leonid Shpaner.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -31,6 +31,12 @@ Table of Contents
 
    getting_started
 
+.. toctree::
+   :maxdepth: 4
+   :caption: Performance Assessment
+
+   performance_assessment
+
 
 .. toctree::
    :maxdepth: 4
