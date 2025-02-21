@@ -21,14 +21,14 @@
 
 
 Acknowledgements
-=================
+==================
 
 Gratitude goes to Dr. Ebrahim Tarshizi for his mentorship during the University 
 of San Diego M.S. Applied Data Science Program, as well as the Shiley-Marcos 
 School of Engineering for its support.
 
 Special thanks to Dr. Alex Bui for his invaluable guidance and support, and to 
-Panayiotis Petousis and Arthur Funell for their exceptional teamwork in maintaining 
+Panayiotis Petousis and Arthur Funnell for their exceptional teamwork in maintaining 
 a solid data science foundation at UCLA CTSI. Special thanks to those who have 
 contributed to the development of this library, provided guidance, and supported 
 a strong data science foundation. This work is built upon a collaborative effort 

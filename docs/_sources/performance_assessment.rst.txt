@@ -76,8 +76,8 @@ Model Performance Summary
 
 The ``summarize_model_performance`` function provides a structured evaluation of classification and regression models, generating key performance metrics. For classification models, it computes precision, recall, specificity, F1-score, and AUC ROC. For regression models, it extracts coefficients and evaluates error metrics like MSE, RMSE, and R². The function allows specifying custom thresholds, metric rounding, and formatted display options.
 
-Implementation Example
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Binary Classification Example
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Below is an example demonstrating how to evaluate multiple models using ``summarize_model_performance``. The function calculates and presents metrics for classification and regression models.
 
@@ -112,6 +112,8 @@ Below is an example demonstrating how to evaluate multiple models using ``summar
     )
 
     model_performance
+
+**Output**
 
 .. raw:: html
 
@@ -167,3 +169,36 @@ Below is an example demonstrating how to evaluate multiple models using ``summar
 .. raw:: html
 
     <div style="height: 40px;"></div>
+
+
+Regression Example
+^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    from sklearn.datasets import make_regression
+    from sklearn.linear_model import LinearRegression
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.model_selection import train_test_split
+    from model_metrics import summarize_model_performance
+
+    # Generate a synthetic regression dataset
+    X, y = make_regression(n_samples=1000, n_features=10, noise=0.1, random_state=42)
+
+    # Split into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train regression models
+    model1 = LinearRegression().fit(X_train, y_train)
+    model2 = RandomForestRegressor(n_estimators=100, random_state=42).fit(X_train, y_train)
+
+    # Evaluate regression model performance
+    regression_metrics = summarize_model_performance(
+        model=[model1, model2],
+        X=X_test,
+        y=y_test,
+        model_type="regression",
+        return_df=False
+    )
+
+    regression_metrics
