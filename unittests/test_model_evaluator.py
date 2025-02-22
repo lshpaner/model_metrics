@@ -27,6 +27,7 @@ from model_metrics.model_evaluator import (
     extract_model_name,
     show_lift_chart,
     show_gain_chart,
+    show_ks_curve,
 )
 
 matplotlib.use("Agg")  # Set non-interactive backend
@@ -1000,6 +1001,90 @@ def test_get_model_probabilities_invalid_model():
         ValueError, match="does not support probability-based prediction"
     ):
         get_model_probabilities(model, X, "Dummy Model")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_ks_curve_single_model(mock_show, trained_model, sample_data):
+    """Test show_ks_curve with a single model."""
+    X, y = sample_data  # Get sample test data
+    try:
+        show_ks_curve(trained_model, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_ks_curve failed with a single model: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_ks_curve_multiple_models(mock_show, trained_model, sample_data):
+    """Test show_ks_curve with multiple models."""
+    X, y = sample_data  # Get sample test data
+    models = [trained_model, trained_model]  # Using the same model twice for simplicity
+    try:
+        show_ks_curve(models, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_ks_curve failed with multiple models: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_ks_curve_saves_plot(mock_show, trained_model, sample_data, tmp_path):
+    """Test if show_ks_curve saves the plot correctly."""
+    X, y = sample_data  # Get sample test data
+    image_path_png = tmp_path / "ks_curve.png"
+    image_path_svg = tmp_path / "ks_curve.svg"
+
+    try:
+        show_ks_curve(
+            trained_model,
+            X,
+            y,
+            save_plot=True,
+            image_path_png=str(image_path_png),
+            image_path_svg=str(image_path_svg),
+        )
+    except Exception as e:
+        pytest.fail(f"show_ks_curve failed when saving plot: {e}")
+
+    assert image_path_png.exists(), "PNG image was not saved."
+    assert image_path_svg.exists(), "SVG image was not saved."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_ks_curve_empty_groups(mock_show, trained_model, sample_data):
+    """Test show_ks_curve when one group is empty."""
+    X, _ = sample_data  # Extract feature data
+    y = np.zeros(len(X))  # Set all labels to zero (no positives)
+
+    try:
+        show_ks_curve(trained_model, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_ks_curve failed when handling empty groups: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_ks_curve_custom_threshold(mock_show, trained_model, sample_data):
+    """Test show_ks_curve with a custom threshold."""
+    X, y = sample_data  # Get sample test data
+    try:
+        show_ks_curve(trained_model, X, y, model_threshold=0.7, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_ks_curve failed with custom threshold: {e}")
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_ks_curve_custom_labels(mock_show, trained_model, sample_data):
+    """Test show_ks_curve with custom axis labels and title."""
+    X, y = sample_data  # Get sample test data
+    try:
+        show_ks_curve(
+            trained_model,
+            X,
+            y,
+            xlabel="Custom X",
+            ylabel="Custom Y",
+            title="Custom Title",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_ks_curve failed with custom labels: {e}")
 
 
 def test_custom_help(capsys):
