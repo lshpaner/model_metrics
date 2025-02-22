@@ -1,16 +1,19 @@
 import pandas as pd
 import numpy as np
-import statsmodels.api as sm
 import math
+import itertools
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colorbar as mcolorbar
+import seaborn as sns
 import sys
 import os
 import re
 from tqdm import tqdm
 import textwrap
 
+import statsmodels.api as sm
+from scipy.stats import ks_2samp
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import (
     precision_score,
@@ -237,7 +240,8 @@ def summarize_model_performance(
     decimal_places=3,
 ):
     """
-    Summarizes model performance metrics, including overall metrics and model coefficients.
+    Summarizes model performance metrics, including overall metrics and model
+    coefficients.
 
     Parameters:
     -----------
@@ -263,7 +267,8 @@ def summarize_model_performance(
         Custom model names for display. If None, model names are inferred.
 
     custom_threshold : float or None, default=None
-        - If set, overrides `model_threshold` and applies a fixed threshold for classification.
+        - If set, overrides `model_threshold` and applies a fixed threshold for
+          classification.
         - When set, the `"Model Threshold"` row is excluded.
 
     score : str or None, default=None
@@ -283,7 +288,8 @@ def summarize_model_performance(
     Returns:
     --------
     pd.DataFrame or None
-        - If `return_df=True`, returns a DataFrame containing model performance metrics.
+        - If `return_df=True`, returns a DataFrame containing model performance
+          metrics.
         - Otherwise, prints the formatted table.
 
     Raises:
@@ -300,7 +306,7 @@ def summarize_model_performance(
         - Requires models supporting `predict_proba` or `decision_function`.
 
     - For regression models:
-        - Computes MAE, MAPE, MSE, RMSE, Explained Variance, and R² Score.
+        - Computes MAE, MAPE, MSE, RMSE, Expl. Var., and R² Score.
         - Uses `statsmodels.OLS` to extract coefficients and p-values.
 
     - If `overall_only=True`, the DataFrame will:
@@ -410,7 +416,7 @@ def summarize_model_performance(
                     ),
                     "MSE": round(mse, decimal_places),
                     "RMSE": round(rmse, decimal_places),
-                    "Explained Variance": (
+                    "Expl. Var.": (
                         round(exp_var, decimal_places)
                         if not np.isnan(exp_var)
                         else None
@@ -432,7 +438,7 @@ def summarize_model_performance(
                         "MAPE (%)": "",
                         "MSE": "",
                         "RMSE": "",
-                        "Explained Variance": "",
+                        "Expl. Var.": "",
                         "R^2 Score": "",
                     }
                 )
@@ -440,9 +446,8 @@ def summarize_model_performance(
     # Create a DataFrame
     metrics_df = pd.DataFrame(metrics_data)
 
-    if model_type == "classification":
-        metrics_df.set_index("Model", inplace=True)
-        metrics_df = metrics_df.T
+    # Fix empty values for better printing
+    metrics_df = metrics_df.fillna("").astype(str)
 
     if model_type == "regression":
         metrics_df = metrics_df
@@ -457,37 +462,37 @@ def summarize_model_performance(
         metrics_df.index = [""] * len(metrics_df)
 
     if return_df:
+        if model_type == "classification":
+            metrics_df = metrics_df.set_index("Model").T.reset_index()
+            metrics_df.columns.name = None  # Force reset of the column name header
+            metrics_df.rename(columns={"index": "Metrics"}, inplace=True)
+        metrics_df.index = [""] * len(metrics_df)  # Remove numerical index
         return metrics_df
 
-    # Adjust column widths for center alignment
-    col_widths = {col: max(len(col), 8) + 2 for col in metrics_df.columns}
-    row_name_width = max(len(str(row)) for row in metrics_df.index) + 2
+    # **Manual formatting**
+    col_widths = {
+        col: max(metrics_df[col].astype(str).map(len).max(), len(col)) + 2
+        for col in metrics_df.columns
+    }
+    separator = "-" * (sum(col_widths.values()) + len(col_widths) * 3)
 
-    # Center-align headers
-    headers = [
-        f"{'Metric'.center(row_name_width)}"
-        + "".join(f"{col.center(col_widths[col])}" for col in metrics_df.columns)
-    ]
-
-    # Separator line
-    separator = "-" * (row_name_width + sum(col_widths.values()))
-
-    # Print table header
+    # Print header
     print("Model Performance Metrics:")
-    print("\n".join(headers))
+    print(separator)
+    print(
+        " | ".join(f"{col.ljust(col_widths[col])}" for col in metrics_df.columns),
+    )
     print(separator)
 
-    # Center-align rows
-    for row_name, row_data in metrics_df.iterrows():
-        row = f"{str(row_name).center(row_name_width)}" + "".join(
-            (
-                f"{f'{value:.4f}'.center(col_widths[col])}"
-                if isinstance(value, float)
-                else f"{str(value).rjust(col_widths[col])}"  # Right-align numbers safely
-            )
-            for col, value in zip(metrics_df.columns, row_data)
+    # Print each row
+    for _, row_data in metrics_df.iterrows():
+        row = " | ".join(
+            f"{str(row_data[col]).ljust(col_widths[col])}" for col in metrics_df.columns
         )
         print(row)
+
+    print(separator)
+    return
 
 
 ################################################################################
@@ -1889,3 +1894,167 @@ def show_calibration_curve(
             image_path_svg,
         )
         plt.show()
+
+
+def show_ks_curve(
+    models,
+    X,
+    y,
+    xlabel="Cumulative Probability",
+    ylabel="Empirical CDF",
+    model_titles=None,
+    title=None,
+    decimal_places=2,
+    save_plot=False,
+    image_path_png=None,
+    image_path_svg=None,
+    text_wrap=None,
+    curve_kwgs=None,
+    linestyle_kwgs=None,
+    figsize=None,
+    label_fontsize=12,
+    tick_fontsize=10,
+    gridlines=True,
+    model_threshold=None,
+    custom_threshold=None,
+    score=None,
+):
+    """
+    Plot the Kolmogorov-Smirnov (KS) statistic curve using model predictions.
+
+    Parameters:
+    - models: List of trained models or a single model.
+    - X: Features for prediction.
+    - y: True binary labels.
+    - model_titles: List of model names for labeling.
+    - xlabel, ylabel: Axis labels.
+    - title: Title for the plot.
+    - save_plot: Whether to save the plot.
+    - image_path_png, image_path_svg: Paths to save PNG and SVG images.
+    - text_wrap: Max width for wrapping titles.
+    - curve_kwgs: Styling for the CDF curves.
+    - linestyle_kwgs: Styling for the KS statistic vertical line.
+    - figsize: Custom figure size.
+    - label_fontsize, tick_fontsize: Font sizes.
+    - gridlines: Whether to show grid lines.
+    - model_threshold, custom_threshold: Thresholds for probability-based
+      classification.
+    - score: Scoring metric used for selecting a threshold.
+    """
+
+    if not isinstance(models, list):
+        models = [models]
+
+    if model_titles is None:
+        model_titles = [f"Model {i+1}" for i in range(len(models))]
+
+    curve_kwgs = curve_kwgs or {}
+    linestyle_kwgs = linestyle_kwgs or {"linestyle": "--", "linewidth": 2}
+
+    colors = itertools.cycle(
+        [
+            "red",
+            "blue",
+            "green",
+            "purple",
+            "orange",
+            "brown",
+            "pink",
+            "gray",
+            "olive",
+            "cyan",
+        ]
+    )
+    plt.figure(figsize=figsize or (8, 6))
+
+    for model, name, color in zip(models, model_titles, colors):
+        print(f"Processing Model: {name}")  # Debugging statement
+
+        y_true, y_prob, _, _ = get_predictions(
+            model, X, y, model_threshold, custom_threshold, score
+        )
+
+        y_true = np.array(y_true).flatten()
+        y_prob = np.array(y_prob).flatten()
+
+        positives = y_prob[y_true == 1] if np.any(y_true == 1) else np.array([])
+        negatives = y_prob[y_true == 0] if np.any(y_true == 0) else np.array([])
+
+        if len(positives) == 0 or len(negatives) == 0:
+            print(
+                f"Warning: {name} has an empty group. "
+                f"KS test may not be meaningful."
+            )
+            continue  # Skip this model
+
+        pos_sorted = np.sort(positives)
+        neg_sorted = np.sort(negatives)
+
+        pos_cdf = np.linspace(0, 1, len(pos_sorted), endpoint=True)
+        neg_cdf = np.linspace(0, 1, len(neg_sorted), endpoint=True)
+
+        # Interpolate CDFs onto a common grid
+        common_grid = np.sort(np.concatenate([pos_sorted, neg_sorted]))
+        pos_interp_cdf = np.interp(
+            common_grid,
+            pos_sorted,
+            pos_cdf,
+            left=0,
+            right=1,
+        )
+        neg_interp_cdf = np.interp(
+            common_grid,
+            neg_sorted,
+            neg_cdf,
+            left=0,
+            right=1,
+        )
+
+        # Compute KS statistic and find the correct split point
+        ks_stat, ks_p_value = ks_2samp(positives, negatives)
+        ks_x = common_grid[np.argmax(np.abs(pos_interp_cdf - neg_interp_cdf))]
+
+        sns.lineplot(
+            x=pos_sorted, y=pos_cdf, label=f"{name} Positive CDF", **curve_kwgs
+        )
+        sns.lineplot(
+            x=neg_sorted, y=neg_cdf, label=f"{name} Negative CDF", **curve_kwgs
+        )
+        plt.axvline(
+            x=ks_x,
+            **{**linestyle_kwgs, "color": color},
+            label=f"{name} KS Stat: {ks_stat:.{decimal_places}f}",
+        )
+
+        if ks_p_value <= 0.01:
+            p_value_str = "p < 0.01"
+        else:
+            p_value_str = f"p-value = {ks_p_value:.{decimal_places}f}"
+        print(
+            f"{name}: Kolmogorov-Smirnov Statistic = "
+            f"{ks_stat:.{decimal_places}f}, "
+            f"{p_value_str}"
+        )
+
+        # Warn if sample size is too small
+        if len(positives) < 10 or len(negatives) < 10:
+            print(f"Warning: Small sample size for {name}. KS test may be unreliable.")
+
+    plt.xlabel(xlabel, fontsize=label_fontsize)
+    plt.ylabel(ylabel, fontsize=label_fontsize)
+    plt.tick_params(axis="both", labelsize=tick_fontsize)
+    plt.legend(fontsize=tick_fontsize)
+    plt.grid(visible=gridlines)
+
+    if title:
+        if text_wrap:
+            title = "\n".join(textwrap.wrap(title, width=text_wrap))
+        plt.title(title, fontsize=label_fontsize)
+
+    if save_plot:
+        if image_path_png:
+            plt.savefig(image_path_png, format="png")
+        if image_path_svg:
+            plt.savefig(image_path_svg, format="svg")
+
+    plt.show()
