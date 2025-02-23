@@ -1104,9 +1104,6 @@ def test_custom_help(capsys):
     assert original_help is not None
 
 
-########
-
-
 @patch("model_metrics.model_evaluator.get_predictions")
 @patch("matplotlib.pyplot.show")  # Prevents plots from displaying
 def test_plot_threshold_metrics_execution(
