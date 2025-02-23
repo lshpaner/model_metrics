@@ -794,7 +794,7 @@ def show_roc_curve(
     Plot ROC curves for models or pipelines with optional styling and grid layout.
 
     Parameters:
-    - model: list
+    - models: list
         List of models or pipelines to plot.
     - X: array-like
         Features for prediction.
@@ -1013,7 +1013,7 @@ def show_pr_curve(
     Plot PR curves for models or pipelines with optional styling and grid layout.
 
     Parameters:
-    - model: list
+    - models: list
         List of models or pipelines to plot.
     - X: array-like
         Features for prediction.
@@ -1896,6 +1896,11 @@ def show_calibration_curve(
         plt.show()
 
 
+################################################################################
+######################### Kolgomorov-Smirnoff Curve ############################
+################################################################################
+
+
 def show_ks_curve(
     models,
     X,
@@ -2058,6 +2063,11 @@ def show_ks_curve(
             plt.savefig(image_path_svg, format="svg")
 
     plt.show()
+
+
+################################################################################
+################## Classification Metrics Threshold Trade-Off ##################
+################################################################################
 
 
 def plot_threshold_metrics(
