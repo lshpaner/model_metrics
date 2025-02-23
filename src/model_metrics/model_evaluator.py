@@ -794,7 +794,7 @@ def show_roc_curve(
     Plot ROC curves for models or pipelines with optional styling and grid layout.
 
     Parameters:
-    - model: list
+    - models: list
         List of models or pipelines to plot.
     - X: array-like
         Features for prediction.
@@ -1013,7 +1013,7 @@ def show_pr_curve(
     Plot PR curves for models or pipelines with optional styling and grid layout.
 
     Parameters:
-    - model: list
+    - models: list
         List of models or pipelines to plot.
     - X: array-like
         Features for prediction.
@@ -1896,6 +1896,11 @@ def show_calibration_curve(
         plt.show()
 
 
+################################################################################
+######################### Kolgomorov-Smirnoff Curve ############################
+################################################################################
+
+
 def show_ks_curve(
     models,
     X,
@@ -2057,4 +2062,199 @@ def show_ks_curve(
         if image_path_svg:
             plt.savefig(image_path_svg, format="svg")
 
+    plt.show()
+
+
+################################################################################
+################## Classification Metrics Threshold Trade-Off ##################
+################################################################################
+
+
+def plot_threshold_metrics(
+    model,
+    X_test,
+    y_test,
+    title=None,
+    text_wrap=None,
+    figsize=(8, 6),
+    label_fontsize=12,
+    tick_fontsize=10,
+    gridlines=True,
+    curve_kwgs=None,
+    baseline_kwgs=None,
+    save_plot=False,
+    image_path_png=None,
+    image_path_svg=None,
+    lookup_metric=None,
+    lookup_value=None,
+    decimal_places=4,
+):
+    """
+    Plot Precision, Recall, F1 Score, and Specificity vs. Thresholds for a model.
+    Allows finding the best threshold for a given precision, recall, F1-score,
+    or specificity.
+
+    Parameters:
+    - model: A trained model that supports `predict_proba`.
+    - X_test: Feature matrix for testing.
+    - y_test: True binary labels.
+    - title: Custom title for the plot (default: None).
+    - text_wrap: Maximum width for title text before wrapping (default: None).
+    - figsize: Tuple specifying figure size (default: (10, 6)).
+    - label_fontsize: Font size for axis labels and title (default: 12).
+    - tick_fontsize: Font size for tick labels (default: 10).
+    - gridlines: Boolean flag to display gridlines (default: True).
+    - curve_kwgs: Dictionary of keyword arguments for curve styling
+      (default: None).
+    - baseline_kwgs: Dictionary of keyword arguments for baseline styling
+      (default: None).
+    - save_plot: Boolean flag to save the plot (default: False).
+    - image_path_png: Path to save the plot as a PNG image (default: None).
+    - image_path_svg: Path to save the plot as an SVG image (default: None).
+    - lookup_metric: Metric to find the best threshold for ("precision",
+      "recall", "f1", "specificity").
+    - lookup_value: Desired value for the chosen lookup metric (default: None).
+    - decimal_places: Number of decimal places for numerical outputs except axes
+      (default: 4).
+    """
+
+    curve_kwgs = curve_kwgs or {"linestyle": "-", "linewidth": 1}
+    baseline_kwgs = baseline_kwgs or {
+        "linestyle": ":",
+        "linewidth": 1.5,
+        "color": "black",
+        "alpha": 0.7,
+    }
+
+    # Use get_predictions instead of model.predict_proba
+    _, y_pred_probs, _, _ = get_predictions(
+        model,
+        X_test,
+        y_test,
+        None,
+        None,
+        None,
+    )
+
+    # Calculate Precision, Recall, and F1 Score for various thresholds
+    precision, recall, thresholds = precision_recall_curve(y_test, y_pred_probs)
+    f1_scores = (
+        2 * (precision * recall) / (precision + recall + 1e-9)
+    )  # Avoid division by zero
+
+    # Calculate Specificity for various thresholds
+    fpr, _, roc_thresholds = roc_curve(y_test, y_pred_probs)
+    specificity = 1 - fpr
+
+    # Find the best threshold for a given metric (if requested)
+    best_threshold = None
+    if lookup_metric and lookup_value is not None:
+        metric_dict = {
+            "precision": (precision[:-1], thresholds),
+            "recall": (recall[:-1], thresholds),
+            "f1": (f1_scores[:-1], thresholds),
+            "specificity": (specificity, roc_thresholds),
+        }
+
+        if lookup_metric in metric_dict:
+            metric_values, metric_thresholds = metric_dict[lookup_metric]
+
+            # Find the closest threshold to the requested metric value
+            closest_idx = (np.abs(metric_values - lookup_value)).argmin()
+            best_threshold = metric_thresholds[closest_idx]
+
+            # Print the result
+            print(
+                f"Best threshold for {lookup_metric} = "
+                f"{round(lookup_value, decimal_places)} is: "
+                f"{round(best_threshold, decimal_places)}"
+            )
+        else:
+            print(
+                f"Invalid lookup metric: {lookup_metric}. Choose from "
+                f"'precision', 'recall', 'f1', 'specificity'."
+            )
+
+    # Create the plot
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Plot Precision, Recall, F1 Score vs. Thresholds
+    ax.plot(
+        thresholds,
+        f1_scores[:-1],
+        label="F1 Score",
+        color="red",
+        **curve_kwgs,
+    )
+    ax.plot(
+        thresholds,
+        recall[:-1],
+        label="Recall",
+        color="green",
+        **curve_kwgs,
+    )
+    ax.plot(
+        thresholds,
+        precision[:-1],
+        label="Precision",
+        color="blue",
+        **curve_kwgs,
+    )
+
+    # Plot Specificity (adjust to match the corresponding thresholds)
+    ax.plot(
+        roc_thresholds,
+        specificity,
+        label="Specificity",
+        color="purple",
+        **curve_kwgs,
+    )
+
+    # Draw baseline lines at 0.5 for thresholds and metrics
+    ax.axvline(x=0.5, **baseline_kwgs, label="Threshold = 0.5")
+    ax.axhline(y=0.5, **baseline_kwgs, label="Metric = 0.5")
+
+    # Highlight the best threshold found
+    if best_threshold is not None:
+        ax.axvline(
+            x=best_threshold,
+            linestyle="--",
+            color="gray",
+            label=f"Best Threshold: {round(best_threshold, decimal_places)}",
+        )
+
+    # Apply labels, legend, and formatting
+    ax.set_xlabel("Thresholds", fontsize=label_fontsize)
+    ax.set_ylabel("Metrics", fontsize=label_fontsize)
+    ax.tick_params(axis="both", labelsize=tick_fontsize)
+    ax.grid(visible=gridlines)
+
+    # Apply title with text wrapping if provided
+    if title:
+        if text_wrap:
+            title = "\n".join(textwrap.wrap(title, width=text_wrap))
+        ax.set_title(title, fontsize=label_fontsize)
+    else:
+        ax.set_title(
+            "Precision, Recall, F1 Score, Specificity vs. Thresholds",
+            fontsize=label_fontsize,
+        )
+
+    # Move the legend below the plot
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.15 * (figsize[0] / 10)),  # Scales with width
+        ncol=int(figsize[0] // 2),  # Adjust columns dynamically
+        fontsize=label_fontsize,
+        columnspacing=1.5,
+        handletextpad=1.2,
+    )
+    # Save plot if required
+    if save_plot:
+        if image_path_png:
+            fig.savefig(image_path_png, format="png", bbox_inches="tight")
+        if image_path_svg:
+            fig.savefig(image_path_svg, format="svg", bbox_inches="tight")
+
+    # Display the plot
     plt.show()
