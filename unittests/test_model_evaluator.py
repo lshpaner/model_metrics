@@ -28,6 +28,7 @@ from model_metrics.model_evaluator import (
     show_lift_chart,
     show_gain_chart,
     show_ks_curve,
+    plot_threshold_metrics,
 )
 
 matplotlib.use("Agg")  # Set non-interactive backend
@@ -1099,3 +1100,81 @@ def test_custom_help(capsys):
     # Ensure built-in help still works
     original_help = builtins.help
     assert original_help is not None
+
+
+########
+
+
+def test_plot_threshold_metrics_execution(trained_model, sample_data):
+    """Test if plot_threshold_metrics runs without errors."""
+    X, y = sample_data
+    try:
+        plot_threshold_metrics(trained_model, X, y, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"plot_threshold_metrics raised an exception: {e}")
+
+
+def test_plot_threshold_metrics_lookup_metric(trained_model, sample_data):
+    """Test lookup metric functionality."""
+    X, y = sample_data
+    lookup_metric = "precision"
+    lookup_value = 0.7
+
+    try:
+        plot_threshold_metrics(
+            trained_model,
+            X,
+            y,
+            lookup_metric=lookup_metric,
+            lookup_value=lookup_value,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"plot_threshold_metrics failed with lookup metric: {e}")
+
+
+@pytest.mark.parametrize("decimal_places", [2, 4, 6])
+def test_plot_threshold_metrics_decimal_places(
+    trained_model, sample_data, decimal_places
+):
+    """Test if decimal_places parameter correctly formats outputs."""
+    X, y = sample_data
+    lookup_metric = "recall"
+    lookup_value = 0.5
+
+    try:
+        plot_threshold_metrics(
+            trained_model,
+            X,
+            y,
+            lookup_metric=lookup_metric,
+            lookup_value=lookup_value,
+            decimal_places=decimal_places,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(
+            f"plot_threshold_metrics failed for decimal_places={decimal_places}: {e}"
+        )
+
+
+def test_plot_threshold_metrics_save_plot(trained_model, sample_data, tmp_path):
+    """Test if plot_threshold_metrics saves the plot correctly."""
+    X, y = sample_data
+    image_path_png = tmp_path / "threshold_plot.png"
+    image_path_svg = tmp_path / "threshold_plot.svg"
+
+    try:
+        plot_threshold_metrics(
+            trained_model,
+            X,
+            y,
+            save_plot=True,
+            image_path_png=str(image_path_png),
+            image_path_svg=str(image_path_svg),
+        )
+    except Exception as e:
+        pytest.fail(f"plot_threshold_metrics failed when saving plots: {e}")
+
+    assert image_path_png.exists(), "PNG image was not saved."
+    assert image_path_svg.exists(), "SVG image was not saved."
