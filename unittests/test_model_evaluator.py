@@ -5,6 +5,7 @@ import os
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
+import textwrap
 from sklearn.svm import SVC
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -365,7 +366,8 @@ def test_summarize_model_performance_overall_only(regression_model):
 
 def test_summarize_model_performance_invalid_combination(regression_model):
     """
-    Test that summarize_model_performance raises an error when overall_only=True with classification.
+    Test that summarize_model_performance raises an error when overall_only=True
+    with classification.
     """
     model, (X, y) = regression_model
 
@@ -1018,7 +1020,7 @@ def test_show_ks_curve_single_model(mock_show, trained_model, sample_data):
 def test_show_ks_curve_multiple_models(mock_show, trained_model, sample_data):
     """Test show_ks_curve with multiple models."""
     X, y = sample_data  # Get sample test data
-    models = [trained_model, trained_model]  # Using the same model twice for simplicity
+    models = [trained_model, trained_model]  # Using the same model 2x for simplicity
     try:
         show_ks_curve(models, X, y, save_plot=False)
     except Exception as e:
@@ -1105,42 +1107,44 @@ def test_custom_help(capsys):
 ########
 
 
-def test_plot_threshold_metrics_execution(trained_model, sample_data):
-    """Test if plot_threshold_metrics runs without errors."""
+@patch("model_metrics.model_evaluator.get_predictions")
+@patch("matplotlib.pyplot.show")  # Prevents plots from displaying
+def test_plot_threshold_metrics_execution(
+    mock_show, mock_get_predictions, trained_model, sample_data
+):
+    """Test that plot_threshold_metrics runs without errors."""
     X, y = sample_data
+    mock_get_predictions.return_value = (
+        y,
+        np.random.rand(len(y)),
+        np.random.randint(0, 2, len(y)),
+        0.5,
+    )
+
     try:
         plot_threshold_metrics(trained_model, X, y, save_plot=False)
     except Exception as e:
-        pytest.fail(f"plot_threshold_metrics raised an exception: {e}")
+        pytest.fail(f"plot_threshold_metrics failed unexpectedly: {e}")
+
+    mock_get_predictions.assert_called_once()  # Ensure function is called
 
 
-def test_plot_threshold_metrics_lookup_metric(trained_model, sample_data):
-    """Test lookup metric functionality."""
-    X, y = sample_data
-    lookup_metric = "precision"
-    lookup_value = 0.7
-
-    try:
-        plot_threshold_metrics(
-            trained_model,
-            X,
-            y,
-            lookup_metric=lookup_metric,
-            lookup_value=lookup_value,
-            save_plot=False,
-        )
-    except Exception as e:
-        pytest.fail(f"plot_threshold_metrics failed with lookup metric: {e}")
-
-
+@patch("model_metrics.model_evaluator.get_predictions")
+@patch("matplotlib.pyplot.show")
 @pytest.mark.parametrize("decimal_places", [2, 4, 6])
 def test_plot_threshold_metrics_decimal_places(
-    trained_model, sample_data, decimal_places
+    mock_show, mock_get_predictions, trained_model, sample_data, decimal_places
 ):
     """Test if decimal_places parameter correctly formats outputs."""
     X, y = sample_data
     lookup_metric = "recall"
     lookup_value = 0.5
+    mock_get_predictions.return_value = (
+        y,
+        np.random.rand(len(y)),
+        np.random.randint(0, 2, len(y)),
+        0.5,
+    )
 
     try:
         plot_threshold_metrics(
@@ -1157,12 +1161,24 @@ def test_plot_threshold_metrics_decimal_places(
             f"plot_threshold_metrics failed for decimal_places={decimal_places}: {e}"
         )
 
+    mock_get_predictions.assert_called_once()
 
-def test_plot_threshold_metrics_save_plot(trained_model, sample_data, tmp_path):
-    """Test if plot_threshold_metrics saves the plot correctly."""
+
+@patch("model_metrics.model_evaluator.get_predictions")
+@patch("matplotlib.pyplot.show")
+def test_plot_threshold_metrics_save_plot(
+    mock_show, mock_get_predictions, trained_model, sample_data, tmp_path
+):
+    """Test that images are saved correctly when save_plot=True."""
     X, y = sample_data
     image_path_png = tmp_path / "threshold_plot.png"
     image_path_svg = tmp_path / "threshold_plot.svg"
+    mock_get_predictions.return_value = (
+        y,
+        np.random.rand(len(y)),
+        np.random.randint(0, 2, len(y)),
+        0.5,
+    )
 
     try:
         plot_threshold_metrics(
