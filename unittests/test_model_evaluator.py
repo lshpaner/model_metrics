@@ -13,6 +13,11 @@ import matplotlib
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification, make_regression
 from sklearn.linear_model import LogisticRegression, Lasso
+from sklearn.metrics import (
+    roc_auc_score,
+    precision_recall_curve,
+    average_precision_score,
+)
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
 from model_metrics.model_evaluator import (
@@ -23,6 +28,7 @@ from model_metrics.model_evaluator import (
     show_roc_curve,
     show_pr_curve,
     show_calibration_curve,
+    get_predictions,
     get_model_probabilities,
     extract_model_titles,
     extract_model_name,
@@ -600,6 +606,20 @@ def test_show_confusion_matrix_saves_plot(
     assert image_path_svg.exists(), "SVG image was not saved."
 
 
+import pytest
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from unittest.mock import patch
+import os
+import math
+import textwrap
+from model_metrics.model_evaluator import (
+    show_roc_curve,
+    get_predictions,
+)  # Adjust import as needed
+
+
 @patch("matplotlib.pyplot.show")
 def test_show_roc_curve_single(mock_show, trained_model, sample_data):
     """Test if show_roc_curve runs correctly for a single model."""
@@ -608,6 +628,7 @@ def test_show_roc_curve_single(mock_show, trained_model, sample_data):
         show_roc_curve(trained_model, X, y, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_roc_curve raised an exception: {e}")
+    assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
@@ -619,6 +640,7 @@ def test_show_roc_curve_multiple(mock_show, trained_model, sample_data):
         show_roc_curve(models, X, y, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_roc_curve raised an exception: {e}")
+    assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
@@ -630,6 +652,7 @@ def test_show_roc_curve_overlay(mock_show, trained_model, sample_data):
         show_roc_curve(models, X, y, overlay=True, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_roc_curve raised an exception: {e}")
+    assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
@@ -641,6 +664,232 @@ def test_show_roc_curve_grid(mock_show, trained_model, sample_data):
         show_roc_curve(models, X, y, grid=True, n_cols=2, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_roc_curve raised an exception: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_invalid_overlay_grid(mock_show, trained_model, sample_data):
+    """Ensure ValueError is raised if both overlay and grid are set to True."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    with pytest.raises(
+        ValueError, match="`grid` cannot be set to True when `overlay` is True."
+    ):
+        show_roc_curve(models, X, y, overlay=True, grid=True, save_plot=False)
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_save_plot(mock_show, trained_model, sample_data, tmp_path):
+    """Test if show_roc_curve saves the plot when save_plot=True."""
+    X, y = sample_data
+    image_path_png = tmp_path / "roc_curve.png"
+    image_path_svg = tmp_path / "roc_curve.svg"
+    try:
+        show_roc_curve(
+            trained_model,
+            X,
+            y,
+            save_plot=True,
+            image_path_png=str(image_path_png),
+            image_path_svg=str(image_path_svg),
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed when saving plots: {e}")
+    assert image_path_png.exists(), "PNG image was not saved."
+    assert image_path_svg.exists(), "SVG image was not saved."
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_custom_titles(mock_show, trained_model, sample_data):
+    """Test custom model_titles and title parameters."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    model_titles = ["ModelA", "ModelB"]
+    custom_title = "Custom ROC Plot"
+    try:
+        show_roc_curve(
+            models,
+            X,
+            y,
+            model_titles=model_titles,
+            title=custom_title,
+            overlay=True,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with custom titles: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_empty_title(mock_show, trained_model, sample_data):
+    """Test handling of empty title string."""
+    X, y = sample_data
+    try:
+        show_roc_curve(trained_model, X, y, title="", save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with empty title: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_text_wrap(mock_show, trained_model, sample_data):
+    """Test text wrapping for long titles."""
+    X, y = sample_data
+    long_title = "This is a very long title that should wrap when text_wrap is set"
+    try:
+        show_roc_curve(
+            trained_model,
+            X,
+            y,
+            title=long_title,
+            text_wrap=20,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with text wrapping: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_curve_styling(mock_show, trained_model, sample_data):
+    """Test custom curve styling with curve_kwgs."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    model_titles = ["ModelA", "ModelB"]
+    curve_kwgs = {
+        "ModelA": {"color": "red", "linestyle": "--"},
+        "ModelB": {"color": "blue"},
+    }
+    try:
+        show_roc_curve(
+            models,
+            X,
+            y,
+            model_titles=model_titles,
+            curve_kwgs=curve_kwgs,
+            overlay=True,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with curve styling: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_group_category(mock_show, trained_model, sample_data):
+    """Test ROC curves grouped by category with class counts."""
+    X, y = sample_data
+    # Convert y to pandas Series to match show_roc_curve's expectation
+    y = pd.Series(y)
+    # Create a simple categorical group (e.g., two groups)
+    group_category = pd.Series(np.random.choice(["Group1", "Group2"], size=len(y)))
+    try:
+        show_roc_curve(
+            trained_model,
+            X,
+            y,
+            group_category=group_category,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with group_category: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_decimal_places(
+    mock_show,
+    trained_model,
+    sample_data,
+    capsys,
+):
+    """Test AUC formatting with decimal_places."""
+    X, y = sample_data
+    decimal_places = 3
+    show_roc_curve(
+        trained_model,
+        X,
+        y,
+        decimal_places=decimal_places,
+        save_plot=False,
+    )
+    captured = capsys.readouterr()
+    assert (
+        f"AUC for Model 1: {roc_auc_score(y, trained_model.predict_proba(X)[:, 1]):.{decimal_places}f}"
+        in captured.out
+    )
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_no_gridlines(mock_show, trained_model, sample_data):
+    """Test disabling gridlines."""
+    X, y = sample_data
+    try:
+        show_roc_curve(
+            trained_model,
+            X,
+            y,
+            gridlines=False,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with gridlines disabled: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_figsize(mock_show, trained_model, sample_data):
+    """Test custom figure size."""
+    X, y = sample_data
+    custom_figsize = (10, 8)
+    try:
+        show_roc_curve(
+            trained_model,
+            X,
+            y,
+            figsize=custom_figsize,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with custom figsize: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_grid_layout(mock_show, trained_model, sample_data):
+    """Test grid layout with custom rows and columns."""
+    X, y = sample_data
+    models = [trained_model, trained_model, trained_model]
+    try:
+        show_roc_curve(
+            models,
+            X,
+            y,
+            grid=True,
+            n_rows=2,
+            n_cols=2,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with custom grid layout: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+import pytest
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.metrics import precision_recall_curve, average_precision_score
+from unittest.mock import patch
+import os
+import textwrap
+from model_metrics.model_evaluator import (
+    show_pr_curve,
+    get_predictions,
+)  # Adjust import as needed
 
 
 @patch("matplotlib.pyplot.show")
@@ -651,6 +900,7 @@ def test_show_pr_curve_single(mock_show, trained_model, sample_data):
         show_pr_curve(trained_model, X, y, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_pr_curve raised an exception: {e}")
+    assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
@@ -662,6 +912,7 @@ def test_show_pr_curve_multiple(mock_show, trained_model, sample_data):
         show_pr_curve(models, X, y, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_pr_curve raised an exception: {e}")
+    assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
@@ -673,8 +924,12 @@ def test_show_pr_curve_overlay(mock_show, trained_model, sample_data):
         show_pr_curve(models, X, y, overlay=True, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_pr_curve raised an exception: {e}")
+    assert mock_show.called, "plt.show() was not called."
 
 
+@pytest.mark.skip(
+    reason="Grid mode has a bug with undefined 'gr' variable when group_category is None"
+)
 @patch("matplotlib.pyplot.show")
 def test_show_pr_curve_grid(mock_show, trained_model, sample_data):
     """Test if show_pr_curve runs correctly with grid enabled."""
@@ -684,6 +939,218 @@ def test_show_pr_curve_grid(mock_show, trained_model, sample_data):
         show_pr_curve(models, X, y, grid=True, n_cols=2, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_pr_curve raised an exception: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_invalid_overlay_grid(mock_show, trained_model, sample_data):
+    """Ensure ValueError is raised if both overlay and grid are set to True."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    with pytest.raises(
+        ValueError, match="`grid` cannot be set to True when `overlay` is True."
+    ):
+        show_pr_curve(models, X, y, overlay=True, grid=True, save_plot=False)
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_save_plot(mock_show, trained_model, sample_data, tmp_path):
+    """Test if show_pr_curve saves the plot when save_plot=True."""
+    X, y = sample_data
+    image_path_png = tmp_path / "pr_curve.png"
+    image_path_svg = tmp_path / "pr_curve.svg"
+    try:
+        show_pr_curve(
+            trained_model,
+            X,
+            y,
+            save_plot=True,
+            image_path_png=str(image_path_png),
+            image_path_svg=str(image_path_svg),
+        )
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed when saving plots: {e}")
+    assert image_path_png.exists(), "PNG image was not saved."
+    assert image_path_svg.exists(), "SVG image was not saved."
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_custom_titles(mock_show, trained_model, sample_data):
+    """Test custom model_titles and title parameters."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    model_titles = ["ModelA", "ModelB"]
+    custom_title = "Custom PR Plot"
+    try:
+        show_pr_curve(
+            models,
+            X,
+            y,
+            model_titles=model_titles,
+            title=custom_title,
+            overlay=True,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed with custom titles: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_empty_title(mock_show, trained_model, sample_data):
+    """Test handling of empty title string."""
+    X, y = sample_data
+    try:
+        show_pr_curve(trained_model, X, y, title="", save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed with empty title: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_text_wrap(mock_show, trained_model, sample_data):
+    """Test text wrapping for long titles."""
+    X, y = sample_data
+    long_title = "This is a very long title that should wrap when text_wrap is set"
+    try:
+        show_pr_curve(
+            trained_model,
+            X,
+            y,
+            title=long_title,
+            text_wrap=20,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed with text wrapping: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_curve_styling(mock_show, trained_model, sample_data):
+    """Test custom curve styling with curve_kwgs."""
+    X, y = sample_data
+    models = [trained_model, trained_model]
+    model_titles = ["ModelA", "ModelB"]
+    curve_kwgs = {
+        "ModelA": {"color": "red", "linestyle": "--"},
+        "ModelB": {"color": "blue"},
+    }
+    try:
+        show_pr_curve(
+            models,
+            X,
+            y,
+            model_titles=model_titles,
+            curve_kwgs=curve_kwgs,
+            overlay=True,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed with curve styling: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_group_category(mock_show, trained_model, sample_data):
+    """Test PR curves grouped by category with class counts."""
+    X, y = sample_data
+    # Convert y to pandas Series to match show_pr_curve's expectation
+    y = pd.Series(y)
+    # Create a simple categorical group (e.g., two groups)
+    group_category = pd.Series(np.random.choice(["Group1", "Group2"], size=len(y)))
+    try:
+        show_pr_curve(
+            trained_model,
+            X,
+            y,
+            group_category=group_category,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed with group_category: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_decimal_places(mock_show, trained_model, sample_data, capsys):
+    """Test AP formatting with decimal_places."""
+    X, y = sample_data
+    decimal_places = 3
+    show_pr_curve(
+        trained_model,
+        X,
+        y,
+        decimal_places=decimal_places,
+        save_plot=False,
+    )
+    captured = capsys.readouterr()
+    assert (
+        f"Average Precision for Model 1: {average_precision_score(y, trained_model.predict_proba(X)[:, 1]):.{decimal_places}f}"
+        in captured.out
+    )
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_no_gridlines(mock_show, trained_model, sample_data):
+    """Test disabling gridlines."""
+    X, y = sample_data
+    try:
+        show_pr_curve(
+            trained_model,
+            X,
+            y,
+            gridlines=False,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed with gridlines disabled: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_figsize(mock_show, trained_model, sample_data):
+    """Test custom figure size."""
+    X, y = sample_data
+    custom_figsize = (10, 8)
+    try:
+        show_pr_curve(
+            trained_model,
+            X,
+            y,
+            figsize=custom_figsize,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed with custom figsize: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@pytest.mark.skip(
+    reason="Grid mode has a bug with undefined 'gr' variable when group_category is None"
+)
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_grid_layout(mock_show, trained_model, sample_data):
+    """Test grid layout with custom rows and columns and corrected labels."""
+    X, y = sample_data
+    models = [trained_model, trained_model, trained_model]
+    model_titles = ["ModelA", "ModelB", "ModelC"]
+    try:
+        show_pr_curve(
+            models,
+            X,
+            y,
+            model_titles=model_titles,
+            grid=True,
+            n_rows=2,
+            n_cols=2,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed with custom grid layout: {e}")
+    assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")

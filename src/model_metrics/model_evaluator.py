@@ -14,6 +14,7 @@ import textwrap
 
 import statsmodels.api as sm
 from scipy.stats import ks_2samp
+from sklearn.preprocessing import LabelEncoder
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import (
     precision_score,
@@ -789,57 +790,87 @@ def show_roc_curve(
     label_fontsize=12,  # Font size for title and axis labels
     tick_fontsize=10,  # Font size for tick labels and legend
     gridlines=True,
+    group_category=None,
 ):
     """
-    Plot ROC curves for models or pipelines with optional styling and grid layout.
+    Plot Receiver Operating Characteristic (ROC) curves for models or pipelines
+    with optional styling, grid layout, and grouping by categories, including
+    class counts in the legend.
 
     Parameters:
     - models: list
-        List of models or pipelines to plot.
+        List of models or pipelines to plot ROC curves for.
     - X: array-like
-        Features for prediction.
+        Feature data for prediction, typically a pandas DataFrame or NumPy array.
     - y: array-like
-        True labels.
+        True binary labels for evaluation,(e.g., a pandas Series or NumPy array).
     - model_titles: list of str, optional
-        Titles for individual models. Required when providing a nested
-        dictionary for `curve_kwgs`.
-    - overlay: bool
-        Whether to overlay multiple models on a single plot.
+        Titles for individual models. If not provided, defaults to "Model 1",
+        "Model 2", etc. Required when providing a nested dictionary for
+        `curve_kwgs`.
+    - xlabel: str, optional
+        Label for the x-axis (default: "False Positive Rate").
+    - ylabel: str, optional
+        Label for the y-axis (default: "True Positive Rate").
+    - decimal_places: int, optional
+        Number of decimal places to round AUC values in the legend and print
+        output (default: 2).
+    - overlay: bool, optional
+        Whether to overlay multiple models on a single plot (default: False).
     - title: str, optional
-        Custom title for the plot when `overlay=True`.
-    - save_plot: bool
-        Whether to save the plot.
+        Custom title for the plot when `overlay=True` or per-model title when
+        `grid=True`. If None, uses a default title; if "", disables the title.
+    - save_plot: bool, optional
+        Whether to save the plot to the specified paths (default: False).
     - image_path_png: str, optional
-        Path to save PNG images.
+        Path to save the plot as a PNG image.
     - image_path_svg: str, optional
-        Path to save SVG images.
+        Path to save the plot as an SVG image.
     - text_wrap: int, optional
-        Max width for wrapping titles.
+        Maximum width for wrapping titles if they are too long (default: None).
     - curve_kwgs: list or dict, optional
         Styling for individual model curves. If `model_titles` is specified as a
-        list of titles, `curve_kwgs` must be a nested dictionary with model
-        titles as keys and their respective style dictionaries as values.
-        Otherwise, `curve_kwgs` must be a list of style dictionaries
-        corresponding to the models.
+        list, `curve_kwgs` must be a nested dictionary with model titles as keys
+        and their respective style dictionaries (e.g., {'color': 'red',
+        'linestyle': '--'}) as values. Otherwise, `curve_kwgs` must be a list of
+        style dictionaries corresponding to the models.
     - linestyle_kwgs: dict, optional
-        Styling for the random guess diagonal line.
+        Styling for the random guess diagonal line (default: {'color': 'gray',
+        'linestyle': '--', 'linewidth': 2}).
     - grid: bool, optional
-        Whether to organize plots in a grid layout (default: False).
+        Whether to organize plots in a grid layout (default: False). Cannot be
+        True if `overlay=True`.
     - n_rows: int, optional
-        Number of rows in the grid layout. If not specified, it is automatically
-        calculated based on the number of models and `n_cols`.
+        Number of rows in the grid layout. If not specified, calculated
+        automatically based on the number of models and `n_cols`.
     - n_cols: int, optional
         Number of columns in the grid layout (default: 2).
     - figsize: tuple, optional
-        Custom figure size (width, height) for the plot(s).
+        Custom figure size (width, height) for the plot(s) (default: None, uses
+        (8, 6) for overlay or calculated size for grid).
     - label_fontsize: int, optional
-        Font size for title and axis labels.
+        Font size for titles and axis labels (default: 12).
     - tick_fontsize: int, optional
-        Font size for tick labels and legend.
+        Font size for tick labels and legend (default: 10).
+    - gridlines: bool, optional
+        Whether to display grid lines on the plot (default: True).
+    - group_category: array-like, optional
+        Categorical data (e.g., pandas Series or NumPy array) to group ROC
+        curves by unique values. If provided, plots separate ROC curves for each
+        group with AUC and class counts (Total, Pos, Neg) in the legend.
 
     Raises:
     - ValueError: If `grid=True` and `overlay=True` are both set.
+
+    Notes:
+    - When `group_category` is provided, the legend includes AUC, total count,
+      and positive/negative class counts for each group (e.g., "AUC = 0.XX,
+      Count: Total: X, Pos: Y, Neg: Z").
+    - The random guess line (diagonal line at y=x) is plotted for reference.
+    - Titles can be customized, disabled with `title=""`, or default to
+      "ROC Curve: Model Name" or "ROC Curves: Overlay" if not specified.
     """
+
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
 
@@ -880,11 +911,28 @@ def show_roc_curve(
             model, X, y, None, None, None
         )
 
-        fpr, tpr, _ = roc_curve(y_true, y_prob)
-        roc_auc = roc_auc_score(y_true, y_prob)
+        if group_category is not None:
+            fpr = {}
+            tpr = {}
+            auc_str = {}
+            counts = {}
+            for gr in group_category.unique():
+                idx = group_category.values == gr
+                counts[gr] = [
+                    idx.sum(),
+                    y_true.values[idx].sum(),
+                    (1 - y_true.values[idx]).sum(),
+                ]
+                fpr[gr], tpr[gr], _ = roc_curve(y_true[idx], y_prob[idx])
+                roc_auc = roc_auc_score(y_true[idx], y_prob[idx])
+                # Format AUC with decimal_places for print and legend
+                auc_str[gr] = f"{roc_auc:.{decimal_places}f}"
 
-        # Format AUC with decimal_places for print and legend
-        auc_str = f"{roc_auc:.{decimal_places}f}"
+        else:
+            fpr, tpr, _ = roc_curve(y_true, y_prob)
+            roc_auc = roc_auc_score(y_true, y_prob)
+            # Format AUC with decimal_places for print and legend
+            auc_str = f"{roc_auc:.{decimal_places}f}"
 
         print(f"AUC for {name}: {roc_auc:.{decimal_places}f}")
 
@@ -897,7 +945,19 @@ def show_roc_curve(
             )
         elif grid:
             ax = axes[idx]
-            ax.plot(fpr, tpr, label=f"ROC Curve (AUC = {auc_str})", **curve_style)
+            if group_category is not None:
+                for gr in tpr:
+                    ax.plot(
+                        fpr[gr],
+                        tpr[gr],
+                        label=f"AUC for {gr} = {auc_str[gr]:{decimal_places}}, "
+                        f"Count = {counts[gr][0]:,}, "
+                        f"Pos = {counts[gr][1]:,}, "
+                        f"Neg = {counts[gr][2]:,}",
+                        **curve_style,
+                    )
+            else:
+                ax.plot(fpr, tpr, label=f"AUC = {auc_str})", **curve_style)
             ax.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
@@ -916,11 +976,24 @@ def show_roc_curve(
 
             if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
-            ax.legend(loc="lower right", fontsize=tick_fontsize)
+            ax.legend(loc="best", fontsize=tick_fontsize)
             ax.grid(visible=gridlines)
         else:
-            plt.figure(figsize=figsize or (8, 6))
-            plt.plot(fpr, tpr, label=f"ROC Curve (AUC = {auc_str})", **curve_style)
+            plt.figure(figsize=figsize)
+            if group_category is not None:
+                for gr in group_category.unique():
+                    plt.plot(
+                        fpr[gr],
+                        tpr[gr],
+                        label=f"AUC for {gr} = {auc_str[gr]:{decimal_places}}, "
+                        f"Count = {counts[gr][0]:,}, "
+                        f"Pos = {counts[gr][1]:,}, "
+                        f"Neg = {counts[gr][2]:,}",
+                        **curve_style,
+                    )
+
+            else:
+                plt.plot(fpr, tpr, label=f"AUC = {auc_str})", **curve_style)
             plt.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
@@ -941,7 +1014,7 @@ def show_roc_curve(
                 plt.title(plot_title, fontsize=label_fontsize)
 
             plt.title(plot_title, fontsize=label_fontsize)
-            plt.legend(loc="lower right", fontsize=tick_fontsize)
+            plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
                 f"{name}_ROC",
@@ -971,7 +1044,7 @@ def show_roc_curve(
         if overlay_title:  # Only set title if not explicitly disabled
             plt.title(overlay_title, fontsize=label_fontsize)
 
-        plt.legend(loc="lower right", fontsize=tick_fontsize)
+        plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid()
         save_plot_images(
             "Overlay_ROC",
@@ -1004,57 +1077,97 @@ def show_pr_curve(
     image_path_svg=None,
     text_wrap=None,
     curve_kwgs=None,
-    grid=False,  # Grid layout option
+    grid=False,
     n_rows=None,
-    n_cols=2,  # Number of columns for the grid
-    figsize=None,  # User-defined figure size
-    label_fontsize=12,  # Font size for title and axis labels
-    tick_fontsize=10,  # Font size for tick labels and legend
+    n_cols=2,
+    figsize=None,
+    label_fontsize=12,
+    tick_fontsize=10,
     gridlines=True,
+    group_category=None,
 ):
     """
-    Plot PR curves for models or pipelines with optional styling and grid layout.
+    Plot Precision-Recall (PR) curves for models or pipelines with optional
+    styling, grid layout, and grouping by categories, including class counts in
+    the legend.
 
     Parameters:
     - models: list
-        List of models or pipelines to plot.
+        List of models or pipelines to plot PR curves for.
     - X: array-like
-        Features for prediction.
+        Feature data for prediction, typically a pandas DataFrame or NumPy array.
     - y: array-like
-        True labels.
+        True binary labels for evaluation (e.g., a pandas Series or NumPy array).
+    - group_category: array-like, optional
+        Categorical data (e.g., pandas Series or NumPy array) to group PR curves
+        by unique values. If provided, plots separate PR curves for each group
+        with Average Precision (AP) and class counts (Total, Pos, Neg) in the
+        legend.
     - model_titles: list of str, optional
-        Titles for individual models.
-    - overlay: bool
-        Whether to overlay multiple models on a single plot.
+        Titles for individual models. If not provided, defaults to "Model 1",
+        "Model 2", etc. Required when providing a nested dictionary for
+        `curve_styles`.
+    - xlabel: str, optional
+        Label for the x-axis (default: "Recall").
+    - ylabel: str, optional
+        Label for the y-axis (default: "Precision").
+    - decimal_places: int, optional
+        Number of decimal places to round Average Precision (AP) values in the
+        legend and print output (default: 3).
+    - overlay: bool, optional
+        Whether to overlay multiple models on a single plot (default: False).
     - title: str, optional
-        Custom title for the plot.
-    - save_plot: bool
-        Whether to save the plot.
+        Custom title for the plot when `overlay=True` or per-model title when
+        `grid=True`. If None, uses a default title; if "", disables the title.
+    - save_plot: bool, optional
+        Whether to save the plot to the specified paths (default: False).
     - image_path_png: str, optional
-        Path to save PNG images.
+        Path to save the plot as a PNG image.
     - image_path_svg: str, optional
-        Path to save SVG images.
+        Path to save the plot as an SVG image.
     - text_wrap: int, optional
-        Max width for wrapping titles.
-    - curve_kwgs: list or dict, optional
-        Styling for individual model curves.
+        Maximum width for wrapping titles if they are too long (default: None).
+    - curve_styles: list or dict, optional
+        Styling for individual model curves. If `model_titles` is specified as a
+        list, `curve_styles` must be a nested dictionary with model titles as
+        keys and their respective style dictionaries (e.g., {'color': 'red',
+        'linestyle': '--'}) as values. Otherwise, `curve_styles` must be a list
+        of style dictionaries corresponding to the models.
+    - linestyle_kwgs: dict, optional
+        Styling for the random classifier baseline line (default: {'color':
+        'gray', 'linestyle': '--', 'linewidth': 2}).
     - grid: bool, optional
-        Whether to organize plots in a grid layout (default: False).
+        Whether to organize plots in a grid layout (default: False). Cannot be
+        True if `overlay=True`.
     - n_rows: int, optional
-        Number of rows in the grid layout. If not specified, it is automatically
-        calculated based on the number of models and `n_cols`.
+        Number of rows in the grid layout. If not specified, calculated
+        automatically based on the number of models and `n_cols`.
     - n_cols: int, optional
         Number of columns in the grid layout (default: 2).
     - figsize: tuple, optional
-        Custom figure size (width, height) for the plot(s).
+        Custom figure size (width, height) for the plot(s) (default: None, uses
+        (8, 6) for overlay or calculated size for grid).
     - label_fontsize: int, optional
-        Font size for title and axis labels.
+        Font size for titles and axis labels (default: 12).
     - tick_fontsize: int, optional
-        Font size for tick labels and legend.
+        Font size for tick labels and legend (default: 10).
+    - gridlines: bool, optional
+        Whether to display grid lines on the plot (default: True).
 
     Raises:
     - ValueError: If `grid=True` and `overlay=True` are both set.
+
+    Notes:
+    - When `group_category` is provided, the legend includes Average Precision
+      (AP), total count, and positive/negative class counts for each group
+      (e.g., "Average Precision for Male = 0.___, Count: Total: X, Pos: Y,
+      Neg: Z").
+    - The random classifier baseline (precision = fraction of positive samples)
+      is plotted for reference.
+    - Titles can be customized, disabled with `title=""`, or default to "PR
+      Curve: Model Name" or "PR Curves: Overlay" if not specified.
     """
+
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
 
@@ -1089,8 +1202,30 @@ def show_pr_curve(
             model, X, y, None, None, None
         )
 
-        precision, recall, _ = precision_recall_curve(y_true, y_prob)
-        avg_precision = average_precision_score(y_true, y_prob)
+        if group_category is not None:
+            precision = {}
+            recall = {}
+            ap_str = {}  # Use ap_str for Average Precision
+            counts = {}
+            for gr in group_category.unique():
+                idx = group_category.values == gr
+                counts[gr] = [
+                    idx.sum(),  # Total count for this group
+                    y_true.values[idx].sum(),  # Positive class count (y_true = 1)
+                    (1 - y_true.values[idx]).sum(),  # Negative class count (y_true = 0)
+                ]
+                precision[gr], recall[gr], _ = precision_recall_curve(
+                    y_true[idx], y_prob[idx]
+                )
+                avg_precision = average_precision_score(y_true[idx], y_prob[idx])
+                # Format Average Precision with decimal_places for print and legend
+                ap_str[gr] = f"{avg_precision:.{decimal_places}f}"
+
+        else:
+            precision, recall, _ = precision_recall_curve(y_true, y_prob)
+            avg_precision = average_precision_score(y_true, y_prob)
+            # Format Average Precision with decimal_places for print and legend
+            ap_str = f"{avg_precision:.{decimal_places}f}"
 
         print(f"Average Precision for {name}: {avg_precision:.{decimal_places}f}")
 
@@ -1103,10 +1238,30 @@ def show_pr_curve(
             )
         elif grid:
             ax = axes[idx]
-            ax.plot(recall, precision, label=f"PR Curve", **curve_style)
+            if group_category is not None:
+                for gr in group_category.unique():
+                    ax.plot(
+                        recall[gr],
+                        precision[gr],
+                        label=f"AP for {gr} = {ap_str[gr]}, "
+                        f"Count: {counts[gr][0]:,}, "
+                        f"Pos: {counts[gr][1]:,}, Neg: {counts[gr][2]:,}",
+                        **curve_style,
+                    )
+            else:
+                ax.plot(
+                    recall,
+                    precision,
+                    label=f"AP for {gr} = {ap_str[gr]}, "
+                    f"Count: {counts[gr][0]:,}, "
+                    f"Pos: {counts[gr][1]:,}, Neg: {counts[gr][2]:,}",
+                    **curve_style,
+                )
+
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
+
             if title is None:
                 grid_title = f"PR Curve: {name}"  # Default title
             elif title == "":
@@ -1122,14 +1277,35 @@ def show_pr_curve(
             if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
 
-            ax.legend(loc="lower left", fontsize=tick_fontsize)
+            ax.legend(loc="best", fontsize=tick_fontsize)
             ax.grid(visible=gridlines)
+
         else:
             plt.figure(figsize=figsize or (8, 6))
-            plt.plot(recall, precision, label=f"PR Curve", **curve_style)
+            if group_category is not None:
+                for gr in group_category.unique():
+                    plt.plot(
+                        recall[gr],
+                        precision[gr],
+                        label=f"AP for {gr} = {ap_str[gr]}, "
+                        f"Count: {counts[gr][0]:,}, "
+                        f"Pos: {counts[gr][1]:,}, Neg: {counts[gr][2]:,}",
+                        **curve_style,
+                    )
+            else:
+                plt.plot(
+                    recall,
+                    precision,
+                    label=f"Average Precision = {ap_str}, "
+                    f"Count: {len(y)}, "
+                    f"Pos: {y.sum()}, Neg: {(1 - y).sum()}",
+                    **curve_style,
+                )
+
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
             plt.tick_params(axis="both", labelsize=tick_fontsize)
+
             if title is None:
                 plot_title = f"PR Curve: {name}"  # Default title
             elif title == "":
@@ -1145,7 +1321,7 @@ def show_pr_curve(
             if plot_title:  # Only set title if not explicitly disabled
                 plt.title(plot_title, fontsize=label_fontsize)
 
-            plt.legend(loc="lower left", fontsize=tick_fontsize)
+            plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
                 f"{name}_PR",
@@ -1174,7 +1350,7 @@ def show_pr_curve(
         if overlay_title:  # Only set title if not explicitly disabled
             plt.title(overlay_title, fontsize=label_fontsize)
 
-        plt.legend(loc="lower left", fontsize=tick_fontsize)
+        plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid()
         save_plot_images(
             "Overlay_PR",
@@ -1400,7 +1576,7 @@ def roc_feature_plot(
 
     if final_title is not None:  # Only set title if it's not None
         plt.title(final_title, fontsize=label_fontsize)
-    plt.legend(loc="lower right", fontsize=tick_fontsize)
+    plt.legend(loc="best", fontsize=tick_fontsize)
     plt.grid(visible=gridlines)
 
     if save_plot:
@@ -1781,7 +1957,7 @@ def show_lift_chart(
             if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
 
-            ax.legend(loc="upper right", fontsize=tick_fontsize)
+            ax.legend(loc="best", fontsize=tick_fontsize)
             ax.grid(visible=gridlines)
         else:
             plt.figure(figsize=figsize or (8, 6))
@@ -1811,7 +1987,7 @@ def show_lift_chart(
                 plt.title(plot_title, fontsize=label_fontsize)
 
             plt.title(plot_title, fontsize=label_fontsize)
-            plt.legend(loc="upper right", fontsize=tick_fontsize)
+            plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
                 f"{name}_Lift",
@@ -1841,7 +2017,7 @@ def show_lift_chart(
         if overlay_title:  # Only set title if not explicitly disabled
             plt.title(overlay_title, fontsize=label_fontsize)
 
-        plt.legend(loc="upper right", fontsize=tick_fontsize)
+        plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
             "Overlay_Lift",
@@ -1996,7 +2172,7 @@ def show_gain_chart(
             if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
 
-            ax.legend(loc="lower right", fontsize=tick_fontsize)
+            ax.legend(loc="best", fontsize=tick_fontsize)
             ax.grid(visible=gridlines)
         else:
             plt.figure(figsize=figsize or (8, 6))
@@ -2026,7 +2202,7 @@ def show_gain_chart(
                 plt.title(plot_title, fontsize=label_fontsize)
 
             plt.title(plot_title, fontsize=label_fontsize)
-            plt.legend(loc="lower right", fontsize=tick_fontsize)
+            plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
                 f"{name}_Gain",
@@ -2056,7 +2232,7 @@ def show_gain_chart(
         if overlay_title:  # Only set title if not explicitly disabled
             plt.title(overlay_title, fontsize=label_fontsize)
 
-        plt.legend(loc="lower right", fontsize=tick_fontsize)
+        plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
             "Overlay_Gain",
@@ -2241,7 +2417,7 @@ def show_calibration_curve(
             if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
 
-            ax.legend(loc="upper left", fontsize=tick_fontsize)
+            ax.legend(loc="best", fontsize=tick_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
             ax.grid(visible=gridlines)
         else:
@@ -2280,7 +2456,7 @@ def show_calibration_curve(
             if plot_title:  # Only set title if not explicitly disabled
                 plt.title(plot_title, fontsize=label_fontsize)
 
-            plt.legend(loc="upper left", fontsize=tick_fontsize)
+            plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
                 f"{name}_Calibration",
@@ -2317,7 +2493,7 @@ def show_calibration_curve(
         if overlay_title:  # Only set title if not explicitly disabled
             plt.title(overlay_title, fontsize=label_fontsize)
 
-        plt.legend(loc="upper left", fontsize=tick_fontsize)
+        plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
             "Overlay_Calibration",
