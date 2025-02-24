@@ -1436,10 +1436,11 @@ def pr_feature_plot(
     n_interpolate_points=100,  # Number of points for interpolation if smoothing
 ):
     """
-    Plot Precision-Recall (PR) curves for individual features using model predictions, with
-    options for smoothing jagged curves, using model_titles only in the plot title,
-    specifying decimal places for Average Precision (AP), and allowing title to be None
-    when title = "" or when model_titles is not specified and no custom title is provided.
+    Plot Precision-Recall (PR) curves for individual features using model
+    predictions, with options for smoothing jagged curves, using model_titles
+    only in the plot title, specifying decimal places for Average Precision
+    (AP), and allowing title to be None when title = "" or when model_titles is
+    not specified and no custom title is provided.
 
     Parameters:
     - models: List of trained models or a single model.
@@ -1447,20 +1448,25 @@ def pr_feature_plot(
     - y: True binary labels.
     - feature_names: List of feature names to plot PR curves for.
     - xlabel, ylabel: Axis labels.
-    - title: Title for the plot (can be customized, default, empty string, or None).
+    - title: Title for the plot (can be customized, default, empty string,
+      or None).
     - save_plot: Whether to save the plot.
     - image_path_png, image_path_svg: Paths to save PNG and SVG images.
     - text_wrap: Max width for wrapping titles.
     - curve_kwgs: Dictionary with feature names as keys and styling dictionaries
       (e.g., {'color': 'red', 'linestyle': '--'}) as values for specific features.
-    - linestyle_kwgs: Styling for the random guess diagonal line (for reference line).
+    - linestyle_kwgs: Styling for the random guess diagonal line
+      (for reference line).
     - figsize: Custom figure size.
     - label_fontsize, tick_fontsize: Font sizes for labels and ticks.
     - gridlines: Whether to show grid lines.
-    - model_titles: List of model names for labeling only in the title (can be a string or list).
-    - decimal_places: Number of decimal places to round Average Precision (AP) values in legend (default: 3).
+    - model_titles: List of model names for labeling only in the title
+      (can be a string or list).
+    - decimal_places: Number of decimal places to round Average Precision (AP)
+      values in legend (default: 3).
     - smooth_curves: Boolean to enable interpolation for smoother curves (optional).
-    - n_interpolate_points: Number of points to use for interpolation if smoothing is enabled.
+    - n_interpolate_points: Number of points to use for interpolation if
+      smoothing is enabled.
     """
     plt.figure(figsize=figsize)
     linestyle_kwgs = linestyle_kwgs or {
