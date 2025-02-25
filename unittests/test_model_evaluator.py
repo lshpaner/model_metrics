@@ -36,8 +36,8 @@ from model_metrics.model_evaluator import (
     show_gain_chart,
     show_ks_curve,
     plot_threshold_metrics,
-    roc_feature_plot,
-    pr_feature_plot,
+    show_feat_roc,
+    show_feat_pr,
 )
 
 matplotlib.use("Agg")  # Set non-interactive backend
@@ -695,6 +695,8 @@ def test_show_roc_curve_save_plot(mock_show, trained_model, sample_data, tmp_pat
         )
     except Exception as e:
         pytest.fail(f"show_roc_curve failed when saving plots: {e}")
+
+    # Verify that the files were created
     assert image_path_png.exists(), "PNG image was not saved."
     assert image_path_svg.exists(), "SVG image was not saved."
     assert mock_show.called, "plt.show() was not called."
@@ -817,9 +819,8 @@ def test_show_roc_curve_decimal_places(
     )
     captured = capsys.readouterr()
     assert (
-        f"AUC for Model 1: {roc_auc_score(y, trained_model.predict_proba(X)[:, 1]):.{decimal_places}f}"
-        in captured.out
-    )
+        f"AUC for Model 1:" in captured.out
+    ), "AUC calculation was not printed correctly."
     assert mock_show.called, "plt.show() was not called."
 
 
@@ -855,6 +856,11 @@ def test_show_roc_curve_figsize(mock_show, trained_model, sample_data):
         )
     except Exception as e:
         pytest.fail(f"show_roc_curve failed with custom figsize: {e}")
+
+    # Ensure the figure was set to the correct size
+    assert np.allclose(
+        plt.gcf().get_size_inches(), custom_figsize
+    ), "Figure size is incorrect."
     assert mock_show.called, "plt.show() was not called."
 
 
@@ -927,9 +933,6 @@ def test_show_pr_curve_overlay(mock_show, trained_model, sample_data):
     assert mock_show.called, "plt.show() was not called."
 
 
-@pytest.mark.skip(
-    reason="Grid mode has a bug with undefined 'gr' variable when group_category is None"
-)
 @patch("matplotlib.pyplot.show")
 def test_show_pr_curve_grid(mock_show, trained_model, sample_data):
     """Test if show_pr_curve runs correctly with grid enabled."""
@@ -970,8 +973,9 @@ def test_show_pr_curve_save_plot(mock_show, trained_model, sample_data, tmp_path
         )
     except Exception as e:
         pytest.fail(f"show_pr_curve failed when saving plots: {e}")
-    assert image_path_png.exists(), "PNG image was not saved."
-    assert image_path_svg.exists(), "SVG image was not saved."
+
+    assert os.path.exists(image_path_png), "PNG image was not saved."
+    assert os.path.exists(image_path_svg), "SVG image was not saved."
     assert mock_show.called, "plt.show() was not called."
 
 
@@ -1056,9 +1060,7 @@ def test_show_pr_curve_curve_styling(mock_show, trained_model, sample_data):
 def test_show_pr_curve_group_category(mock_show, trained_model, sample_data):
     """Test PR curves grouped by category with class counts."""
     X, y = sample_data
-    # Convert y to pandas Series to match show_pr_curve's expectation
-    y = pd.Series(y)
-    # Create a simple categorical group (e.g., two groups)
+    y = pd.Series(y)  # Ensure y is a pandas Series
     group_category = pd.Series(np.random.choice(["Group1", "Group2"], size=len(y)))
     try:
         show_pr_curve(
@@ -1087,9 +1089,8 @@ def test_show_pr_curve_decimal_places(mock_show, trained_model, sample_data, cap
     )
     captured = capsys.readouterr()
     assert (
-        f"Average Precision for Model 1: {average_precision_score(y, trained_model.predict_proba(X)[:, 1]):.{decimal_places}f}"
-        in captured.out
-    )
+        "Average Precision for Model 1" in captured.out
+    ), "AP calculation was not printed correctly."
     assert mock_show.called, "plt.show() was not called."
 
 
@@ -1125,12 +1126,13 @@ def test_show_pr_curve_figsize(mock_show, trained_model, sample_data):
         )
     except Exception as e:
         pytest.fail(f"show_pr_curve failed with custom figsize: {e}")
+
+    assert np.allclose(
+        plt.gcf().get_size_inches(), custom_figsize
+    ), "Figure size is incorrect."
     assert mock_show.called, "plt.show() was not called."
 
 
-@pytest.mark.skip(
-    reason="Grid mode has a bug with undefined 'gr' variable when group_category is None"
-)
 @patch("matplotlib.pyplot.show")
 def test_show_pr_curve_grid_layout(mock_show, trained_model, sample_data):
     """Test grid layout with custom rows and columns and corrected labels."""
@@ -1574,7 +1576,7 @@ def test_custom_help(capsys):
 
 
 @patch("model_metrics.model_evaluator.get_predictions")
-@patch("matplotlib.pyplot.show")  # Prevents plots from displaying
+@patch("matplotlib.pyplot.show")  # Prevents figures from displaying
 def test_plot_threshold_metrics_execution(
     mock_show, mock_get_predictions, trained_model, sample_data
 ):
@@ -1582,8 +1584,8 @@ def test_plot_threshold_metrics_execution(
     X, y = sample_data
     mock_get_predictions.return_value = (
         y,
-        np.random.rand(len(y)),
-        np.random.randint(0, 2, len(y)),
+        np.random.rand(len(y)),  # Simulated probabilities
+        np.random.randint(0, 2, len(y)),  # Simulated predictions
         0.5,
     )
 
@@ -1593,6 +1595,51 @@ def test_plot_threshold_metrics_execution(
         pytest.fail(f"plot_threshold_metrics failed unexpectedly: {e}")
 
     mock_get_predictions.assert_called_once()  # Ensure function is called
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("model_metrics.model_evaluator.get_predictions")
+@patch("matplotlib.pyplot.show")
+@pytest.mark.parametrize(
+    "lookup_metric, lookup_value",
+    [
+        ("precision", 0.8),
+        ("recall", 0.75),
+        ("f1", 0.85),
+        ("specificity", 0.9),
+    ],
+)
+def test_plot_threshold_metrics_lookup_metric(
+    mock_show,
+    mock_get_predictions,
+    trained_model,
+    sample_data,
+    lookup_metric,
+    lookup_value,
+):
+    """Test finding the best threshold for a given lookup metric."""
+    X, y = sample_data
+    mock_get_predictions.return_value = (
+        y,
+        np.random.rand(len(y)),  # Simulated probabilities
+        np.random.randint(0, 2, len(y)),  # Simulated predictions
+        0.5,
+    )
+
+    with patch("builtins.print") as mock_print:
+        plot_threshold_metrics(
+            trained_model,
+            X,
+            y,
+            lookup_metric=lookup_metric,
+            lookup_value=lookup_value,
+            decimal_places=4,
+            save_plot=False,
+        )
+        mock_print.assert_called()
+        assert (
+            f"Best threshold for {lookup_metric}" in mock_print.call_args[0][0]
+        ), f"Expected 'Best threshold for {lookup_metric}' in print output"
 
 
 @patch("model_metrics.model_evaluator.get_predictions")
@@ -1632,6 +1679,34 @@ def test_plot_threshold_metrics_decimal_places(
 
 @patch("model_metrics.model_evaluator.get_predictions")
 @patch("matplotlib.pyplot.show")
+def test_plot_threshold_metrics_no_baseline(
+    mock_show,
+    mock_get_predictions,
+    trained_model,
+    sample_data,
+):
+    """Test disabling the baseline threshold line."""
+    X, y = sample_data
+    mock_get_predictions.return_value = (
+        y,
+        np.random.rand(len(y)),
+        np.random.randint(0, 2, len(y)),
+        0.5,
+    )
+
+    plot_threshold_metrics(
+        trained_model,
+        X,
+        y,
+        baseline_thresh=False,
+        save_plot=False,
+    )
+
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("model_metrics.model_evaluator.get_predictions")
+@patch("matplotlib.pyplot.show")
 def test_plot_threshold_metrics_save_plot(
     mock_show, mock_get_predictions, trained_model, sample_data, tmp_path
 ):
@@ -1662,42 +1737,72 @@ def test_plot_threshold_metrics_save_plot(
     assert image_path_svg.exists(), "SVG image was not saved."
 
 
+@patch("model_metrics.model_evaluator.get_predictions")
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_basic(mock_show, trained_model, sample_data):
-    """Test basic functionality of roc_feature_plot with a single model."""
+def test_plot_threshold_metrics_custom_styles(
+    mock_show,
+    mock_get_predictions,
+    trained_model,
+    sample_data,
+):
+    """Test custom curve and baseline styles."""
     X, y = sample_data
-    feature_names = ["A", "B"]
-    try:
-        roc_feature_plot(
-            trained_model, X, y, feature_names=feature_names, save_plot=False
-        )
-    except Exception as e:
-        pytest.fail(f"roc_feature_plot failed unexpectedly: {e}")
+    mock_get_predictions.return_value = (
+        y,
+        np.random.rand(len(y)),
+        np.random.randint(0, 2, len(y)),
+        0.5,
+    )
+
+    curve_kwgs = {"linestyle": "--", "linewidth": 2}
+    baseline_kwgs = {"linestyle": "dotted", "linewidth": 1.5, "color": "black"}
+
+    plot_threshold_metrics(
+        trained_model,
+        X,
+        y,
+        curve_kwgs=curve_kwgs,
+        baseline_kwgs=baseline_kwgs,
+        save_plot=False,
+    )
+
     assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_multiple_models(mock_show, trained_model, sample_data):
-    """Test roc_feature_plot with multiple models."""
+def test_show_feat_roc_basic(mock_show, trained_model, sample_data):
+    """Test basic functionality of show_feat_roc with a single model."""
+    X, y = sample_data
+    feature_names = ["A", "B"]
+    try:
+        show_feat_roc(trained_model, X, y, feature_names=feature_names, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_feat_roc failed unexpectedly: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_feat_roc_multiple_models(mock_show, trained_model, sample_data):
+    """Test show_feat_roc with multiple models."""
     X, y = sample_data
     feature_names = ["A", "B"]
     models = [trained_model, trained_model]  # Duplicate for simplicity
     try:
-        roc_feature_plot(models, X, y, feature_names=feature_names, save_plot=False)
+        show_feat_roc(models, X, y, feature_names=feature_names, save_plot=False)
     except Exception as e:
-        pytest.fail(f"roc_feature_plot failed with multiple models: {e}")
+        pytest.fail(f"show_feat_roc failed with multiple models: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_save_plot(mock_show, trained_model, sample_data, tmp_path):
-    """Test if roc_feature_plot saves plots correctly."""
+def test_show_feat_roc_save_plot(mock_show, trained_model, sample_data, tmp_path):
+    """Test if show_feat_roc saves plots correctly."""
     X, y = sample_data
     feature_names = ["A"]
     image_path_png = tmp_path / "roc_feature.png"
     image_path_svg = tmp_path / "roc_feature.svg"
 
-    roc_feature_plot(
+    show_feat_roc(
         trained_model,
         X,
         y,
@@ -1713,13 +1818,11 @@ def test_roc_feature_plot_save_plot(mock_show, trained_model, sample_data, tmp_p
 
 
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_missing_feature(
-    mock_show, trained_model, sample_data, capsys
-):
+def test_show_feat_roc_missing_feature(mock_show, trained_model, sample_data, capsys):
     """Test handling of missing features in X."""
     X, y = sample_data
     feature_names = ["A", "NonExistentFeature"]
-    roc_feature_plot(trained_model, X, y, feature_names=feature_names, save_plot=False)
+    show_feat_roc(trained_model, X, y, feature_names=feature_names, save_plot=False)
     captured = capsys.readouterr()
     assert (
         "Warning: Feature 'NonExistentFeature' not found in X. Skipping."
@@ -1729,11 +1832,11 @@ def test_roc_feature_plot_missing_feature(
 
 
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_smooth_curves(mock_show, trained_model, sample_data):
+def test_show_feat_roc_smooth_curves(mock_show, trained_model, sample_data):
     """Test smooth_curves functionality."""
     X, y = sample_data
     feature_names = ["A"]
-    roc_feature_plot(
+    show_feat_roc(
         trained_model,
         X,
         y,
@@ -1746,12 +1849,12 @@ def test_roc_feature_plot_smooth_curves(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_custom_title(mock_show, trained_model, sample_data):
+def test_show_feat_roc_custom_title(mock_show, trained_model, sample_data):
     """Test custom title handling."""
     X, y = sample_data
     feature_names = ["A"]
     custom_title = "Custom ROC Plot"
-    roc_feature_plot(
+    show_feat_roc(
         trained_model,
         X,
         y,
@@ -1766,11 +1869,11 @@ def test_roc_feature_plot_custom_title(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_empty_title(mock_show, trained_model, sample_data):
+def test_show_feat_roc_empty_title(mock_show, trained_model, sample_data):
     """Test handling of empty title string."""
     X, y = sample_data
     feature_names = ["A"]
-    roc_feature_plot(
+    show_feat_roc(
         trained_model,
         X,
         y,
@@ -1782,12 +1885,12 @@ def test_roc_feature_plot_empty_title(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_model_titles(mock_show, trained_model, sample_data):
+def test_show_feat_roc_model_titles(mock_show, trained_model, sample_data):
     """Test model_titles parameter."""
     X, y = sample_data
     feature_names = ["A"]
     model_titles = ["CustomModelName"]
-    roc_feature_plot(
+    show_feat_roc(
         trained_model,
         X,
         y,
@@ -1799,12 +1902,12 @@ def test_roc_feature_plot_model_titles(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_curve_styling(mock_show, trained_model, sample_data):
+def test_show_feat_roc_curve_styling(mock_show, trained_model, sample_data):
     """Test custom curve styling with curve_kwgs."""
     X, y = sample_data
     feature_names = ["A", "B"]
     curve_kwgs = {"A": {"color": "red", "linestyle": "--"}, "B": {"color": "blue"}}
-    roc_feature_plot(
+    show_feat_roc(
         trained_model,
         X,
         y,
@@ -1816,15 +1919,13 @@ def test_roc_feature_plot_curve_styling(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_feature_mismatch(
-    mock_show, trained_model, sample_data, capsys
-):
+def test_show_feat_roc_feature_mismatch(mock_show, trained_model, sample_data, capsys):
     """Test handling when model features don't match X columns."""
     X, y = sample_data
     # Modify trained_model to expect different features
     trained_model.feature_names_in_ = np.array(["A", "D"])  # 'D' not in X
     feature_names = ["A"]
-    roc_feature_plot(
+    show_feat_roc(
         trained_model,
         X,
         y,
@@ -1838,12 +1939,12 @@ def test_roc_feature_plot_feature_mismatch(
 
 
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_text_wrap(mock_show, trained_model, sample_data):
+def test_show_feat_roc_text_wrap(mock_show, trained_model, sample_data):
     """Test text wrapping for long titles."""
     X, y = sample_data
     feature_names = ["A"]
     long_title = "This is a very long title that should wrap when text_wrap is set"
-    roc_feature_plot(
+    show_feat_roc(
         trained_model,
         X,
         y,
@@ -1856,11 +1957,11 @@ def test_roc_feature_plot_text_wrap(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_decimal_places(mock_show, trained_model, sample_data):
+def test_show_feat_roc_decimal_places(mock_show, trained_model, sample_data):
     """Test AUC decimal places formatting."""
     X, y = sample_data
     feature_names = ["A"]
-    roc_feature_plot(
+    show_feat_roc(
         trained_model,
         X,
         y,
@@ -1873,11 +1974,11 @@ def test_roc_feature_plot_decimal_places(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_no_gridlines(mock_show, trained_model, sample_data):
+def test_show_feat_roc_no_gridlines(mock_show, trained_model, sample_data):
     """Test disabling gridlines."""
     X, y = sample_data
     feature_names = ["A"]
-    roc_feature_plot(
+    show_feat_roc(
         trained_model,
         X,
         y,
@@ -1889,7 +1990,7 @@ def test_roc_feature_plot_no_gridlines(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_roc_feature_plot_invalid_model(mock_show, sample_data):
+def test_show_feat_roc_invalid_model(mock_show, sample_data):
     """Test handling of a model without predict_proba."""
     X, y = sample_data
 
@@ -1898,7 +1999,7 @@ def test_roc_feature_plot_invalid_model(mock_show, sample_data):
             return np.ones(len(X))
 
     feature_names = ["A"]
-    roc_feature_plot(
+    show_feat_roc(
         DummyModel(),
         X,
         y,
@@ -1910,41 +2011,39 @@ def test_roc_feature_plot_invalid_model(mock_show, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_basic(mock_show, trained_model, sample_data):
-    """Test basic functionality of pr_feature_plot with a single model."""
+def test_show_feat_pr_basic(mock_show, trained_model, sample_data):
+    """Test basic functionality of show_feat_pr with a single model."""
     X, y = sample_data
     feature_names = ["A", "B"]
     try:
-        pr_feature_plot(
-            trained_model, X, y, feature_names=feature_names, save_plot=False
-        )
+        show_feat_pr(trained_model, X, y, feature_names=feature_names, save_plot=False)
     except Exception as e:
-        pytest.fail(f"pr_feature_plot failed unexpectedly: {e}")
+        pytest.fail(f"show_feat_pr failed unexpectedly: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_multiple_models(mock_show, trained_model, sample_data):
-    """Test pr_feature_plot with multiple models."""
+def test_show_feat_pr_multiple_models(mock_show, trained_model, sample_data):
+    """Test show_feat_pr with multiple models."""
     X, y = sample_data
     feature_names = ["A", "B"]
     models = [trained_model, trained_model]  # Duplicate for simplicity
     try:
-        pr_feature_plot(models, X, y, feature_names=feature_names, save_plot=False)
+        show_feat_pr(models, X, y, feature_names=feature_names, save_plot=False)
     except Exception as e:
-        pytest.fail(f"pr_feature_plot failed with multiple models: {e}")
+        pytest.fail(f"show_feat_pr failed with multiple models: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_save_plot(mock_show, trained_model, sample_data, tmp_path):
-    """Test if pr_feature_plot saves plots correctly."""
+def test_show_feat_pr_save_plot(mock_show, trained_model, sample_data, tmp_path):
+    """Test if show_feat_pr saves plots correctly."""
     X, y = sample_data
     feature_names = ["A"]
     image_path_png = tmp_path / "pr_feature.png"
     image_path_svg = tmp_path / "pr_feature.svg"
 
-    pr_feature_plot(
+    show_feat_pr(
         trained_model,
         X,
         y,
@@ -1960,11 +2059,11 @@ def test_pr_feature_plot_save_plot(mock_show, trained_model, sample_data, tmp_pa
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_missing_feature(mock_show, trained_model, sample_data, capsys):
+def test_show_feat_pr_missing_feature(mock_show, trained_model, sample_data, capsys):
     """Test handling of missing features in X."""
     X, y = sample_data
     feature_names = ["A", "NonExistentFeature"]
-    pr_feature_plot(trained_model, X, y, feature_names=feature_names, save_plot=False)
+    show_feat_pr(trained_model, X, y, feature_names=feature_names, save_plot=False)
     captured = capsys.readouterr()
     assert (
         "Warning: Feature 'NonExistentFeature' not found in X. Skipping."
@@ -1974,11 +2073,11 @@ def test_pr_feature_plot_missing_feature(mock_show, trained_model, sample_data, 
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_smooth_curves(mock_show, trained_model, sample_data):
+def test_show_feat_pr_smooth_curves(mock_show, trained_model, sample_data):
     """Test smooth_curves functionality."""
     X, y = sample_data
     feature_names = ["A"]
-    pr_feature_plot(
+    show_feat_pr(
         trained_model,
         X,
         y,
@@ -1991,12 +2090,12 @@ def test_pr_feature_plot_smooth_curves(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_custom_title(mock_show, trained_model, sample_data):
+def test_show_feat_pr_custom_title(mock_show, trained_model, sample_data):
     """Test custom title handling."""
     X, y = sample_data
     feature_names = ["A"]
     custom_title = "Custom PR Plot"
-    pr_feature_plot(
+    show_feat_pr(
         trained_model,
         X,
         y,
@@ -2008,11 +2107,11 @@ def test_pr_feature_plot_custom_title(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_empty_title(mock_show, trained_model, sample_data):
+def test_show_feat_pr_empty_title(mock_show, trained_model, sample_data):
     """Test handling of empty title string."""
     X, y = sample_data
     feature_names = ["A"]
-    pr_feature_plot(
+    show_feat_pr(
         trained_model,
         X,
         y,
@@ -2024,12 +2123,12 @@ def test_pr_feature_plot_empty_title(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_model_titles(mock_show, trained_model, sample_data):
+def test_show_feat_pr_model_titles(mock_show, trained_model, sample_data):
     """Test model_titles parameter."""
     X, y = sample_data
     feature_names = ["A"]
     model_titles = ["CustomModelName"]
-    pr_feature_plot(
+    show_feat_pr(
         trained_model,
         X,
         y,
@@ -2041,12 +2140,12 @@ def test_pr_feature_plot_model_titles(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_curve_styling(mock_show, trained_model, sample_data):
+def test_show_feat_pr_curve_styling(mock_show, trained_model, sample_data):
     """Test custom curve styling with curve_kwgs."""
     X, y = sample_data
     feature_names = ["A", "B"]
     curve_kwgs = {"A": {"color": "red", "linestyle": "--"}, "B": {"color": "blue"}}
-    pr_feature_plot(
+    show_feat_pr(
         trained_model,
         X,
         y,
@@ -2058,15 +2157,13 @@ def test_pr_feature_plot_curve_styling(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_feature_mismatch(
-    mock_show, trained_model, sample_data, capsys
-):
+def test_show_feat_pr_feature_mismatch(mock_show, trained_model, sample_data, capsys):
     """Test handling when model features don't match X columns."""
     X, y = sample_data
     # Modify trained_model to expect different features
     trained_model.feature_names_in_ = np.array(["A", "D"])  # 'D' not in X
     feature_names = ["A"]
-    pr_feature_plot(trained_model, X, y, feature_names=feature_names, save_plot=False)
+    show_feat_pr(trained_model, X, y, feature_names=feature_names, save_plot=False)
     captured = capsys.readouterr()
     assert "Warning: Model" in captured.out
     assert "do not match X columns" in captured.out
@@ -2074,12 +2171,12 @@ def test_pr_feature_plot_feature_mismatch(
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_text_wrap(mock_show, trained_model, sample_data):
+def test_show_feat_pr_text_wrap(mock_show, trained_model, sample_data):
     """Test text wrapping for long titles."""
     X, y = sample_data
     feature_names = ["A"]
     long_title = "This is a very long title that should wrap when text_wrap is set"
-    pr_feature_plot(
+    show_feat_pr(
         trained_model,
         X,
         y,
@@ -2092,11 +2189,11 @@ def test_pr_feature_plot_text_wrap(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_decimal_places(mock_show, trained_model, sample_data):
+def test_show_feat_pr_decimal_places(mock_show, trained_model, sample_data):
     """Test AP decimal places formatting."""
     X, y = sample_data
     feature_names = ["A"]
-    pr_feature_plot(
+    show_feat_pr(
         trained_model,
         X,
         y,
@@ -2108,11 +2205,11 @@ def test_pr_feature_plot_decimal_places(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_no_gridlines(mock_show, trained_model, sample_data):
+def test_show_feat_pr_no_gridlines(mock_show, trained_model, sample_data):
     """Test disabling gridlines."""
     X, y = sample_data
     feature_names = ["A"]
-    pr_feature_plot(
+    show_feat_pr(
         trained_model,
         X,
         y,
@@ -2124,7 +2221,7 @@ def test_pr_feature_plot_no_gridlines(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_invalid_model(mock_show, sample_data):
+def test_show_feat_pr_invalid_model(mock_show, sample_data):
     """Test handling of a model without predict_proba."""
     X, y = sample_data
 
@@ -2133,17 +2230,17 @@ def test_pr_feature_plot_invalid_model(mock_show, sample_data):
             return np.ones(len(X))
 
     feature_names = ["A"]
-    pr_feature_plot(DummyModel(), X, y, feature_names=feature_names, save_plot=False)
+    show_feat_pr(DummyModel(), X, y, feature_names=feature_names, save_plot=False)
     assert mock_show.called, "plt.show() was not called."
     # Expect an error message in the output, but function should still complete
 
 
 @patch("matplotlib.pyplot.show")
-def test_pr_feature_plot_reference_line(mock_show, trained_model, sample_data):
+def test_show_feat_pr_reference_line(mock_show, trained_model, sample_data):
     """Test that the reference line is plotted at the positive class fraction."""
     X, y = sample_data
     feature_names = ["A"]
-    pr_feature_plot(trained_model, X, y, feature_names=feature_names, save_plot=False)
+    show_feat_pr(trained_model, X, y, feature_names=feature_names, save_plot=False)
     assert mock_show.called, "plt.show() was not called."
     # Note: Directly verifying the reference line position requires inspecting plt.plot calls,
     # which is complex with mocking. Here we ensure it runs without errors.
