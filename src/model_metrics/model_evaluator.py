@@ -14,6 +14,7 @@ import textwrap
 
 import statsmodels.api as sm
 from scipy.stats import ks_2samp
+from sklearn.preprocessing import LabelEncoder
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import (
     precision_score,
@@ -785,63 +786,109 @@ def show_roc_curve(
     grid=False,  # Grid layout option
     n_rows=None,
     n_cols=2,  # Number of columns for the grid
-    figsize=None,  # User-defined figure size
+    figsize=(8, 6),  # User-defined figure size
     label_fontsize=12,  # Font size for title and axis labels
     tick_fontsize=10,  # Font size for tick labels and legend
     gridlines=True,
+    group_category=None,
 ):
     """
-    Plot ROC curves for models or pipelines with optional styling and grid layout.
+    Plot Receiver Operating Characteristic (ROC) curves for models or pipelines
+    with optional styling, grid layout, and grouping by categories, including
+    class counts in the legend.
 
     Parameters:
     - models: list
-        List of models or pipelines to plot.
+        List of models or pipelines to plot ROC curves for.
     - X: array-like
-        Features for prediction.
+        Feature data for prediction, typically a pandas DataFrame or NumPy array.
     - y: array-like
-        True labels.
+        True binary labels for evaluation,(e.g., a pandas Series or NumPy array).
     - model_titles: list of str, optional
-        Titles for individual models. Required when providing a nested
-        dictionary for `curve_kwgs`.
-    - overlay: bool
-        Whether to overlay multiple models on a single plot.
+        Titles for individual models. If not provided, defaults to "Model 1",
+        "Model 2", etc. Required when providing a nested dictionary for
+        `curve_kwgs`.
+    - xlabel: str, optional
+        Label for the x-axis (default: "False Positive Rate").
+    - ylabel: str, optional
+        Label for the y-axis (default: "True Positive Rate").
+    - decimal_places: int, optional
+        Number of decimal places to round AUC values in the legend and print
+        output (default: 2).
+    - overlay: bool, optional
+        Whether to overlay multiple models on a single plot (default: False).
     - title: str, optional
-        Custom title for the plot when `overlay=True`.
-    - save_plot: bool
-        Whether to save the plot.
+        Custom title for the plot when `overlay=True` or per-model title when
+        `grid=True`. If None, uses a default title; if "", disables the title.
+    - save_plot: bool, optional
+        Whether to save the plot to the specified paths (default: False).
     - image_path_png: str, optional
-        Path to save PNG images.
+        Path to save the plot as a PNG image.
     - image_path_svg: str, optional
-        Path to save SVG images.
+        Path to save the plot as an SVG image.
     - text_wrap: int, optional
-        Max width for wrapping titles.
+        Maximum width for wrapping titles if they are too long (default: None).
     - curve_kwgs: list or dict, optional
         Styling for individual model curves. If `model_titles` is specified as a
-        list of titles, `curve_kwgs` must be a nested dictionary with model
-        titles as keys and their respective style dictionaries as values.
-        Otherwise, `curve_kwgs` must be a list of style dictionaries
-        corresponding to the models.
+        list, `curve_kwgs` must be a nested dictionary with model titles as keys
+        and their respective style dictionaries (e.g., {'color': 'red',
+        'linestyle': '--'}) as values. Otherwise, `curve_kwgs` must be a list of
+        style dictionaries corresponding to the models.
     - linestyle_kwgs: dict, optional
-        Styling for the random guess diagonal line.
+        Styling for the random guess diagonal line (default: {'color': 'gray',
+        'linestyle': '--', 'linewidth': 2}).
     - grid: bool, optional
-        Whether to organize plots in a grid layout (default: False).
+        Whether to organize plots in a grid layout (default: False). Cannot be
+        True if `overlay=True`.
     - n_rows: int, optional
-        Number of rows in the grid layout. If not specified, it is automatically
-        calculated based on the number of models and `n_cols`.
+        Number of rows in the grid layout. If not specified, calculated
+        automatically based on the number of models and `n_cols`.
     - n_cols: int, optional
         Number of columns in the grid layout (default: 2).
     - figsize: tuple, optional
-        Custom figure size (width, height) for the plot(s).
+        Custom figure size (width, height) for the plot(s) (default: None, uses
+        (8, 6) for overlay or calculated size for grid).
     - label_fontsize: int, optional
-        Font size for title and axis labels.
+        Font size for titles and axis labels (default: 12).
     - tick_fontsize: int, optional
-        Font size for tick labels and legend.
+        Font size for tick labels and legend (default: 10).
+    - gridlines: bool, optional
+        Whether to display grid lines on the plot (default: True).
+    - group_category: array-like, optional
+        Categorical data (e.g., pandas Series or NumPy array) to group ROC
+        curves by unique values. If provided, plots separate ROC curves for each
+        group with AUC and class counts (Total, Pos, Neg) in the legend.
 
     Raises:
-    - ValueError: If `grid=True` and `overlay=True` are both set.
+    - ValueError: If `grid=True` and `overlay=True` are both set, if
+        `grid=True` and `group_category` is provided, or if `overlay=True` and
+        `group_category` is provided.
+
+    Notes:
+    - When `group_category` is provided, the legend includes AUC, total count,
+      and positive/negative class counts for each group (e.g., "AUC = 0.XX,
+      Count: Total: X, Pos: Y, Neg: Z").
+    - The random guess line (diagonal line at y=x) is plotted for reference.
+    - Titles can be customized, disabled with `title=""`, or default to
+      "ROC Curve: Model Name" or "ROC Curves: Overlay" if not specified.
     """
+
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
+
+    if grid and group_category is not None:
+        raise ValueError(
+            f"`grid` cannot be set to True when `group_category` is provided. "
+            f"When selecting `group_category`, make sure `grid` and `overlay` "
+            f"are set to `False`."
+        )
+
+    if overlay and group_category is not None:
+        raise ValueError(
+            f"`overlay` cannot be set to True when `group_category` is "
+            f"provided. When selecting `group_category`, make sure `grid` and "
+            f"`overlay` are set to `False`."
+        )
 
     if not isinstance(models, list):
         models = [models]
@@ -880,21 +927,53 @@ def show_roc_curve(
             model, X, y, None, None, None
         )
 
-        fpr, tpr, _ = roc_curve(y_true, y_prob)
-        roc_auc = roc_auc_score(y_true, y_prob)
+        if group_category is not None:
+            fpr = {}
+            tpr = {}
+            auc_str = {}
+            counts = {}
+            for gr in group_category.unique():
+                idx = group_category.values == gr
+                counts[gr] = [
+                    idx.sum(),
+                    y_true.values[idx].sum(),
+                    (1 - y_true.values[idx]).sum(),
+                ]
+                fpr[gr], tpr[gr], _ = roc_curve(y_true[idx], y_prob[idx])
+                roc_auc = roc_auc_score(y_true[idx], y_prob[idx])
+                # Format AUC with decimal_places for print and legend
+                auc_str[gr] = f"{roc_auc:.{decimal_places}f}"
 
-        print(f"AUC for {name}: {roc_auc:.3f}")
+        else:
+            fpr, tpr, _ = roc_curve(y_true, y_prob)
+            roc_auc = roc_auc_score(y_true, y_prob)
+            # Format AUC with decimal_places for print and legend
+            auc_str = f"{roc_auc:.{decimal_places}f}"
+
+        print(f"AUC for {name}: {roc_auc:.{decimal_places}f}")
 
         if overlay:
             plt.plot(
                 fpr,
                 tpr,
-                label=f"{name} (AUC = {roc_auc:.3f})",
+                label=f"{name} (AUC = {auc_str})",
                 **curve_style,
             )
         elif grid:
             ax = axes[idx]
-            ax.plot(fpr, tpr, label=f"ROC Curve", **curve_style)
+            if group_category is not None:
+                for gr in tpr:
+                    ax.plot(
+                        fpr[gr],
+                        tpr[gr],
+                        label=f"AUC for {gr} = {auc_str[gr]:{decimal_places}}, "
+                        f"Count: {counts[gr][0]:,}, "
+                        f"Pos: {counts[gr][1]:,}, "
+                        f"Neg: {counts[gr][2]:,}",
+                        **curve_style,
+                    )
+            else:
+                ax.plot(fpr, tpr, label=f"AUC = {auc_str})", **curve_style)
             ax.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
@@ -913,11 +992,32 @@ def show_roc_curve(
 
             if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
-            ax.legend(loc="lower right", fontsize=tick_fontsize)
+            if group_category is not None:
+                ax.legend(
+                    loc="upper center",
+                    bbox_to_anchor=(0.5, -0.25),
+                    fontsize=tick_fontsize,
+                    ncol=1,
+                )
+            else:
+                ax.legend(loc="lower left", fontsize=tick_fontsize)
             ax.grid(visible=gridlines)
         else:
-            plt.figure(figsize=figsize or (8, 6))
-            plt.plot(fpr, tpr, label=f"ROC Curve", **curve_style)
+            plt.figure(figsize=figsize)
+            if group_category is not None:
+                for gr in group_category.unique():
+                    plt.plot(
+                        fpr[gr],
+                        tpr[gr],
+                        label=f"AUC for {gr} = {auc_str[gr]:{decimal_places}}, "
+                        f"Count: {counts[gr][0]:,}, "
+                        f"Pos: {counts[gr][1]:,}, "
+                        f"Neg: {counts[gr][2]:,}",
+                        **curve_style,
+                    )
+
+            else:
+                plt.plot(fpr, tpr, label=f"AUC = {auc_str})", **curve_style)
             plt.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
@@ -938,7 +1038,15 @@ def show_roc_curve(
                 plt.title(plot_title, fontsize=label_fontsize)
 
             plt.title(plot_title, fontsize=label_fontsize)
-            plt.legend(loc="lower right", fontsize=tick_fontsize)
+            if group_category is not None:
+                plt.legend(
+                    loc="upper center",
+                    bbox_to_anchor=(0.5, -0.15),
+                    fontsize=tick_fontsize,
+                    ncol=1,
+                )
+            else:
+                plt.legend(loc="lower left", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
                 f"{name}_ROC",
@@ -968,7 +1076,15 @@ def show_roc_curve(
         if overlay_title:  # Only set title if not explicitly disabled
             plt.title(overlay_title, fontsize=label_fontsize)
 
-        plt.legend(loc="lower right", fontsize=tick_fontsize)
+        if group_category is not None:
+            plt.legend(
+                loc="upper center",
+                bbox_to_anchor=(0.5, -0.15),
+                fontsize=tick_fontsize,
+                ncol=1,
+            )
+        else:
+            plt.legend(loc="lower left", fontsize=tick_fontsize)
         plt.grid()
         save_plot_images(
             "Overlay_ROC",
@@ -1001,59 +1117,115 @@ def show_pr_curve(
     image_path_svg=None,
     text_wrap=None,
     curve_kwgs=None,
-    grid=False,  # Grid layout option
+    grid=False,
     n_rows=None,
-    n_cols=2,  # Number of columns for the grid
-    figsize=None,  # User-defined figure size
-    label_fontsize=12,  # Font size for title and axis labels
-    tick_fontsize=10,  # Font size for tick labels and legend
+    n_cols=2,
+    figsize=(8, 6),
+    label_fontsize=12,
+    tick_fontsize=10,
     gridlines=True,
+    group_category=None,
 ):
     """
-    Plot PR curves for models or pipelines with optional styling and grid layout.
+    Plot Precision-Recall (PR) curves for models or pipelines with optional
+    styling, grid layout, and grouping by categories, including class counts in
+    the legend.
 
     Parameters:
     - models: list
-        List of models or pipelines to plot.
+        List of models or pipelines to plot PR curves for.
     - X: array-like
-        Features for prediction.
+        Feature data for prediction, typically a pandas DataFrame or NumPy array.
     - y: array-like
-        True labels.
+        True binary labels for evaluation (e.g., a pandas Series or NumPy array).
+    - group_category: array-like, optional
+        Categorical data (e.g., pandas Series or NumPy array) to group PR curves
+        by unique values. If provided, plots separate PR curves for each group
+        with Average Precision (AP) and class counts (Total, Pos, Neg) in the
+        legend.
     - model_titles: list of str, optional
-        Titles for individual models.
-    - overlay: bool
-        Whether to overlay multiple models on a single plot.
+        Titles for individual models. If not provided, defaults to "Model 1",
+        "Model 2", etc. Required when providing a nested dictionary for
+        `curve_styles`.
+    - xlabel: str, optional
+        Label for the x-axis (default: "Recall").
+    - ylabel: str, optional
+        Label for the y-axis (default: "Precision").
+    - decimal_places: int, optional
+        Number of decimal places to round Average Precision (AP) values in the
+        legend and print output (default: 3).
+    - overlay: bool, optional
+        Whether to overlay multiple models on a single plot (default: False).
     - title: str, optional
-        Custom title for the plot.
-    - save_plot: bool
-        Whether to save the plot.
+        Custom title for the plot when `overlay=True` or per-model title when
+        `grid=True`. If None, uses a default title; if "", disables the title.
+    - save_plot: bool, optional
+        Whether to save the plot to the specified paths (default: False).
     - image_path_png: str, optional
-        Path to save PNG images.
+        Path to save the plot as a PNG image.
     - image_path_svg: str, optional
-        Path to save SVG images.
+        Path to save the plot as an SVG image.
     - text_wrap: int, optional
-        Max width for wrapping titles.
-    - curve_kwgs: list or dict, optional
-        Styling for individual model curves.
+        Maximum width for wrapping titles if they are too long (default: None).
+    - curve_styles: list or dict, optional
+        Styling for individual model curves. If `model_titles` is specified as a
+        list, `curve_styles` must be a nested dictionary with model titles as
+        keys and their respective style dictionaries (e.g., {'color': 'red',
+        'linestyle': '--'}) as values. Otherwise, `curve_styles` must be a list
+        of style dictionaries corresponding to the models.
+    - linestyle_kwgs: dict, optional
+        Styling for the random classifier baseline line (default: {'color':
+        'gray', 'linestyle': '--', 'linewidth': 2}).
     - grid: bool, optional
-        Whether to organize plots in a grid layout (default: False).
+        Whether to organize plots in a grid layout (default: False). Cannot be
+        True if `overlay=True`.
     - n_rows: int, optional
-        Number of rows in the grid layout. If not specified, it is automatically
-        calculated based on the number of models and `n_cols`.
+        Number of rows in the grid layout. If not specified, calculated
+        automatically based on the number of models and `n_cols`.
     - n_cols: int, optional
         Number of columns in the grid layout (default: 2).
     - figsize: tuple, optional
-        Custom figure size (width, height) for the plot(s).
+        Custom figure size (width, height) for the plot(s) (default: None, uses
+        (8, 6) for overlay or calculated size for grid).
     - label_fontsize: int, optional
-        Font size for title and axis labels.
+        Font size for titles and axis labels (default: 12).
     - tick_fontsize: int, optional
-        Font size for tick labels and legend.
+        Font size for tick labels and legend (default: 10).
+    - gridlines: bool, optional
+        Whether to display grid lines on the plot (default: True).
 
     Raises:
-    - ValueError: If `grid=True` and `overlay=True` are both set.
+    - ValueError: If `grid=True` and `overlay=True` are both set, if
+        `grid=True` and `group_category` is provided, or if `overlay=True` and
+        `group_category` is provided.
+
+    Notes:
+    - When `group_category` is provided, the legend includes Average Precision
+      (AP), total count, and positive/negative class counts for each group
+      (e.g., "Average Precision for Male = 0.___, Count: Total: X, Pos: Y,
+      Neg: Z").
+    - The random classifier baseline (precision = fraction of positive samples)
+      is plotted for reference.
+    - Titles can be customized, disabled with `title=""`, or default to "PR
+      Curve: Model Name" or "PR Curves: Overlay" if not specified.
     """
+
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
+
+    if grid and group_category is not None:
+        raise ValueError(
+            f"`grid` cannot be set to True when `group_category` is provided. "
+            f"When selecting `group_category`, make sure `grid` and `overlay` "
+            f"are set to `False`."
+        )
+
+    if overlay and group_category is not None:
+        raise ValueError(
+            f"`overlay` cannot be set to True when `group_category` is "
+            f"provided. When selecting `group_category`, make sure `grid` and "
+            f"`overlay` are set to `False`."
+        )
 
     if not isinstance(models, list):
         models = [models]
@@ -1086,8 +1258,30 @@ def show_pr_curve(
             model, X, y, None, None, None
         )
 
-        precision, recall, _ = precision_recall_curve(y_true, y_prob)
-        avg_precision = average_precision_score(y_true, y_prob)
+        counts = {}
+        if group_category is not None:
+            precision = {}
+            recall = {}
+            ap_str = {}  # Use ap_str for Average Precision
+            for gr in group_category.unique():
+                idx = group_category.values == gr
+                counts[gr] = [
+                    idx.sum(),  # Total count for this group
+                    y_true.values[idx].sum(),  # Positive class count (y_true = 1)
+                    (1 - y_true.values[idx]).sum(),  # Negative class count (y_true = 0)
+                ]
+                precision[gr], recall[gr], _ = precision_recall_curve(
+                    y_true[idx], y_prob[idx]
+                )
+                avg_precision = average_precision_score(y_true[idx], y_prob[idx])
+                # Format Average Precision with decimal_places for print and legend
+                ap_str[gr] = f"{avg_precision:.{decimal_places}f}"
+
+        else:
+            precision, recall, _ = precision_recall_curve(y_true, y_prob)
+            avg_precision = average_precision_score(y_true, y_prob)
+            # Format Average Precision with decimal_places for print and legend
+            ap_str = f"{avg_precision:.{decimal_places}f}"
 
         print(f"Average Precision for {name}: {avg_precision:.{decimal_places}f}")
 
@@ -1100,10 +1294,28 @@ def show_pr_curve(
             )
         elif grid:
             ax = axes[idx]
-            ax.plot(recall, precision, label=f"PR Curve", **curve_style)
+            if group_category is not None:
+                for gr in group_category.unique():
+                    ax.plot(
+                        recall[gr],
+                        precision[gr],
+                        label=f"AP for {gr} = {ap_str[gr]}, "
+                        f"Count: {counts[gr][0]:,}, "
+                        f"Pos: {counts[gr][1]:,}, Neg: {counts[gr][2]:,}",
+                        **curve_style,
+                    )
+            else:
+                ax.plot(
+                    recall,
+                    precision,
+                    label=f"Average Precision = {ap_str}",
+                    **curve_style,
+                )
+
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
+
             if title is None:
                 grid_title = f"PR Curve: {name}"  # Default title
             elif title == "":
@@ -1118,15 +1330,41 @@ def show_pr_curve(
 
             if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
-
-            ax.legend(loc="lower left", fontsize=tick_fontsize)
+            if group_category is not None:
+                ax.legend(
+                    loc="upper center",
+                    bbox_to_anchor=(0.5, -0.25),
+                    fontsize=tick_fontsize,
+                    ncol=1,
+                )
+            else:
+                ax.legend(loc="lower left", fontsize=tick_fontsize)
             ax.grid(visible=gridlines)
+
         else:
             plt.figure(figsize=figsize or (8, 6))
-            plt.plot(recall, precision, label=f"PR Curve", **curve_style)
+            if group_category is not None:
+                for gr in group_category.unique():
+                    plt.plot(
+                        recall[gr],
+                        precision[gr],
+                        label=f"AP for {gr} = {ap_str[gr]}, "
+                        f"Count: {counts[gr][0]:,}, "
+                        f"Pos: {counts[gr][1]:,}, Neg: {counts[gr][2]:,}",
+                        **curve_style,
+                    )
+            else:
+                plt.plot(
+                    recall,
+                    precision,
+                    label=f"Average Precision = {ap_str}",
+                    **curve_style,
+                )
+
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
             plt.tick_params(axis="both", labelsize=tick_fontsize)
+
             if title is None:
                 plot_title = f"PR Curve: {name}"  # Default title
             elif title == "":
@@ -1142,7 +1380,15 @@ def show_pr_curve(
             if plot_title:  # Only set title if not explicitly disabled
                 plt.title(plot_title, fontsize=label_fontsize)
 
-            plt.legend(loc="lower left", fontsize=tick_fontsize)
+            if group_category is not None:
+                plt.legend(
+                    loc="upper center",
+                    bbox_to_anchor=(0.5, -0.15),
+                    fontsize=tick_fontsize,
+                    ncol=1,
+                )
+            else:
+                plt.legend(loc="lower left", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
                 f"{name}_PR",
@@ -1171,7 +1417,15 @@ def show_pr_curve(
         if overlay_title:  # Only set title if not explicitly disabled
             plt.title(overlay_title, fontsize=label_fontsize)
 
-        plt.legend(loc="lower left", fontsize=tick_fontsize)
+        if group_category is not None:
+            plt.legend(
+                loc="upper center",
+                bbox_to_anchor=(0.5, -0.15),
+                fontsize=tick_fontsize,
+                ncol=1,
+            )
+        else:
+            plt.legend(loc="lower left", fontsize=tick_fontsize)
         plt.grid()
         save_plot_images(
             "Overlay_PR",
@@ -1187,6 +1441,447 @@ def show_pr_curve(
         plt.tight_layout()
         save_plot_images("Grid_PR", save_plot, image_path_png, image_path_svg)
         plt.show()
+
+
+################################################################################
+######################### Feature-wise ROC and PR Curves #######################
+################################################################################
+
+
+def show_feat_roc(
+    models,
+    X,
+    y,
+    feature_names,
+    xlabel="False Positive Rate",
+    ylabel="True Positive Rate",
+    title="ROC Curves for Individual Features",
+    save_plot=False,
+    image_path_png=None,
+    image_path_svg=None,
+    text_wrap=None,
+    curve_kwgs=None,
+    linestyle_kwgs=None,
+    figsize=(8, 6),
+    label_fontsize=12,
+    tick_fontsize=10,
+    gridlines=True,
+    model_titles=None,
+    decimal_places=3,  # Parameter for consistent decimal places in AUC
+    smooth_curves=False,  # New parameter to enable smoothing
+    n_interpolate_points=100,  # Number of points for interpolation if smoothing
+):
+    """
+    Plot ROC curves for individual features using model predictions, with
+    options for smoothing jagged curves, using model_titles only in the plot
+    title, specifying decimal places for AUC, and allowing title to be None when
+    title = "" or when model_titles is not specified and no custom title is
+    provided.
+
+    Parameters:
+    - models: List of trained models or a single model.
+    - X: Feature DataFrame for prediction.
+    - y: True binary labels.
+    - feature_names: List of feature names to plot ROC curves for.
+    - xlabel, ylabel: Axis labels.
+    - title: Title for the plot (can be customized, default, empty string,
+      or None).
+    - save_plot: Whether to save the plot.
+    - image_path_png, image_path_svg: Paths to save PNG and SVG images.
+    - text_wrap: Max width for wrapping titles.
+    - curve_kwgs: Dictionary with feature names as keys and styling dictionaries
+      (e.g., {'color': 'red', 'linestyle': '--'}) as values for specific features.
+    - linestyle_kwgs: Styling for the random guess diagonal line.
+    - figsize: Custom figure size.
+    - label_fontsize, tick_fontsize: Font sizes for labels and ticks.
+    - gridlines: Whether to show grid lines.
+    - model_titles: List of model names for labeling only in the title
+      (can be a string or list).
+    - decimal_places: Number of decimal places to round AUC values in legend
+      (default: 3).
+    - smooth_curves: Boolean to enable interpolation for smoother curves
+      (optional).
+    - n_interpolate_points: Number of points to use for interpolation if
+      smoothing is enabled.
+    """
+    plt.figure(figsize=figsize)
+    linestyle_kwgs = linestyle_kwgs or {
+        "color": "gray",
+        "linestyle": "--",
+        "linewidth": 2,
+    }
+    curve_kwgs = curve_kwgs or {}  # Default to empty dict if None
+
+    if not isinstance(models, list):
+        models = [models]
+
+    # Handle model_titles: convert single string to list or ensure it's a list
+    if model_titles is None:
+        model_titles = None  # Explicitly set to None to skip default titles
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]  # Convert single string to list
+    elif not isinstance(model_titles, list):
+        model_titles = [str(model_titles)]  # Convert any non-list to list of string
+    else:
+        model_titles = [str(title) for title in model_titles]  # Ensure all are strings
+
+    for model, model_name in zip(
+        models, model_titles or [f"Model {i+1}" for i in range(len(models))]
+    ):
+        # Get the feature names the model was trained on, if available
+        expected_features = (
+            model.feature_names_in_
+            if hasattr(model, "feature_names_in_")
+            else X.columns.tolist()
+        )
+
+        for feature in feature_names:
+            try:
+                if feature not in X.columns:
+                    print(f"Warning: Feature '{feature}' not found in X. Skipping.")
+                    continue
+
+                # Check if the model's expected features match X's columns
+                if set(expected_features) != set(X.columns):
+                    print(
+                        f"Warning: Model {model_name} feature names {expected_features} "
+                        f"do not match X columns {X.columns.tolist()}. "
+                        f"Using single feature."
+                    )
+                    # Use only the current feature for prediction, shuffle
+                    # non-target features for variability
+                    X_masked = X[[feature]].copy()
+                    # Pad with shuffled values from other features to introduce variability
+                    for exp_feature in expected_features:
+                        if exp_feature != feature and exp_feature in X.columns:
+                            X_masked[exp_feature] = np.random.permutation(
+                                X[exp_feature]
+                            )
+                        elif exp_feature != feature and exp_feature not in X.columns:
+                            X_masked[exp_feature] = 0  # Use 0 for missing features
+                    X_input = X_masked[expected_features]  # Reorder to match model
+                else:
+                    # Mask all other features by shuffling non-target features
+                    # for more variability
+                    X_masked = X.copy()
+                    for col in X_masked.columns:
+                        if col != feature:
+                            X_masked[col] = np.random.permutation(
+                                X[col]
+                            )  # Shuffle non-target features
+
+                # Predict probabilities
+                y_prob = model.predict_proba(
+                    X_input if "X_input" in locals() else X_masked
+                )[:, 1]
+
+                # Calculate the ROC curve
+                fpr, tpr, _ = roc_curve(y, y_prob)
+                roc_auc = roc_auc_score(y, y_prob)
+
+                # Format AUC with specified decimal places
+                auc_str = f"{roc_auc:.{decimal_places}f}"
+
+                # Get curve styling for this specific feature, default to empty
+                # dict if not specified
+                feature_curve_kwgs = curve_kwgs.get(feature, {})
+
+                # Plot with only feature name and AUC in the legend, applying
+                # feature-specific styling
+                if smooth_curves:
+                    fpr_smooth = np.linspace(0, 1, n_interpolate_points)
+                    tpr_smooth = np.interp(fpr_smooth, fpr, tpr)
+                    plt.plot(
+                        fpr_smooth,
+                        tpr_smooth,
+                        label=f"{feature} (AUC = {auc_str})",
+                        **feature_curve_kwgs,  # Use feature-specific styling
+                    )
+                else:
+                    plt.plot(
+                        fpr,
+                        tpr,
+                        label=f"{feature} (AUC = {auc_str})",
+                        **feature_curve_kwgs,  # Use feature-specific styling
+                    )
+
+            except Exception as e:
+                print(f"Error for {model_name} on {feature}: {e}")
+
+    # Plot the random guess line
+    plt.plot([0, 1], [0, 1], **linestyle_kwgs)
+    plt.xlabel(xlabel, fontsize=label_fontsize)
+    plt.ylabel(ylabel, fontsize=label_fontsize)
+    plt.tick_params(axis="both", labelsize=tick_fontsize)
+
+    if text_wrap:
+        title = "\n".join(textwrap.wrap(title, width=text_wrap))
+
+    # Updated title logic to show model_titles only if specified, otherwise use
+    # default title or suppress if title = ""
+    if model_titles and any(
+        model_titles
+    ):  # Check if model_titles exists and has non-empty values
+        if (
+            len(models) == 1 and model_titles[0]
+        ):  # For a single model, use the first non-empty title
+            final_title = f"ROC Curves for Individual Features: {model_titles[0]}"
+        else:
+            # For multiple models or if titles are provided, join non-empty titles
+            final_titles = [t for t in model_titles if t]  # Filter out empty strings
+            if final_titles:
+                final_title = (
+                    f"ROC Curves for Individual Features: {', '.join(final_titles)}"
+                )
+            else:
+                final_title = "ROC Curves for Individual Features"
+    else:
+        final_title = (
+            "ROC Curves for Individual Features"  # Default title if no model_titles
+        )
+
+    # Use the provided title only if explicitly set and non-empty, otherwise use
+    # dynamic title or suppress
+    if title == "":  # Explicitly check for empty string
+        final_title = None  # Suppress title (no title displayed) if title is empty
+    elif title and title.strip() and title != "ROC Curves for Individual Features":
+        final_title = title
+    else:
+        final_title = final_title  # Use dynamic title or default
+
+    if final_title is not None:  # Only set title if it's not None
+        plt.title(final_title, fontsize=label_fontsize)
+    plt.legend(loc="best", fontsize=tick_fontsize)
+    plt.grid(visible=gridlines)
+
+    if save_plot:
+        if image_path_png:
+            plt.savefig(image_path_png, bbox_inches="tight", format="png")
+        if image_path_svg:
+            plt.savefig(image_path_svg, bbox_inches="tight", format="svg")
+
+    plt.show()
+
+
+def show_feat_pr(
+    models,
+    X,
+    y,
+    feature_names,
+    xlabel="Recall",
+    ylabel="Precision",
+    title="PR Curves for Individual Features",
+    save_plot=False,
+    image_path_png=None,
+    image_path_svg=None,
+    text_wrap=None,
+    curve_kwgs=None,
+    linestyle_kwgs=None,
+    figsize=(8, 6),
+    label_fontsize=12,
+    tick_fontsize=10,
+    gridlines=True,
+    model_titles=None,
+    decimal_places=3,  # Parameter for consistent decimal places in AP
+    smooth_curves=False,  # New parameter to enable smoothing
+    n_interpolate_points=100,  # Number of points for interpolation if smoothing
+):
+    """
+    Plot Precision-Recall (PR) curves for individual features using model
+    predictions, with options for smoothing jagged curves, using model_titles
+    only in the plot title, specifying decimal places for Average Precision
+    (AP), and allowing title to be None when title = "" or when model_titles is
+    not specified and no custom title is provided.
+
+    Parameters:
+    - models: List of trained models or a single model.
+    - X: Feature DataFrame for prediction.
+    - y: True binary labels.
+    - feature_names: List of feature names to plot PR curves for.
+    - xlabel, ylabel: Axis labels.
+    - title: Title for the plot (can be customized, default, empty string,
+      or None).
+    - save_plot: Whether to save the plot.
+    - image_path_png, image_path_svg: Paths to save PNG and SVG images.
+    - text_wrap: Max width for wrapping titles.
+    - curve_kwgs: Dictionary with feature names as keys and styling dictionaries
+      (e.g., {'color': 'red', 'linestyle': '--'}) as values for specific features.
+    - linestyle_kwgs: Styling for the random guess diagonal line
+      (for reference line).
+    - figsize: Custom figure size.
+    - label_fontsize, tick_fontsize: Font sizes for labels and ticks.
+    - gridlines: Whether to show grid lines.
+    - model_titles: List of model names for labeling only in the title
+      (can be a string or list).
+    - decimal_places: Number of decimal places to round Average Precision (AP)
+      values in legend (default: 3).
+    - smooth_curves: Boolean to enable interpolation for smoother curves (optional).
+    - n_interpolate_points: Number of points to use for interpolation if
+      smoothing is enabled.
+    """
+    plt.figure(figsize=figsize)
+    linestyle_kwgs = linestyle_kwgs or {
+        "color": "gray",
+        "linestyle": "--",
+        "linewidth": 2,
+    }
+    curve_kwgs = curve_kwgs or {}  # Default to empty dict if None
+
+    if not isinstance(models, list):
+        models = [models]
+
+    # Handle model_titles: convert single string to list or ensure it's a list
+    if model_titles is None:
+        model_titles = None  # Explicitly set to None to skip default titles
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]  # Convert single string to list
+    elif not isinstance(model_titles, list):
+        model_titles = [str(model_titles)]  # Convert any non-list to list of string
+    else:
+        model_titles = [str(title) for title in model_titles]  # Ensure all are strings
+
+    for model, model_name in zip(
+        models, model_titles or [f"Model {i+1}" for i in range(len(models))]
+    ):
+        # Get the feature names the model was trained on, if available
+        expected_features = (
+            model.feature_names_in_
+            if hasattr(model, "feature_names_in_")
+            else X.columns.tolist()
+        )
+
+        for feature in feature_names:
+            try:
+                if feature not in X.columns:
+                    print(f"Warning: Feature '{feature}' not found in X. Skipping.")
+                    continue
+
+                # Check if the model's expected features match X's columns
+                if set(expected_features) != set(X.columns):
+                    print(
+                        f"Warning: Model {model_name} feature names {expected_features} "
+                        f"do not match X columns {X.columns.tolist()}. "
+                        f"Using single feature."
+                    )
+                    # Use only the current feature for prediction, shuffle
+                    # non-target features for variability
+                    X_masked = X[[feature]].copy()
+                    # Pad with shuffled values from other features to introduce variability
+                    for exp_feature in expected_features:
+                        if exp_feature != feature and exp_feature in X.columns:
+                            X_masked[exp_feature] = np.random.permutation(
+                                X[exp_feature]
+                            )
+                        elif exp_feature != feature and exp_feature not in X.columns:
+                            X_masked[exp_feature] = 0  # Use 0 for missing features
+                    X_input = X_masked[expected_features]  # Reorder to match model
+                else:
+                    # Mask all other features by shuffling non-target features
+                    # for more variability
+                    X_masked = X.copy()
+                    for col in X_masked.columns:
+                        if col != feature:
+                            X_masked[col] = np.random.permutation(
+                                X[col]
+                            )  # Shuffle non-target features
+
+                # Predict probabilities
+                y_prob = model.predict_proba(
+                    X_input if "X_input" in locals() else X_masked
+                )[:, 1]
+
+                # Calculate the Precision-Recall curve
+                precision, recall, _ = precision_recall_curve(y, y_prob)
+                ap_score = average_precision_score(
+                    y, y_prob
+                )  # Use Average Precision instead of AUC
+
+                # Format Average Precision with specified decimal places
+                ap_str = f"{ap_score:.{decimal_places}f}"
+
+                # Get curve styling for this specific feature, default to empty
+                # dict if not specified
+                feature_curve_kwgs = curve_kwgs.get(feature, {})
+
+                # Plot with only feature name and AP in the legend, applying
+                # feature-specific styling
+                if smooth_curves:
+                    recall_smooth = np.linspace(0, 1, n_interpolate_points)
+                    precision_smooth = np.interp(recall_smooth, recall, precision)
+                    plt.plot(
+                        recall_smooth,
+                        precision_smooth,
+                        label=f"{feature} (AP = {ap_str})",
+                        **feature_curve_kwgs,  # Use feature-specific styling
+                    )
+                else:
+                    plt.plot(
+                        recall,
+                        precision,
+                        label=f"{feature} (AP = {ap_str})",
+                        **feature_curve_kwgs,  # Use feature-specific styling
+                    )
+
+            except Exception as e:
+                print(f"Error for {model_name} on {feature}: {e}")
+
+    # Plot a reference line (e.g., random classifier baseline) at
+    # precision = positive class fraction
+    positive_fraction = np.mean(y)  # Fraction of positive class (y=1)
+    plt.plot([0, 1], [positive_fraction, positive_fraction], **linestyle_kwgs)
+    plt.xlabel(xlabel, fontsize=label_fontsize)
+    plt.ylabel(ylabel, fontsize=label_fontsize)
+    plt.tick_params(axis="both", labelsize=tick_fontsize)
+
+    if text_wrap:
+        title = "\n".join(textwrap.wrap(title, width=text_wrap))
+
+    # Updated title logic to show model_titles only if specified, otherwise use
+    # default title or suppress if title = ""
+    if model_titles and any(
+        model_titles
+    ):  # Check if model_titles exists and has non-empty values
+        if (
+            len(models) == 1 and model_titles[0]
+        ):  # For a single model, use the first non-empty title
+            final_title = f"PR Curves for Individual Features: {model_titles[0]}"
+        else:
+            # For multiple models or if titles are provided, join non-empty titles
+            final_titles = [t for t in model_titles if t]  # Filter out empty strings
+            if final_titles:
+                final_title = (
+                    f"PR Curves for Individual Features: {', '.join(final_titles)}"
+                )
+            else:
+                final_title = "PR Curves for Individual Features"
+    else:
+        final_title = (
+            "PR Curves for Individual Features"  # Default title if no model_titles
+        )
+
+    # Use the provided title only if explicitly set and non-empty, otherwise use
+    # dynamic title or suppress
+    if title == "":  # Explicitly check for empty string
+        final_title = None  # Suppress title (no title displayed) if title is empty
+    elif title and title.strip() and title != "PR Curves for Individual Features":
+        final_title = title
+    else:
+        final_title = final_title  # Use dynamic title or default
+
+    if final_title is not None:  # Only set title if it's not None
+        plt.title(final_title, fontsize=label_fontsize)
+    plt.legend(
+        loc="best", fontsize=tick_fontsize
+    )  # PR curves often have legend in lower left
+    plt.grid(visible=gridlines)
+
+    if save_plot:
+        if image_path_png:
+            plt.savefig(image_path_png, bbox_inches="tight", format="png")
+        if image_path_svg:
+            plt.savefig(image_path_svg, bbox_inches="tight", format="svg")
+
+    plt.show()
 
 
 ################################################################################
@@ -1336,8 +2031,7 @@ def show_lift_chart(
 
             if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
-
-            ax.legend(loc="upper right", fontsize=tick_fontsize)
+                ax.legend(loc="best", fontsize=tick_fontsize)
             ax.grid(visible=gridlines)
         else:
             plt.figure(figsize=figsize or (8, 6))
@@ -1367,7 +2061,7 @@ def show_lift_chart(
                 plt.title(plot_title, fontsize=label_fontsize)
 
             plt.title(plot_title, fontsize=label_fontsize)
-            plt.legend(loc="upper right", fontsize=tick_fontsize)
+            plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
                 f"{name}_Lift",
@@ -1396,8 +2090,7 @@ def show_lift_chart(
 
         if overlay_title:  # Only set title if not explicitly disabled
             plt.title(overlay_title, fontsize=label_fontsize)
-
-        plt.legend(loc="upper right", fontsize=tick_fontsize)
+        plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
             "Overlay_Lift",
@@ -1552,7 +2245,7 @@ def show_gain_chart(
             if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
 
-            ax.legend(loc="lower right", fontsize=tick_fontsize)
+            ax.legend(loc="best", fontsize=tick_fontsize)
             ax.grid(visible=gridlines)
         else:
             plt.figure(figsize=figsize or (8, 6))
@@ -1582,7 +2275,7 @@ def show_gain_chart(
                 plt.title(plot_title, fontsize=label_fontsize)
 
             plt.title(plot_title, fontsize=label_fontsize)
-            plt.legend(loc="lower right", fontsize=tick_fontsize)
+            plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
                 f"{name}_Gain",
@@ -1612,7 +2305,7 @@ def show_gain_chart(
         if overlay_title:  # Only set title if not explicitly disabled
             plt.title(overlay_title, fontsize=label_fontsize)
 
-        plt.legend(loc="lower right", fontsize=tick_fontsize)
+        plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
             "Overlay_Gain",
@@ -1797,7 +2490,7 @@ def show_calibration_curve(
             if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
 
-            ax.legend(loc="upper left", fontsize=tick_fontsize)
+            ax.legend(loc="best", fontsize=tick_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
             ax.grid(visible=gridlines)
         else:
@@ -1836,7 +2529,7 @@ def show_calibration_curve(
             if plot_title:  # Only set title if not explicitly disabled
                 plt.title(plot_title, fontsize=label_fontsize)
 
-            plt.legend(loc="upper left", fontsize=tick_fontsize)
+            plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
                 f"{name}_Calibration",
@@ -1873,7 +2566,7 @@ def show_calibration_curve(
         if overlay_title:  # Only set title if not explicitly disabled
             plt.title(overlay_title, fontsize=label_fontsize)
 
-        plt.legend(loc="upper left", fontsize=tick_fontsize)
+        plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
             "Overlay_Calibration",
@@ -2080,6 +2773,7 @@ def plot_threshold_metrics(
     label_fontsize=12,
     tick_fontsize=10,
     gridlines=True,
+    baseline_thresh=True,
     curve_kwgs=None,
     baseline_kwgs=None,
     save_plot=False,
@@ -2104,6 +2798,7 @@ def plot_threshold_metrics(
     - label_fontsize: Font size for axis labels and title (default: 12).
     - tick_fontsize: Font size for tick labels (default: 10).
     - gridlines: Boolean flag to display gridlines (default: True).
+    - baseline_thresh: Boolean flag to display baseline threshold on plot.
     - curve_kwgs: Dictionary of keyword arguments for curve styling
       (default: None).
     - baseline_kwgs: Dictionary of keyword arguments for baseline styling
@@ -2210,9 +2905,9 @@ def plot_threshold_metrics(
         **curve_kwgs,
     )
 
-    # Draw baseline lines at 0.5 for thresholds and metrics
-    ax.axvline(x=0.5, **baseline_kwgs, label="Threshold = 0.5")
-    ax.axhline(y=0.5, **baseline_kwgs, label="Metric = 0.5")
+    if baseline_thresh:
+        # Draw baseline lines at 0.5 for thresholds and metrics
+        ax.axvline(x=0.5, **baseline_kwgs, label="Threshold = 0.5")
 
     # Highlight the best threshold found
     if best_threshold is not None:
