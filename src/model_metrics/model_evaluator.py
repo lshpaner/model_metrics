@@ -485,12 +485,28 @@ def summarize_model_performance(
     )
     print(separator)
 
-    # Print each row
-    for _, row_data in metrics_df.iterrows():
+    # Track the previous model name for regression models only
+    prev_model = None
+    for i, (_, row_data) in enumerate(metrics_df.iterrows()):
+        current_model = row_data["Model"] if "Model" in row_data else None
+        # Only add a separator for regression models when transitioning to a new model
+        if (
+            model_type == "regression"
+            and current_model
+            and current_model != prev_model
+            and i > 0  # Avoid printing separator before the first row
+        ):
+            print(separator)
         row = " | ".join(
             f"{str(row_data[col]).ljust(col_widths[col])}" for col in metrics_df.columns
         )
         print(row)
+        # Update the previous model name for the next iteration
+        prev_model = (
+            current_model
+            if model_type == "regression" and current_model
+            else prev_model
+        )
 
     print(separator)
     return
