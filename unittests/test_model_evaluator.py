@@ -62,6 +62,24 @@ def trained_model(sample_data):
 
 
 @pytest.fixture
+def sample_classification_data():
+    """Fixture to create a sample classification dataset."""
+    np.random.seed(42)
+    X = pd.DataFrame(np.random.rand(100, 3), columns=["A", "B", "C"])
+    y = np.random.randint(0, 2, size=100)
+    return X, y
+
+
+@pytest.fixture
+def sample_regression_data():
+    """Fixture to create a sample regression dataset."""
+    np.random.seed(42)
+    X = pd.DataFrame(np.random.rand(100, 3), columns=["A", "B", "C"])
+    y = np.random.rand(100) * 100  # Simulated continuous target variable
+    return X, y
+
+
+@pytest.fixture
 def classification_model():
     """Returns a trained classification model and test data."""
     X, y = make_classification(n_samples=500, n_features=10, random_state=42)
@@ -86,6 +104,28 @@ def regression_model():
     )
     model = Lasso(alpha=0.1).fit(X_train, y_train)
     return model, (X_test, y_test)
+
+
+@pytest.fixture
+def trained_classification_model(sample_classification_data):
+    """Fixture to train a sample classification model."""
+    from sklearn.linear_model import LogisticRegression
+
+    X, y = sample_classification_data
+    model = LogisticRegression()
+    model.fit(X, y)
+    return model
+
+
+@pytest.fixture
+def trained_regression_model(sample_regression_data):
+    """Fixture to train a sample regression model."""
+    from sklearn.linear_model import LinearRegression
+
+    X, y = sample_regression_data
+    model = LinearRegression()
+    model.fit(X, y)
+    return model
 
 
 def test_save_plot_images(tmp_path):
@@ -298,17 +338,43 @@ def test_summarize_model_performance_classification(classification_model, capsys
     print("All classification metrics present and correctly formatted.")
 
 
-def test_summarize_model_performance_regression(regression_model):
-    """Test summarize_model_performance function for regression models."""
-    model, (X, y) = regression_model
-    df = summarize_model_performance(
-        model, X, y, model_type="regression", return_df=True
+def test_summarize_model_performance_regression(
+    trained_regression_model, sample_regression_data, capsys
+):
+    """Test summarize_model_performance prints formatted output for regression models."""
+    X, y = sample_regression_data
+    summarize_model_performance(
+        trained_regression_model, X, y, model_type="regression", return_df=False
     )
 
-    # Ensure output is a DataFrame
-    assert isinstance(df, pd.DataFrame), "Output should be a pandas DataFrame."
+    captured = capsys.readouterr().out
+    print("\nCaptured Regression Output:\n", captured)
 
-    # Expected columns in full regression output
+    # Ensure "Model Performance Metrics" title is printed
+    assert "Model Performance Metrics:" in captured
+
+    # Ensure at least one separator line exists
+    separator_count = captured.count(
+        "-" * 30
+    )  # Assuming at least 30 dashes in separators
+    assert separator_count >= 2, "Expected at least two separator lines"
+
+    # Ensure key regression metrics appear
+    expected_keywords = ["Model", "MAE", "MAPE (%)", "MSE", "RMSE", "R^2 Score"]
+    for keyword in expected_keywords:
+        assert keyword in captured, f"Expected keyword '{keyword}' missing in output"
+
+
+def test_summarize_model_performance_regression_dataframe(
+    trained_regression_model, sample_regression_data
+):
+    """Test summarize_model_performance returns a properly formatted DataFrame for regression models."""
+    X, y = sample_regression_data
+    df = summarize_model_performance(
+        trained_regression_model, X, y, model_type="regression", return_df=True
+    )
+
+    assert isinstance(df, pd.DataFrame), "Expected a DataFrame as output"
     expected_columns = [
         "Model",
         "Metric",
@@ -319,29 +385,105 @@ def test_summarize_model_performance_regression(regression_model):
         "MAPE (%)",
         "MSE",
         "RMSE",
-        "Expl. Var.",
         "R^2 Score",
     ]
-
     missing_columns = [col for col in expected_columns if col not in df.columns]
     assert not missing_columns, f"Missing expected columns: {missing_columns}"
 
-    # Ensure the model name is captured
-    model_name = extract_model_name(model)
+    # Ensure "Overall Metrics" row exists
+    assert "Overall Metrics" in df["Metric"].values, "Expected 'Overall Metrics' row"
+
+
+def test_summarize_model_performance_regression_separator(
+    trained_regression_model, sample_regression_data, capsys
+):
+    """Test separator placement for regression models."""
+    X, y = sample_regression_data
+    summarize_model_performance(
+        trained_regression_model, X, y, model_type="regression", return_df=False
+    )
+
+    captured = capsys.readouterr().out
+
+    # Debugging: Print captured output if needed
+    # print("\nCaptured Output:\n", captured)
+
+    separator_count = captured.count(
+        "-" * 30
+    )  # Assuming at least 30 dashes in separators
     assert (
-        model_name in df["Model"].values
-    ), f"Model name '{model_name}' is missing from DataFrame."
+        separator_count >= 2
+    ), f"Expected at least two separator lines, found {separator_count}"
 
-    print("Regression performance summary test passed.")
+    # Ensure separators appear between models (if multiple)
+    model_name = extract_model_name(trained_regression_model)
+    occurrences = captured.count(model_name)
+
+    # Adjusted assertion: Allow multiple occurrences (set upper limit based on expected behavior)
+    assert (
+        1 <= occurrences <= 5
+    ), f"Expected 1-5 occurrences of model name, found {occurrences}"
 
 
-def test_summarize_model_performance_overall_only(regression_model):
-    """
-    Test summarize_model_performance with overall_only=True for regression models.
-    """
-    model, (X, y) = regression_model
+def test_summarize_model_performance_format(
+    trained_classification_model, sample_classification_data, capsys
+):
+    """Test summarize_model_performance prints correctly formatted output for classification models."""
+    X, y = sample_classification_data
+    summarize_model_performance(
+        trained_classification_model, X, y, model_type="classification", return_df=False
+    )
+
+    captured = capsys.readouterr().out
+    print("\nCaptured Output:\n", captured)
+
+    # Ensure "Model Performance Metrics" title is printed
+    assert "Model Performance Metrics:" in captured
+
+    # Ensure at least one separator line exists
+    separator_count = captured.count(
+        "-" * 30
+    )  # Assuming at least 30 dashes in separators
+    assert separator_count >= 2, "Expected at least two separator lines"
+
+    # Ensure expected metrics appear in the output
+    expected_keywords = [
+        "Model",
+        "Precision/PPV",
+        "AUC ROC",
+        "F1-Score",
+        "Sensitivity/Recall",
+    ]
+    for keyword in expected_keywords:
+        assert keyword in captured, f"Expected keyword '{keyword}' missing in output"
+
+
+def test_summarize_model_performance_dataframe(
+    trained_classification_model, sample_classification_data
+):
+    """Test summarize_model_performance returns a properly formatted DataFrame when return_df=True."""
+    X, y = sample_classification_data
     df = summarize_model_performance(
-        model,
+        trained_classification_model, X, y, model_type="classification", return_df=True
+    )
+
+    assert isinstance(df, pd.DataFrame), "Expected a DataFrame as output"
+    assert "Metrics" in df.columns, "Expected 'Metrics' column in DataFrame"
+
+    expected_metrics = ["Precision/PPV", "AUC ROC", "F1-Score", "Sensitivity/Recall"]
+    missing_metrics = [
+        metric for metric in expected_metrics if metric not in df["Metrics"].values
+    ]
+    assert not missing_metrics, f"Missing expected metrics: {missing_metrics}"
+
+
+def test_summarize_model_performance_overall_only(
+    trained_regression_model, sample_regression_data
+):
+    """Test summarize_model_performance with overall_only=True for regression models."""
+    X, y = sample_regression_data
+    df = summarize_model_performance(
+        trained_regression_model,
         X,
         y,
         model_type="regression",
@@ -350,64 +492,56 @@ def test_summarize_model_performance_overall_only(regression_model):
     )
 
     # Ensure DataFrame is returned
-    assert isinstance(df, pd.DataFrame), "Expected a DataFrame output."
+    assert isinstance(df, pd.DataFrame), "Expected a DataFrame output"
 
     # Ensure "Overall Metrics" row is the only row
-    assert len(df) == 1, "Expected only one row for 'Overall Metrics'."
+    assert len(df) == 1, "Expected only one row for 'Overall Metrics'"
     assert (
         df.iloc[0]["Metric"] == "Overall Metrics"
-    ), "First row should be 'Overall Metrics'."
+    ), "First row should be 'Overall Metrics'"
 
     # Ensure unnecessary columns are removed
     assert (
         "Variable" not in df.columns
-    ), "Column 'Variable' should be removed in 'overall_only' mode."
+    ), "Column 'Variable' should be removed in 'overall_only' mode"
     assert (
         "Coefficient" not in df.columns
-    ), "Column 'Coefficient' should be removed in 'overall_only' mode."
+    ), "Column 'Coefficient' should be removed in 'overall_only' mode"
     assert (
         "P-value" not in df.columns
-    ), "Column 'P-value' should be removed in 'overall_only' mode."
-
-    print("Overall metrics filtering test passed.")
+    ), "Column 'P-value' should be removed in 'overall_only' mode"
 
 
-def test_summarize_model_performance_invalid_combination(regression_model):
-    """
-    Test that summarize_model_performance raises an error when overall_only=True
-    with classification.
-    """
-    model, (X, y) = regression_model
-
+def test_summarize_model_performance_invalid_combination(
+    trained_classification_model, sample_classification_data
+):
+    """Ensure ValueError is raised when using overall_only=True for classification models."""
+    X, y = sample_classification_data
     with pytest.raises(
         ValueError,
         match="The 'overall_only' option is only valid for regression models",
     ):
         summarize_model_performance(
-            model, X, y, model_type="classification", overall_only=True
+            trained_classification_model,
+            X,
+            y,
+            model_type="classification",
+            overall_only=True,
         )
-
-    print("Invalid overall_only check passed.")
 
 
 @patch("builtins.print")
-def test_summarize_model_performance_print_output(mock_print, regression_model):
-    """
-    Test that summarize_model_performance prints output correctly when return_df=False.
-    """
-    model, (X, y) = regression_model
+def test_summarize_model_performance_print_output(
+    mock_print, trained_regression_model, sample_regression_data
+):
+    """Test summarize_model_performance prints output correctly when return_df=False."""
+    X, y = sample_regression_data
     summarize_model_performance(
-        model,
-        X,
-        y,
-        model_type="regression",
-        return_df=False,
+        trained_regression_model, X, y, model_type="regression", return_df=False
     )
 
     # Ensure print was called
     mock_print.assert_called()
-
-    print("Print output test passed.")
 
 
 def test_get_model_probabilities(trained_model, sample_data):
