@@ -72,14 +72,14 @@ Model Performance Summary
         - Uses ``statsmodels.OLS`` to extract coefficients and p-values.
         - If ``overall_only=True``, the DataFrame retains only overall performance metrics.
 
-    - If ``return_df=False``, the function prints results in a structured format with center-aligned headers.
+    - If ``return_df=False``, the function prints results in a structured format.
 
 The ``summarize_model_performance`` function provides a structured evaluation of classification and regression models, generating key performance metrics. For classification models, it computes precision, recall, specificity, F1-score, and AUC ROC. For regression models, it extracts coefficients and evaluates error metrics like MSE, RMSE, and R². The function allows specifying custom thresholds, metric rounding, and formatted display options.
 
+Below are two examples demonstrating how to evaluate multiple models using ``summarize_model_performance``. The function calculates and presents metrics for classification and regression models.
+
 Binary Classification Example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Below is an example demonstrating how to evaluate multiple models using ``summarize_model_performance``. The function calculates and presents metrics for classification and regression models.
 
 .. code-block:: python
 
@@ -90,10 +90,19 @@ Below is an example demonstrating how to evaluate multiple models using ``summar
     from model_metrics import summarize_model_performance
 
     # Generate a synthetic dataset
-    X, y = make_classification(n_samples=1000, n_features=10, random_state=42)
+    X, y = make_classification(
+        n_samples=1000,
+        n_features=10,
+        random_state=42,
+    )
 
     # Split into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        random_state=42,
+    )
 
     # Train models
     model1 = LogisticRegression().fit(X_train, y_train)
@@ -108,10 +117,11 @@ Below is an example demonstrating how to evaluate multiple models using ``summar
         X=X_test,
         y=y_test,
         model_type="classification",
-        return_df=True
+        return_df=True,
     )
 
     model_performance
+
 
 **Output**
 
@@ -119,52 +129,63 @@ Below is an example demonstrating how to evaluate multiple models using ``summar
 
     <style type="text/css">
     .tg  {border-collapse:collapse;border-spacing:0;}
-    .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:12px;
-    overflow:hidden;padding:10px 5px;word-break:normal;}
-    .tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:12px;
-    font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
-    .tg .tg-7btt{border-color:inherit;font-weight:bold;text-align:center;vertical-align:top}
-    .tg .tg-0pky{border-color:inherit;text-align:center;vertical-align:top}
-    </style>
-    <table class="tg"><thead>
+    .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+    overflow:hidden;padding:0px 5px;word-break:normal;}
+    .tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+    font-weight:normal;overflow:hidden;padding:0px 5px;word-break:normal;}
+    .tg .tg-2b7s{text-align:right;vertical-align:bottom}
+    .tg .tg-kex3{font-weight:bold;text-align:right;vertical-align:bottom}
+    .tg .tg-j6zm{font-weight:bold;text-align:right;vertical-align:bottom}
+    .tg .tg-7zrl{text-align:right;vertical-align:bottom}
+    @media screen and (max-width: 767px) {.tg {width: auto !important;}.tg col {width: auto !important;}.tg-wrap {overflow-x: auto;-webkit-overflow-scrolling: touch;}}</style>
+    <div class="tg-wrap"><table class="tg"><thead>
     <tr>
-        <th class="tg-7btt">Model</th>
-        <th class="tg-7btt">Logistic Regression</th>
-        <th class="tg-7btt">Random Forest Classifier</th>
+        <th class="tg-kex3">Metrics</th>
+        <th class="tg-j6zm">Logistic Regression</th>
+        <th class="tg-j6zm">Random Forest</th>
     </tr></thead>
     <tbody>
     <tr>
-        <td class="tg-0pky">Precision/PPV</td>
-        <td class="tg-0pky">0.867</td>
-        <td class="tg-0pky">0.914</td>
+        <td class="tg-2b7s">Precision/PPV</td>
+        <td class="tg-7zrl">0.867</td>
+        <td class="tg-7zrl">0.912</td>
     </tr>
     <tr>
-        <td class="tg-0pky">Average Precision</td>
-        <td class="tg-0pky">0.937</td>
-        <td class="tg-0pky">0.967</td>
+        <td class="tg-2b7s">Average Precision</td>
+        <td class="tg-7zrl">0.937</td>
+        <td class="tg-7zrl">0.966</td>
     </tr>
     <tr>
-        <td class="tg-0pky">Sensitivity/Recall</td>
-        <td class="tg-0pky">0.820</td>
-        <td class="tg-0pky">0.865</td>
+        <td class="tg-2b7s">Sensitivity/Recall</td>
+        <td class="tg-7zrl">0.82</td>
+        <td class="tg-7zrl">0.838</td>
     </tr>
     <tr>
-        <td class="tg-0pky">Specificity</td>
-        <td class="tg-0pky">0.843</td>
-        <td class="tg-0pky">0.899</td>
+        <td class="tg-2b7s">Specificity</td>
+        <td class="tg-7zrl">0.843</td>
+        <td class="tg-7zrl">0.899</td>
     </tr>
     <tr>
-        <td class="tg-0pky">F1-Score</td>
-        <td class="tg-0pky">0.843</td>
-        <td class="tg-0pky">0.889</td>
+        <td class="tg-2b7s">F1-Score</td>
+        <td class="tg-7zrl">0.843</td>
+        <td class="tg-7zrl">0.873</td>
     </tr>
     <tr>
-        <td class="tg-0pky">AUC   ROC</td>
-        <td class="tg-0pky">0.913</td>
-        <td class="tg-0pky">0.950</td>
+        <td class="tg-2b7s">AUC ROC</td>
+        <td class="tg-7zrl">0.913</td>
+        <td class="tg-7zrl">0.95</td>
     </tr>
-    </tbody>
-    </table>
+    <tr>
+        <td class="tg-2b7s">Brier Score</td>
+        <td class="tg-7zrl">0.118</td>
+        <td class="tg-7zrl">0.086</td>
+    </tr>
+    <tr>
+        <td class="tg-2b7s">Model Threshold</td>
+        <td class="tg-7zrl">0.5</td>
+        <td class="tg-7zrl">0.5</td>
+    </tr>
+    </tbody></table></div>
 
 .. raw:: html
 
@@ -183,14 +204,27 @@ Regression Example
     from model_metrics import summarize_model_performance
 
     # Generate a synthetic regression dataset
-    X, y = make_regression(n_samples=1000, n_features=10, noise=0.1, random_state=42)
+    X, y = make_regression(
+        n_samples=1000,
+        n_features=10,
+        noise=0.1,
+        random_state=42,
+    )
 
     # Split into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        random_state=42,
+    )
 
     # Train regression models
     model1 = LinearRegression().fit(X_train, y_train)
-    model2 = RandomForestRegressor(n_estimators=100, random_state=42).fit(X_train, y_train)
+    model2 = RandomForestRegressor(n_estimators=100, random_state=42,).fit(
+        X_train,
+        y_train,
+    )
 
     # Evaluate regression model performance
     # Evaluate models
@@ -204,6 +238,9 @@ Regression Example
     )
 
     regression_metrics
+
+
+**Output**
 
 .. raw:: html
 
