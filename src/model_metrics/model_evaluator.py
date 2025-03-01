@@ -412,7 +412,7 @@ def summarize_model_performance(
                     "Coefficient": "",
                     "P-value": "",
                     "MAE": round(mae, decimal_places),
-                    "MAPE (%)": (
+                    "MAPE": (
                         round(mape, decimal_places) if not np.isnan(mape) else None
                     ),
                     "MSE": round(mse, decimal_places),
@@ -436,7 +436,7 @@ def summarize_model_performance(
                         "Coefficient": coefficients[feature],
                         "P-value": p_values[feature],
                         "MAE": "",
-                        "MAPE (%)": "",
+                        "MAPE": "",
                         "MSE": "",
                         "RMSE": "",
                         "Expl. Var.": "",
