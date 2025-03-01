@@ -78,6 +78,8 @@ The ``summarize_model_performance`` function provides a structured evaluation of
 
 Below are two examples demonstrating how to evaluate multiple models using ``summarize_model_performance``. The function calculates and presents metrics for classification and regression models.
 
+.. _Binary_Classification_Example_1:
+
 Binary Classification Example 1
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -201,12 +203,15 @@ Binary Classification Example 2
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this example, we revisit binary classification with the same two models—Logistic 
-Regression and Random Forest—but adjust the classification threshold from the 
-default 0.5 to 0.2. This change allows us to explore how lowering the threshold 
-impacts model performance, potentially increasing sensitivity (recall) by 
-classifying more instances as positive (1) at the expense of precision.
+Regression and Random Forest—but adjust the classification threshold 
+(``custom_threshold`` input in this case) from the default 0.5 to 0.2. This 
+change allows us to explore how lowering the threshold impacts model performance, 
+potentially increasing sensitivity (recall) by classifying more instances as 
+positive (1) at the expense of precision.
 
 .. code-block:: python
+
+    from model_metrics import summarize_model_performance
 
     # Evaluate model performance
     model_performance = summarize_model_performance(
@@ -221,9 +226,81 @@ classifying more instances as positive (1) at the expense of precision.
 
 .. note:: 
 
-    For the full context behind model training in Binary Classification Example 2, see 
+    For the full context behind model training in Binary Classification Example 2, 
+    see :ref:`Example 1 <Binary_Classification_Example_1>`
 
-Regression Example
+
+**Output**
+
+.. raw:: html
+
+    <style type="text/css">
+    .tg  {border-collapse:collapse;border-spacing:0;}
+    .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+    overflow:hidden;padding:0px 5px;word-break:normal;}
+    .tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+    font-weight:normal;overflow:hidden;padding:0px 5px;word-break:normal;}
+    .tg .tg-2b7s{text-align:right;vertical-align:bottom}
+    .tg .tg-kex3{font-weight:bold;text-align:right;vertical-align:bottom}
+    .tg .tg-j6zm{font-weight:bold;text-align:right;vertical-align:bottom}
+    .tg .tg-7zrl{text-align:right;vertical-align:bottom}
+    @media screen and (max-width: 767px) {.tg {width: auto !important;}.tg col {width: auto !important;}.tg-wrap {overflow-x: auto;-webkit-overflow-scrolling: touch;}}</style>
+    <div class="tg-wrap"><table class="tg"><thead>
+    <tr>
+        <th class="tg-kex3">Metrics</th>
+        <th class="tg-j6zm">Logistic Regression</th>
+        <th class="tg-j6zm">Random Forest</th>
+    </tr></thead>
+    <tbody>
+    <tr>
+        <td class="tg-2b7s">Precision/PPV</td>
+        <td class="tg-7zrl">0.803</td>
+        <td class="tg-7zrl">0.831</td>
+    </tr>
+    <tr>
+        <td class="tg-2b7s">Average Precision</td>
+        <td class="tg-7zrl">0.937</td>
+        <td class="tg-7zrl">0.966</td>
+    </tr>
+    <tr>
+        <td class="tg-2b7s">Sensitivity/Recall</td>
+        <td class="tg-7zrl">0.919</td>
+        <td class="tg-7zrl">0.928</td>
+    </tr>
+    <tr>
+        <td class="tg-2b7s">Specificity</td>
+        <td class="tg-7zrl">0.719</td>
+        <td class="tg-7zrl">0.764</td>
+    </tr>
+    <tr>
+        <td class="tg-2b7s">F1-Score</td>
+        <td class="tg-7zrl">0.857</td>
+        <td class="tg-7zrl">0.877</td>
+    </tr>
+    <tr>
+        <td class="tg-2b7s">AUC ROC</td>
+        <td class="tg-7zrl">0.913</td>
+        <td class="tg-7zrl">0.949</td>
+    </tr>
+    <tr>
+        <td class="tg-2b7s">Brier Score</td>
+        <td class="tg-7zrl">0.118</td>
+        <td class="tg-7zrl">0.085</td>
+    </tr>
+    <tr>
+        <td class="tg-2b7s">Model Threshold</td>
+        <td class="tg-7zrl">0.2</td>
+        <td class="tg-7zrl">0.2</td>
+    </tr>
+    </tbody></table></div>
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+
+
+Regression Example 1
 ^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
@@ -258,7 +335,6 @@ Regression Example
     )
 
     # Evaluate regression model performance
-    # Evaluate models
     regression_metrics = summarize_model_performance(
         model=[linear_model, rf_model],
         model_titles=["Linear Regression", "Random Forest"],
@@ -667,3 +743,24 @@ Regression Example
 .. raw:: html
 
     <div style="height: 40px;"></div>
+
+
+Regression Example 2
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    from model_metrics import summarize_model_performance
+
+
+    # Evaluate regression model performance
+    regression_metrics = summarize_model_performance(
+        model=[linear_model, rf_model],
+        model_titles=["Linear Regression", "Random Forest"],
+        X=X_test_scaled,
+        y=y_test,
+        model_type="regression",
+        return_df=True,
+    )
+
+    regression_metrics
