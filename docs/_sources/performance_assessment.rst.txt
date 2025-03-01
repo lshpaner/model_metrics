@@ -352,43 +352,43 @@ Regression Example 1
 .. raw:: html
 
     <style type="text/css">
-    .tg {
-        border-collapse: collapse;
-        border-spacing: 0;
-        max-width: 450px; 
-        width: 100%;
-    }
-    .tg td {
-        border-color: black;
-        border-style: solid;
-        border-width: 1px;
-        font-family: Arial, sans-serif;
-        font-size: 12px; 
-        overflow: hidden;
-        padding: 0px 3px; 
-        word-break: normal;
-    }
-    .tg th {
-        border-color: black;
-        border-style: solid;
-        border-width: 1px;
-        font-family: Arial, sans-serif;
-        font-size: 12px; 
-        font-weight: normal;
-        overflow: hidden;
-        padding: 0px 3px; 
-        word-break: normal;
-    }
-    .tg .tg-2b7s { text-align: right; vertical-align: bottom; }
-    .tg .tg-kex3 { font-weight: bold; text-align: right; vertical-align: bottom; }
-    .tg .tg-j6zm { font-weight: bold; text-align: right; vertical-align: bottom; }
-    .tg .tg-7zrl { text-align: right; vertical-align: bottom; }
+        .tg {
+            border-collapse: collapse;
+            border-spacing: 0;
+            max-width: 450px;
+            width: 100%;
+        }
+        .tg td {
+            border-color: black;
+            border-style: solid;
+            border-width: 1px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            overflow: hidden;
+            padding: 0px 3px;
+            word-break: normal;
+        }
+        .tg th {
+            border-color: black;
+            border-style: solid;
+            border-width: 1px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            font-weight: normal;
+            overflow: hidden;
+            padding: 0px 3px;
+            word-break: normal;
+        }
+        .tg .tg-2b7s { text-align: right; vertical-align: bottom; }
+        .tg .tg-kex3 { font-weight: bold; text-align: right; vertical-align: bottom; }
+        .tg .tg-j6zm { font-weight: bold; text-align: right; vertical-align: bottom; }
+        .tg .tg-7zrl { text-align: right; vertical-align: bottom; }
 
-    @media screen and (max-width: 767px) {
-        .tg { width: auto !important; }
-        .tg col { width: auto !important; }
-        .tg-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    }
+        @media screen and (max-width: 767px) {
+            .tg { width: auto !important; }
+            .tg col { width: auto !important; }
+            .tg-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        }
     </style>
 
     <div class="tg-wrap">
@@ -400,7 +400,7 @@ Regression Example 1
                 <col style="width: 70px"> <!-- Coefficient -->
                 <col style="width: 50px"> <!-- P-value -->
                 <col style="width: 45px"> <!-- MAE -->
-                <col style="width: 70px"> <!-- MAPE (%) -->
+                <col style="width: 45px"> <!-- MAPE (%) -->
                 <col style="width: 55px"> <!-- MSE -->
                 <col style="width: 45px"> <!-- RMSE -->
                 <col style="width: 65px"> <!-- Expl. Var. -->
@@ -414,7 +414,7 @@ Regression Example 1
                     <th class="tg-kex3">Coefficient</th>
                     <th class="tg-kex3">P-value</th>
                     <th class="tg-kex3">MAE</th>
-                    <th class="tg-kex3">MAPE (%)</th>
+                    <th class="tg-kex3">MAPE</th>
                     <th class="tg-kex3">MSE</th>
                     <th class="tg-kex3">RMSE</th>
                     <th class="tg-kex3">Expl. Var.</th>
@@ -438,8 +438,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Linear Regression</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">0</td>
-                    <td class="tg-2b7s">156.463</td>
+                    <td class="tg-2b7s">const</td>
+                    <td class="tg-2b7s">154.311</td>
                     <td class="tg-2b7s">0</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -451,8 +451,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Linear Regression</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">1</td>
-                    <td class="tg-2b7s">-6.258</td>
+                    <td class="tg-2b7s">age</td>
+                    <td class="tg-2b7s">-135.253</td>
                     <td class="tg-2b7s">0.285</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -464,8 +464,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Linear Regression</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">2</td>
-                    <td class="tg-2b7s">-12.247</td>
+                    <td class="tg-2b7s">sex</td>
+                    <td class="tg-2b7s">257.411</td>
                     <td class="tg-2b7s">0.121</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -477,8 +477,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Linear Regression</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">3</td>
-                    <td class="tg-2b7s">20.091</td>
+                    <td class="tg-2b7s">bmi</td>
+                    <td class="tg-2b7s">425.591</td>
                     <td class="tg-2b7s">0.004</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -490,8 +490,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Linear Regression</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">4</td>
-                    <td class="tg-2b7s">10.902</td>
+                    <td class="tg-2b7s">bp</td>
+                    <td class="tg-2b7s">225.238</td>
                     <td class="tg-2b7s">0.219</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -503,8 +503,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Linear Regression</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">5</td>
-                    <td class="tg-2b7s">16.991</td>
+                    <td class="tg-2b7s">s1</td>
+                    <td class="tg-2b7s">356.066</td>
                     <td class="tg-2b7s">0.8</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -516,8 +516,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Linear Regression</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">6</td>
-                    <td class="tg-2b7s">-11.763</td>
+                    <td class="tg-2b7s">s2</td>
+                    <td class="tg-2b7s">-247.304</td>
                     <td class="tg-2b7s">0.838</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -529,8 +529,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Linear Regression</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">7</td>
-                    <td class="tg-2b7s">-19.65</td>
+                    <td class="tg-2b7s">s3</td>
+                    <td class="tg-2b7s">-418.291</td>
                     <td class="tg-2b7s">0.503</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -542,8 +542,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Linear Regression</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">8</td>
-                    <td class="tg-2b7s">-8.769</td>
+                    <td class="tg-2b7s">s4</td>
+                    <td class="tg-2b7s">-183.756</td>
                     <td class="tg-2b7s">0.606</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -555,8 +555,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Linear Regression</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">9</td>
-                    <td class="tg-2b7s">28.723</td>
+                    <td class="tg-2b7s">s5</td>
+                    <td class="tg-2b7s">601.398</td>
                     <td class="tg-2b7s">0.224</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -568,8 +568,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Linear Regression</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">10</td>
-                    <td class="tg-2b7s">7.99</td>
+                    <td class="tg-2b7s">s6</td>
+                    <td class="tg-2b7s">165.374</td>
                     <td class="tg-2b7s">0.317</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -584,18 +584,18 @@ Regression Example 1
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s">44.171</td>
-                    <td class="tg-2b7s">40.09</td>
-                    <td class="tg-2b7s">2959.181</td>
-                    <td class="tg-2b7s">54.398</td>
-                    <td class="tg-2b7s">0.442</td>
-                    <td class="tg-7zrl">0.441</td>
+                    <td class="tg-2b7s">44.053</td>
+                    <td class="tg-2b7s">40.005</td>
+                    <td class="tg-2b7s">2952.011</td>
+                    <td class="tg-2b7s">54.332</td>
+                    <td class="tg-2b7s">0.443</td>
+                    <td class="tg-7zrl">0.443</td>
                 </tr>
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">0</td>
-                    <td class="tg-2b7s">156.463</td>
+                    <td class="tg-2b7s">const</td>
+                    <td class="tg-2b7s">154.311</td>
                     <td class="tg-2b7s">0</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -607,8 +607,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">1</td>
-                    <td class="tg-2b7s">-6.258</td>
+                    <td class="tg-2b7s">age</td>
+                    <td class="tg-2b7s">-135.253</td>
                     <td class="tg-2b7s">0.285</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -620,8 +620,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">2</td>
-                    <td class="tg-2b7s">-12.247</td>
+                    <td class="tg-2b7s">sex</td>
+                    <td class="tg-2b7s">257.411</td>
                     <td class="tg-2b7s">0.121</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -633,8 +633,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">3</td>
-                    <td class="tg-2b7s">20.091</td>
+                    <td class="tg-2b7s">bmi</td>
+                    <td class="tg-2b7s">425.591</td>
                     <td class="tg-2b7s">0.004</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -646,8 +646,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">4</td>
-                    <td class="tg-2b7s">10.902</td>
+                    <td class="tg-2b7s">bp</td>
+                    <td class="tg-2b7s">229.238</td>
                     <td class="tg-2b7s">0.219</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -659,8 +659,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">5</td>
-                    <td class="tg-2b7s">16.991</td>
+                    <td class="tg-2b7s">s1</td>
+                    <td class="tg-2b7s">356.066</td>
                     <td class="tg-2b7s">0.8</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -672,8 +672,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">6</td>
-                    <td class="tg-2b7s">-11.763</td>
+                    <td class="tg-2b7s">s2</td>
+                    <td class="tg-2b7s">-247.304</td>
                     <td class="tg-2b7s">0.838</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -685,8 +685,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">7</td>
-                    <td class="tg-2b7s">-19.65</td>
+                    <td class="tg-2b7s">s3</td>
+                    <td class="tg-2b7s">-418.281</td>
                     <td class="tg-2b7s">0.503</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -698,8 +698,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">8</td>
-                    <td class="tg-2b7s">-8.769</td>
+                    <td class="tg-2b7s">s4</td>
+                    <td class="tg-2b7s">-183.756</td>
                     <td class="tg-2b7s">0.606</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -711,8 +711,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">9</td>
-                    <td class="tg-2b7s">28.723</td>
+                    <td class="tg-2b7s">s5</td>
+                    <td class="tg-2b7s">601.398</td>
                     <td class="tg-2b7s">0.224</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -724,8 +724,8 @@ Regression Example 1
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
                     <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">10</td>
-                    <td class="tg-2b7s">7.99</td>
+                    <td class="tg-2b7s">s6</td>
+                    <td class="tg-2b7s">165.374</td>
                     <td class="tg-2b7s">0.317</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
@@ -737,8 +737,6 @@ Regression Example 1
             </tbody>
         </table>
     </div>
-
-
 
 .. raw:: html
 
