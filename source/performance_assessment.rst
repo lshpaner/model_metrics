@@ -78,8 +78,13 @@ The ``summarize_model_performance`` function provides a structured evaluation of
 
 Below are two examples demonstrating how to evaluate multiple models using ``summarize_model_performance``. The function calculates and presents metrics for classification and regression models.
 
-Binary Classification Example
+Binary Classification Example 1
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this example, we demonstrate binary classification using two popular machine 
+learning models: Logistic Regression and Random Forest. Both models are evaluated 
+with a default classification threshold of 0.5, meaning predictions are classified 
+as positive (1) if the predicted probability exceeds 0.5, and negative (0) otherwise.
 
 .. code-block:: python
 
@@ -191,6 +196,32 @@ Binary Classification Example
 
     <div style="height: 40px;"></div>
 
+
+Binary Classification Example 2
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this example, we revisit binary classification with the same two models—Logistic 
+Regression and Random Forest—but adjust the classification threshold from the 
+default 0.5 to 0.2. This change allows us to explore how lowering the threshold 
+impacts model performance, potentially increasing sensitivity (recall) by 
+classifying more instances as positive (1) at the expense of precision.
+
+.. code-block:: python
+
+    # Evaluate model performance
+    model_performance = summarize_model_performance(
+        model=[model1, model2],
+        model_titles=model_titles,
+        X=X_test,
+        y=y_test,
+        model_type="classification",
+        return_df=True,
+        custom_threshold=0.2,
+    )
+
+.. note:: 
+
+    For the full context behind model training in Binary Classification Example 2, see 
 
 Regression Example
 ^^^^^^^^^^^^^^^^^^^^

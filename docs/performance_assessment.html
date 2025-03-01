@@ -57,7 +57,8 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Model Performance Summary</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#summarize_model_performance"><code class="docutils literal notranslate"><span class="pre">summarize_model_performance()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#binary-classification-example">Binary Classification Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binary-classification-example-1">Binary Classification Example 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binary-classification-example-2">Binary Classification Example 2</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#regression-example">Regression Example</a></li>
 </ul>
 </li>
@@ -158,8 +159,12 @@
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">summarize_model_performance</span></code> function provides a structured evaluation of classification and regression models, generating key performance metrics. For classification models, it computes precision, recall, specificity, F1-score, and AUC ROC. For regression models, it extracts coefficients and evaluates error metrics like MSE, RMSE, and R². The function allows specifying custom thresholds, metric rounding, and formatted display options.</p>
 <p>Below are two examples demonstrating how to evaluate multiple models using <code class="docutils literal notranslate"><span class="pre">summarize_model_performance</span></code>. The function calculates and presents metrics for classification and regression models.</p>
-<section id="binary-classification-example">
-<h2>Binary Classification Example<a class="headerlink" href="#binary-classification-example" title="Link to this heading"></a></h2>
+<section id="binary-classification-example-1">
+<h2>Binary Classification Example 1<a class="headerlink" href="#binary-classification-example-1" title="Link to this heading"></a></h2>
+<p>In this example, we demonstrate binary classification using two popular machine
+learning models: Logistic Regression and Random Forest. Both models are evaluated
+with a default classification threshold of 0.5, meaning predictions are classified
+as positive (1) if the predicted probability exceeds 0.5, and negative (0) otherwise.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_classification</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRegression</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.ensemble</span><span class="w"> </span><span class="kn">import</span> <span class="n">RandomForestClassifier</span>
@@ -260,6 +265,30 @@ font-weight:normal;overflow:hidden;padding:0px 5px;word-break:normal;}
     <td class="tg-7zrl">0.5</td>
 </tr>
 </tbody></table></div><div style="height: 40px;"></div></section>
+<section id="binary-classification-example-2">
+<h2>Binary Classification Example 2<a class="headerlink" href="#binary-classification-example-2" title="Link to this heading"></a></h2>
+<p>In this example, we revisit binary classification with the same two models—Logistic
+Regression and Random Forest—but adjust the classification threshold from the
+default 0.5 to 0.2. This change allows us to explore how lowering the threshold
+impacts model performance, potentially increasing sensitivity (recall) by
+classifying more instances as positive (1) at the expense of precision.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Evaluate model performance</span>
+<span class="n">model_performance</span> <span class="o">=</span> <span class="n">summarize_model_performance</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
+    <span class="n">model_titles</span><span class="o">=</span><span class="n">model_titles</span><span class="p">,</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
+    <span class="n">model_type</span><span class="o">=</span><span class="s2">&quot;classification&quot;</span><span class="p">,</span>
+    <span class="n">return_df</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">custom_threshold</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For the full context behind model training in Binary Classification Example 2, see</p>
+</div>
+</section>
 <section id="regression-example">
 <h2>Regression Example<a class="headerlink" href="#regression-example" title="Link to this heading"></a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_regression</span>
