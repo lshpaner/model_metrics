@@ -15,6 +15,7 @@ import textwrap
 import statsmodels.api as sm
 from scipy.stats import ks_2samp
 from sklearn.preprocessing import LabelEncoder
+from sklearn.pipeline import Pipeline
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import (
     precision_score,
@@ -227,20 +228,9 @@ def extract_model_name(pipeline_or_model):
 ################################################################################
 
 
-# Helper functions
-def has_coef(model):
-    """Check if the model has a coef_ attribute."""
-    return hasattr(model, "coef_")
-
-
 def has_feature_importances(model):
     """Check if the model has a feature_importances_ attribute."""
     return hasattr(model, "feature_importances_")
-
-
-def extract_model_name(model):
-    """Extract a readable name from the model object."""
-    return model.__class__.__name__
 
 
 def summarize_model_performance(
@@ -408,21 +398,28 @@ def summarize_model_performance(
                     y_pred = model.predict(X)
 
                 # Extract coefficients for scikit-learn models
-                if hasattr(model, "coef_"):
+                if hasattr(model, "coef_") or (
+                    type(model) is Pipeline and hasattr(model[-1], "coef_")
+                ):
+
+                    if hasattr(model, "coef_"):
+                        coef_ = model.coef_
+                        intercept_ = model.intercept_
+                    else:
+                        coef_ = model[-1].coef_
+                        intercept_ = model[-1].intercept_
+
                     # Get feature names from X (excluding const for coef_)
                     feature_names = (
-                        X.columns
-                        if isinstance(X, pd.DataFrame)
-                        else range(len(model.coef_))
+                        X.columns if isinstance(X, pd.DataFrame) else range(len(coef_))
                     )
                     coefficients = (
-                        pd.Series(model.coef_, index=feature_names)
+                        pd.Series(coef_, index=feature_names)
                         .round(decimal_places)
                         .to_dict()
                     )
                     # Add intercept if it exists
-                    if hasattr(model, "intercept_"):
-                        coefficients["const"] = round(model.intercept_, decimal_places)
+                    coefficients["const"] = round(intercept_, decimal_places)
                 else:
                     coefficients = {}
 
@@ -467,69 +464,71 @@ def summarize_model_performance(
             # Append overall metrics
             metrics_data.append(base_columns)
 
-            # Determine feature importances
-            feature_importance = {}
-            if has_feature_importances(model):
-                # Use built-in feature importances for tree-based models (only on original features, not const)
-                feature_importance = (
-                    pd.Series(model.feature_importances_, index=X.columns)
-                    .round(decimal_places)
-                    .to_dict()
-                )
-
-            # Append coefficient rows for models with coefficients (no P-value)
-            if coefficients:
-                # Ensure 'const' is first if it exists
-                if "const" in coefficients:
-                    metrics_data.append(
-                        {
-                            "Model": name,
-                            "Metric": "Coefficient",
-                            "Variable": "const",
-                            "Coefficient": coefficients["const"],
-                            "MAE": "",
-                            "MAPE": "",
-                            "MSE": "",
-                            "RMSE": "",
-                            "Expl. Var.": "",
-                            "R^2 Score": "",
-                        }
-                    )
-                # Then append the remaining features
-                for feature in [f for f in coefficients if f != "const"]:
-                    metrics_data.append(
-                        {
-                            "Model": name,
-                            "Metric": "Coefficient",
-                            "Variable": feature,
-                            "Coefficient": coefficients[feature],
-                            "MAE": "",
-                            "MAPE": "",
-                            "MSE": "",
-                            "RMSE": "",
-                            "Expl. Var.": "",
-                            "R^2 Score": "",
-                        }
+            # Only append coefficients and feature importances if not overall_only
+            if not overall_only:
+                # Determine feature importances
+                feature_importance = {}
+                if has_feature_importances(model):
+                    # Use built-in feature importances for tree-based models (only on original features, not const)
+                    feature_importance = (
+                        pd.Series(model.feature_importances_, index=X.columns)
+                        .round(decimal_places)
+                        .to_dict()
                     )
 
-            # Append feature importance only if the model has feature importances
-            if feature_importance and has_feature_importances(model):
-                for feature in feature_importance:
-                    metrics_data.append(
-                        {
-                            "Model": name,
-                            "Metric": "Feature Importance",
-                            "Variable": feature,
-                            "Coefficient": "",
-                            "MAE": "",
-                            "MAPE": "",
-                            "MSE": "",
-                            "RMSE": "",
-                            "Expl. Var.": "",
-                            "R^2 Score": "",
-                            "Feature Importance": feature_importance[feature],
-                        }
-                    )
+                # Append coefficient rows for models with coefficients (no P-value)
+                if coefficients:
+                    # Ensure 'const' is first if it exists
+                    if "const" in coefficients:
+                        metrics_data.append(
+                            {
+                                "Model": name,
+                                "Metric": "Coefficient",
+                                "Variable": "const",
+                                "Coefficient": coefficients["const"],
+                                "MAE": "",
+                                "MAPE": "",
+                                "MSE": "",
+                                "RMSE": "",
+                                "Expl. Var.": "",
+                                "R^2 Score": "",
+                            }
+                        )
+                    # Then append the remaining features
+                    for feature in [f for f in coefficients if f != "const"]:
+                        metrics_data.append(
+                            {
+                                "Model": name,
+                                "Metric": "Coefficient",
+                                "Variable": feature,
+                                "Coefficient": coefficients[feature],
+                                "MAE": "",
+                                "MAPE": "",
+                                "MSE": "",
+                                "RMSE": "",
+                                "Expl. Var.": "",
+                                "R^2 Score": "",
+                            }
+                        )
+
+                # Append feature importance only if the model has feature importances
+                if feature_importance and has_feature_importances(model):
+                    for feature in feature_importance:
+                        metrics_data.append(
+                            {
+                                "Model": name,
+                                "Metric": "Feature Importance",
+                                "Variable": feature,
+                                "Coefficient": "",
+                                "MAE": "",
+                                "MAPE": "",
+                                "MSE": "",
+                                "RMSE": "",
+                                "Expl. Var.": "",
+                                "R^2 Score": "",
+                                "Feature Importance": feature_importance[feature],
+                            }
+                        )
 
     # Check if any model in the list has feature importances
     has_feature_importances_any = any(has_feature_importances(m) for m in models)
@@ -561,12 +560,11 @@ def summarize_model_performance(
             "R^2 Score",
         ]
 
-    # Add "Feature Importance" column only if any model has feature importances and it's regression
+    # Add "Feature Importance" column only if any model has feature importances
+    # and it's regression
     columns = base_columns.copy()
-    if has_feature_importances_any and model_type == "regression":
-        columns.insert(
-            4, "Feature Importance"
-        )  # Insert after "Coefficient" for regression
+    if has_feature_importances_any and model_type == "regression" and not overall_only:
+        columns.insert(4, "Feature Importance")  # Insert after "Coefficient"
 
     # Create DataFrame with the determined columns
     metrics_df = pd.DataFrame(metrics_data, columns=columns)
@@ -597,54 +595,91 @@ def summarize_model_performance(
                     )
             metrics_df.index = [""] * len(metrics_df)
 
-    if return_df:
+    # **Manual formatting**
+    if not return_df:
+        if model_type == "classification":
+            # Transpose for classification: metrics as rows, models as columns
+            print("Model Performance Metrics (Transposed):")
+            metrics_df = metrics_df.set_index(
+                "Model"
+            ).T  # Transpose the DataFrame for printing
+            col_widths = {
+                col: max(metrics_df[col].astype(str).map(len).max(), len(str(col))) + 2
+                for col in metrics_df.columns
+            }
+            col_widths["Metrics"] = (
+                max(metrics_df.index.astype(str).map(len).max(), len("Metrics")) + 2
+            )
+            separator = "-" * (sum(col_widths.values()) + len(col_widths) * 3)
+
+            # Print header (all columns right-aligned, including "Metrics")
+            print(separator)
+            header = (
+                "Metrics".rjust(col_widths["Metrics"])
+                + " | "
+                + " | ".join(
+                    f"{str(col).rjust(col_widths[col])}" for col in metrics_df.columns
+                )
+            )
+            print(header)
+            print(separator)
+
+            # Print each metric row with all values right-aligned
+            for metric, row_data in metrics_df.iterrows():
+                row = f"{metric.rjust(col_widths['Metrics'])} | " + " | ".join(
+                    f"{str(row_data[col]).rjust(col_widths[col])}"
+                    for col in metrics_df.columns
+                )
+                print(row)
+            print(separator)
+
+        else:
+            # Regression formatting with all columns right-aligned
+            col_widths = {
+                col: max(metrics_df[col].astype(str).map(len).max(), len(col)) + 2
+                for col in metrics_df.columns
+            }
+            separator = "-" * (sum(col_widths.values()) + len(col_widths) * 3)
+
+            # Print header (all columns right-aligned)
+            print("Model Performance Metrics")
+            print(separator)
+            print(
+                " | ".join(
+                    f"{col.rjust(col_widths[col])}" for col in metrics_df.columns
+                ),
+            )
+            print(separator)
+
+            # Track the previous model name for regression models only
+            prev_model = None
+            for i, (_, row_data) in enumerate(metrics_df.iterrows()):
+                current_model = row_data["Model"] if "Model" in row_data else None
+                if (
+                    model_type == "regression"
+                    and current_model
+                    and current_model != prev_model
+                    and i > 0
+                ):
+                    print(separator)
+                row = " | ".join(
+                    f"{str(row_data[col]).rjust(col_widths[col])}"
+                    for col in metrics_df.columns
+                )
+                print(row)
+                prev_model = (
+                    current_model
+                    if model_type == "regression" and current_model
+                    else prev_model
+                )
+            print(separator)
+    else:
         if model_type == "classification":
             metrics_df = metrics_df.set_index("Model").T.reset_index()
-            metrics_df.columns.name = None  # Force reset of the column name header
+            metrics_df.columns.name = None
             metrics_df.rename(columns={"index": "Metrics"}, inplace=True)
-        metrics_df.index = [""] * len(metrics_df)  # Remove numerical index
+        metrics_df.index = [""] * len(metrics_df)
         return metrics_df
-
-    # **Manual formatting**
-    col_widths = {
-        col: max(metrics_df[col].astype(str).map(len).max(), len(col)) + 2
-        for col in metrics_df.columns
-    }
-    separator = "-" * (sum(col_widths.values()) + len(col_widths) * 3)
-
-    # Print header
-    print("Model Performance Metrics:")
-    print(separator)
-    print(
-        " | ".join(f"{col.ljust(col_widths[col])}" for col in metrics_df.columns),
-    )
-    print(separator)
-
-    # Track the previous model name for regression models only
-    prev_model = None
-    for i, (_, row_data) in enumerate(metrics_df.iterrows()):
-        current_model = row_data["Model"] if "Model" in row_data else None
-        # Only add a separator for regression models when transitioning to a new model
-        if (
-            model_type == "regression"
-            and current_model
-            and current_model != prev_model
-            and i > 0  # Avoid printing separator before the first row
-        ):
-            print(separator)
-        row = " | ".join(
-            f"{str(row_data[col]).ljust(col_widths[col])}" for col in metrics_df.columns
-        )
-        print(row)
-        # Update the previous model name for the next iteration
-        prev_model = (
-            current_model
-            if model_type == "regression" and current_model
-            else prev_model
-        )
-
-    print(separator)
-    return
 
 
 ################################################################################
