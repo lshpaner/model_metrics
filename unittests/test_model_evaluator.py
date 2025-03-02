@@ -316,7 +316,7 @@ def test_summarize_model_performance_regression(regression_model):
         "Coefficient",
         "P-value",
         "MAE",
-        "MAPE (%)",
+        "MAPE",
         "MSE",
         "RMSE",
         "Expl. Var.",
