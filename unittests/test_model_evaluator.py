@@ -490,12 +490,11 @@ def test_summarize_model_performance_rf_regression(rf_regression_model):
     # Ensure output is a DataFrame
     assert isinstance(df_full, pd.DataFrame), "Output should be a pandas DataFrame."
 
-    # Expected columns in full regression output (including Feature Importance)
+    # Expected columns in full regression output for RandomForestRegressor
+    # (no Coefficient or Variable)
     expected_columns_full = [
         "Model",
         "Metric",
-        "Variable",
-        "Coefficient",
         "Feature Importance",
         "MAE",
         "MAPE",
@@ -532,8 +531,8 @@ def test_summarize_model_performance_rf_regression(rf_regression_model):
         df_overall, pd.DataFrame
     ), "Output for overall_only=True should be a pandas DataFrame."
 
-    # Expected columns in overall_only output (no Feature Importance, Variable,
-    # or Coefficient)
+    # Expected columns in overall_only output (no Feature Importance,
+    # Coefficient, or Variable)
     expected_columns_overall = [
         "Model",
         "Metric",
@@ -552,8 +551,8 @@ def test_summarize_model_performance_rf_regression(rf_regression_model):
         not missing_columns_overall
     ), f"Missing expected columns in overall_only output: {missing_columns_overall}"
 
-    # Ensure "Overall Metrics" is the only row and "Feature Importance"
-    # is not present
+    # Ensure "Overall Metrics" is the only row and "Feature Importance",
+    # "Coefficient", and "Variable" are not present
     assert (
         len(df_overall) == 1
     ), "Expected only one row for 'Overall Metrics' in overall_only mode."
@@ -563,6 +562,12 @@ def test_summarize_model_performance_rf_regression(rf_regression_model):
     assert (
         "Feature Importance" not in df_overall.columns
     ), "Feature Importance should not appear in overall_only mode."
+    assert (
+        "Coefficient" not in df_overall.columns
+    ), "Coefficient should not appear in overall_only mode."
+    assert (
+        "Variable" not in df_overall.columns
+    ), "Variable should not appear in overall_only mode."
 
     print(
         f"RandomForest regression performance summary test passed, "

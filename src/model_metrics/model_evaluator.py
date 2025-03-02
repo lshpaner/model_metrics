@@ -580,6 +580,18 @@ def summarize_model_performance(
                     columns=["Feature Importance"], errors="ignore"
                 )
 
+        # Check if the current model (or its pipeline's final step) has coef_
+        has_coef = hasattr(model, "coef_") or (
+            type(model) is Pipeline and hasattr(model[-1], "coef_")
+        )
+        # Remove "Coefficient" and "Variable" columns if the model doesn't have coef_
+        if not has_coef:
+            if "Coefficient" in metrics_df.columns:
+                metrics_df = metrics_df.drop(
+                    columns=["Coefficient"],
+                    errors="ignore",
+                )
+
     if overall_only:
         if model_type == "regression":
             metrics_df = (
