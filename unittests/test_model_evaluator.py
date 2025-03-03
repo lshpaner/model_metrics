@@ -24,6 +24,7 @@ from model_metrics.model_evaluator import (
     save_plot_images,
     get_predictions,
     summarize_model_performance,
+    has_feature_importances,
     show_confusion_matrix,
     show_roc_curve,
     show_pr_curve,
@@ -64,7 +65,11 @@ def trained_model(sample_data):
 @pytest.fixture
 def classification_model():
     """Returns a trained classification model and test data."""
-    X, y = make_classification(n_samples=500, n_features=10, random_state=42)
+    X, y = make_classification(
+        n_samples=500,
+        n_features=10,
+        random_state=42,
+    )
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
@@ -82,9 +87,32 @@ def regression_model():
         random_state=42,
     )
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
+        X,
+        y,
+        test_size=0.2,
+        random_state=42,
     )
     model = Lasso(alpha=0.1).fit(X_train, y_train)
+    return model, (X_test, y_test)
+
+
+@pytest.fixture
+def rf_regression_model():
+    """
+    Fixture to create a RandomForestRegressor model with feature importances.
+    """
+    from sklearn.ensemble import RandomForestRegressor
+
+    X, y = make_regression(
+        n_samples=100,
+        n_features=5,
+        noise=0.1,
+        random_state=42,
+    )
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+    model = RandomForestRegressor(random_state=42).fit(X_train, y_train)
     return model, (X_test, y_test)
 
 
@@ -98,7 +126,12 @@ def test_save_plot_images(tmp_path):
     os.makedirs(image_path_svg, exist_ok=True)
 
     plt.plot([0, 1], [0, 1])  # Dummy plot
-    save_plot_images(filename, True, str(image_path_png), str(image_path_svg))
+    save_plot_images(
+        filename,
+        True,
+        str(image_path_png),
+        str(image_path_svg),
+    )
 
     assert os.path.exists(os.path.join(image_path_png, f"{filename}.png"))
     assert os.path.exists(os.path.join(image_path_svg, f"{filename}.svg"))
@@ -197,10 +230,21 @@ def test_get_predictions_kfold(sample_data):
     assert isinstance(threshold, float)
 
 
-def test_summarize_model_performance(trained_model, sample_data, capsys):
-    """Test summarize_model_performance function with formatted output."""
+def test_summarize_model_performance(
+    trained_model,
+    sample_data,
+    capsys,
+):
+    """
+    Test summarize_model_performance function with formatted output.
+    """
     X, y = sample_data
-    df = summarize_model_performance([trained_model], X, y, return_df=True)
+    df = summarize_model_performance(
+        [trained_model],
+        X,
+        y,
+        return_df=True,
+    )
 
     # Debugging: Print the actual DataFrame before assertions
     print("\nDEBUG: Model Performance DataFrame")
@@ -235,7 +279,8 @@ def test_summarize_model_performance(trained_model, sample_data, capsys):
     # Find actual header line by locating the first separator line ("----")
     captured_lines = captured.split("\n")
     separator_idx = next(
-        (i for i, line in enumerate(captured_lines) if set(line) == {"-"}), None
+        (i for i, line in enumerate(captured_lines) if set(line) == {"-"}),
+        None,
     )
 
     if separator_idx is None or separator_idx + 1 >= len(captured_lines):
@@ -246,22 +291,33 @@ def test_summarize_model_performance(trained_model, sample_data, capsys):
     ]  # The line immediately after separator
 
     # Validate column headers formatting
-    expected_header_keywords = ["Model", "Precision/PPV", "AUC ROC"]
+    # (updated for transposed classification table)
+    expected_header_keywords = ["Metrics", "LogisticRegression"]
     for keyword in expected_header_keywords:
         assert (
             keyword in header_line
-        ), f"Header misalignment detected. Expected '{keyword}', but found: {header_line}"
+        ), f"Header misalignment detected. Expected '{keyword}', "
+        f"but found: {header_line}"
 
     print("All tests passed for formatted output.")
 
 
-def test_summarize_model_performance_classification(classification_model, capsys):
-    """Test summarize_model_performance function for classification models."""
+def test_summarize_model_performance_classification(
+    classification_model,
+    capsys,
+):
+    """
+    Test summarize_model_performance function for classification models.
+    """
     trained_model, sample_data = classification_model
     X, y = sample_data
 
     df = summarize_model_performance(
-        [trained_model], X, y, model_type="classification", return_df=True
+        [trained_model],
+        X,
+        y,
+        model_type="classification",
+        return_df=True,
     )
 
     # Print actual DataFrame for debugging if test fails
@@ -275,7 +331,12 @@ def test_summarize_model_performance_classification(classification_model, capsys
     assert isinstance(df, pd.DataFrame), "Output should be a pandas DataFrame."
 
     # Ensure key classification metrics exist in the DataFrame
-    expected_metrics = ["Precision/PPV", "AUC ROC", "F1-Score", "Sensitivity/Recall"]
+    expected_metrics = [
+        "Precision/PPV",
+        "AUC ROC",
+        "F1-Score",
+        "Sensitivity/Recall",
+    ]
     missing_metrics = [
         metric for metric in expected_metrics if metric not in df["Metrics"].values
     ]
@@ -287,7 +348,8 @@ def test_summarize_model_performance_classification(classification_model, capsys
 
     # Ensure model name is included in columns
     model_name = extract_model_name(trained_model)
-    assert model_name in df.columns, f"Expected model name '{model_name}' in columns."
+    assert model_name in df.columns, f"Expected model name '{model_name}' "
+    f"in columns."
 
     # Ensure numeric values are not empty
     for metric in expected_metrics:
@@ -299,45 +361,345 @@ def test_summarize_model_performance_classification(classification_model, capsys
 
 
 def test_summarize_model_performance_regression(regression_model):
-    """Test summarize_model_performance function for regression models."""
+    """
+    Test summarize_model_performance function for regression models,
+    including overall_only behavior.
+    """
     model, (X, y) = regression_model
-    df = summarize_model_performance(
-        model, X, y, model_type="regression", return_df=True
+
+    # Convert X to DataFrame if it's a NumPy array to ensure .columns works
+    if isinstance(X, np.ndarray):
+        X = pd.DataFrame(X, columns=[f"Feature_{i}" for i in range(X.shape[1])])
+
+    # Test full regression output (overall_only=False)
+    df_full = summarize_model_performance(
+        model,
+        X,
+        y,
+        model_type="regression",
+        return_df=True,
+        overall_only=False,
     )
 
     # Ensure output is a DataFrame
-    assert isinstance(df, pd.DataFrame), "Output should be a pandas DataFrame."
+    assert isinstance(df_full, pd.DataFrame), "Output should be a pandas DataFrame."
 
     # Expected columns in full regression output
-    expected_columns = [
+    # (Lasso doesn't have feature importances)
+    expected_columns_full = [
         "Model",
         "Metric",
         "Variable",
         "Coefficient",
-        "P-value",
         "MAE",
-        "MAPE (%)",
+        "MAPE",
         "MSE",
         "RMSE",
         "Expl. Var.",
         "R^2 Score",
     ]
 
-    missing_columns = [col for col in expected_columns if col not in df.columns]
-    assert not missing_columns, f"Missing expected columns: {missing_columns}"
+    missing_columns_full = [
+        col for col in expected_columns_full if col not in df_full.columns
+    ]
+    assert (
+        not missing_columns_full
+    ), f"Missing expected columns in full output: {missing_columns_full}"
 
     # Ensure the model name is captured
     model_name = extract_model_name(model)
     assert (
-        model_name in df["Model"].values
-    ), f"Model name '{model_name}' is missing from DataFrame."
+        model_name in df_full["Model"].values
+    ), f"Model name '{model_name}' is missing from full DataFrame."
 
-    print("Regression performance summary test passed.")
+    # Test overall_only=True output
+    df_overall = summarize_model_performance(
+        model,
+        X,
+        y,
+        model_type="regression",
+        return_df=True,
+        overall_only=True,
+    )
+
+    # Ensure output is a DataFrame
+    assert isinstance(
+        df_overall, pd.DataFrame
+    ), "Output for overall_only=True should be a pandas DataFrame."
+
+    # Expected columns in overall_only output (no Feature Importance,
+    # Variable, or Coefficient)
+    expected_columns_overall = [
+        "Model",
+        "Metric",
+        "MAE",
+        "MAPE",
+        "MSE",
+        "RMSE",
+        "Expl. Var.",
+        "R^2 Score",
+    ]
+
+    missing_columns_overall = [
+        col for col in expected_columns_overall if col not in df_overall.columns
+    ]
+    assert (
+        not missing_columns_overall
+    ), f"Missing expected columns in overall_only output: "
+    f"{missing_columns_overall}"
+
+    # Ensure "Overall Metrics" is the only row and "Feature Importance"
+    # is not present
+    assert (
+        len(df_overall) == 1
+    ), "Expected only one row for 'Overall Metrics' in overall_only mode."
+    assert (
+        df_overall.iloc[0]["Metric"] == "Overall Metrics"
+    ), "First row should be 'Overall Metrics'."
+    assert (
+        "Feat. Imp." not in df_overall.columns
+    ), "Feat. Imp. should not appear in overall_only mode."
+
+    print(
+        f"Regression performance summary test passed, "
+        f"including overall_only behavior."
+    )
+
+
+def test_summarize_model_performance_rf_regression(rf_regression_model):
+    """
+    Test summarize_model_performance for RandomForestRegressor with feature
+    importances, including overall_only behavior.
+    """
+    model, (X, y) = rf_regression_model
+
+    # Convert X to DataFrame if it's a NumPy array to ensure .columns works
+    if isinstance(X, np.ndarray):
+        X = pd.DataFrame(X, columns=[f"Feature_{i}" for i in range(X.shape[1])])
+
+    # Test full regression output (overall_only=False)
+    df_full = summarize_model_performance(
+        model,
+        X,
+        y,
+        model_type="regression",
+        return_df=True,
+        overall_only=False,
+    )
+
+    # Ensure output is a DataFrame
+    assert isinstance(df_full, pd.DataFrame), "Output should be a pandas DataFrame."
+
+    # Expected columns in full regression output for RandomForestRegressor
+    # (no Coefficient or Variable)
+    expected_columns_full = [
+        "Model",
+        "Metric",
+        "Feat. Imp.",
+        "MAE",
+        "MAPE",
+        "MSE",
+        "RMSE",
+        "Expl. Var.",
+        "R^2 Score",
+    ]
+
+    missing_columns_full = [
+        col for col in expected_columns_full if col not in df_full.columns
+    ]
+    assert (
+        not missing_columns_full
+    ), f"Missing expected columns in full output: {missing_columns_full}"
+
+    # Ensure Feature Importance values are present for at least one feature
+    assert any(
+        df_full["Metric"] == "Feat. Imp."
+    ), "Feat. Imp. rows should exist in full output."
+
+    # Test overall_only=True output
+    df_overall = summarize_model_performance(
+        model,
+        X,
+        y,
+        model_type="regression",
+        return_df=True,
+        overall_only=True,
+    )
+
+    # Ensure output is a DataFrame
+    assert isinstance(
+        df_overall, pd.DataFrame
+    ), "Output for overall_only=True should be a pandas DataFrame."
+
+    # Expected columns in overall_only output (no Feature Importance,
+    # Coefficient, or Variable)
+    expected_columns_overall = [
+        "Model",
+        "Metric",
+        "MAE",
+        "MAPE",
+        "MSE",
+        "RMSE",
+        "Expl. Var.",
+        "R^2 Score",
+    ]
+
+    missing_columns_overall = [
+        col for col in expected_columns_overall if col not in df_overall.columns
+    ]
+    assert (
+        not missing_columns_overall
+    ), f"Missing expected columns in overall_only output: {missing_columns_overall}"
+
+    # Ensure "Overall Metrics" is the only row and "Feature Importance",
+    # "Coefficient", and "Variable" are not present
+    assert (
+        len(df_overall) == 1
+    ), "Expected only one row for 'Overall Metrics' in overall_only mode."
+    assert (
+        df_overall.iloc[0]["Metric"] == "Overall Metrics"
+    ), "First row should be 'Overall Metrics'."
+    assert (
+        "Feat. Imp." not in df_overall.columns
+    ), "Feat. Imp. should not appear in overall_only mode."
+    assert (
+        "Coefficient" not in df_overall.columns
+    ), "Coefficient should not appear in overall_only mode."
+    assert (
+        "Variable" not in df_overall.columns
+    ), "Variable should not appear in overall_only mode."
+
+    print(
+        f"RandomForest regression performance summary test passed, "
+        f"including overall_only behavior and feature importances."
+    )
+
+
+def test_summarize_model_performance_mixed_regression(
+    regression_model,
+    rf_regression_model,
+):
+    """
+    Test summarize_model_performance for a mix of regression models
+    (e.g., Lasso and RandomForestRegressor), ensuring 'Coefficient' and 'Variable'
+    are retained if any model has coef_, and 'Feat. Imp.' is included
+    if any model has feature_importances_.
+    """
+    lasso_model, (X_lasso, y_lasso) = regression_model
+    rf_model, (X_rf, y_rf) = rf_regression_model
+
+    # Ensure X and y are compatible (same shape and values for testing)
+    X = pd.DataFrame(X_lasso, columns=[f"Feature_{i}" for i in range(X_lasso.shape[1])])
+    # Use Lasso's y for consistency; assume both models were trained on similar data
+    y = y_lasso
+
+    # Test full regression output (overall_only=False) with mixed models
+    models = [rf_model, lasso_model]
+    df_full = summarize_model_performance(
+        models,
+        X,
+        y,
+        model_type="regression",
+        return_df=True,
+        overall_only=False,
+    )
+
+    # Ensure output is a DataFrame
+    assert isinstance(df_full, pd.DataFrame), "Output should be a pandas DataFrame."
+
+    # Expected columns in full regression output for mixed models
+    # (both Coefficient/Variable and Feat. Imp. should be present)
+    expected_columns_full = [
+        "Model",
+        "Metric",
+        "Variable",
+        "Coefficient",
+        "Feat. Imp.",
+        "MAE",
+        "MAPE",
+        "MSE",
+        "RMSE",
+        "Expl. Var.",
+        "R^2 Score",
+    ]
+
+    missing_columns_full = [
+        col for col in expected_columns_full if col not in df_full.columns
+    ]
+    assert (
+        not missing_columns_full
+    ), f"Missing expected columns in full output: {missing_columns_full}"
+
+    # Ensure both coefficient and feature importance rows exist (if applicable)
+    assert any(
+        df_full["Metric"] == "Coefficient"
+    ), "Coefficient rows should exist for Lasso."
+    assert any(
+        df_full["Metric"] == "Feat. Imp."
+    ), "Feat. Imp. rows should exist for RandomForest."
+
+    # Test overall_only=True output with mixed models
+    df_overall = summarize_model_performance(
+        models,
+        X,
+        y,
+        model_type="regression",
+        return_df=True,
+        overall_only=True,
+    )
+
+    # Ensure output is a DataFrame
+    assert isinstance(
+        df_overall, pd.DataFrame
+    ), "Output for overall_only=True should be a pandas DataFrame."
+
+    # Expected columns in overall_only output (no Coefficient, Variable, or Feat. Imp.)
+    expected_columns_overall = [
+        "Model",
+        "Metric",
+        "MAE",
+        "MAPE",
+        "MSE",
+        "RMSE",
+        "Expl. Var.",
+        "R^2 Score",
+    ]
+
+    missing_columns_overall = [
+        col for col in expected_columns_overall if col not in df_overall.columns
+    ]
+    assert (
+        not missing_columns_overall
+    ), f"Missing expected columns in overall_only output: {missing_columns_overall}"
+
+    # Ensure "Overall Metrics" is the only row and no coefficient-related or
+    # feature importance columns are present
+    assert (
+        len(df_overall) == 2
+    ), "Expected one row per model for 'Overall Metrics' in overall_only mode."
+    assert all(
+        df_overall["Metric"] == "Overall Metrics"
+    ), "All rows should be 'Overall Metrics'."
+    assert (
+        "Coefficient" not in df_overall.columns
+    ), "Coefficient should not appear in overall_only mode."
+    assert (
+        "Variable" not in df_overall.columns
+    ), "Variable should not appear in overall_only mode."
+    assert (
+        "Feat. Imp." not in df_overall.columns
+    ), "Feat. Imp. should not appear in overall_only mode."
+
+    print(
+        f"Mixed regression performance summary test passed, "
+        f"including overall_only behavior."
+    )
 
 
 def test_summarize_model_performance_overall_only(regression_model):
     """
-    Test summarize_model_performance with overall_only=True for regression models.
+    Test summarize_model_performance with overall_only=True for regression
+    models, ensuring no Feature Importance column appears.
     """
     model, (X, y) = regression_model
     df = summarize_model_performance(
@@ -358,7 +720,7 @@ def test_summarize_model_performance_overall_only(regression_model):
         df.iloc[0]["Metric"] == "Overall Metrics"
     ), "First row should be 'Overall Metrics'."
 
-    # Ensure unnecessary columns are removed
+    # Ensure unnecessary columns are removed, including Feature Importance
     assert (
         "Variable" not in df.columns
     ), "Column 'Variable' should be removed in 'overall_only' mode."
@@ -366,10 +728,16 @@ def test_summarize_model_performance_overall_only(regression_model):
         "Coefficient" not in df.columns
     ), "Column 'Coefficient' should be removed in 'overall_only' mode."
     assert (
-        "P-value" not in df.columns
-    ), "Column 'P-value' should be removed in 'overall_only' mode."
+        "Feat. Imp." not in df.columns
+    ), "Column 'Feat. Imp.' should be removed in 'overall_only' mode."
 
-    print("Overall metrics filtering test passed.")
+    # Ensure index is empty for clean display
+    assert df.index.tolist() == [""], "Index should be empty strings for clean display."
+
+    print(
+        f"Overall metrics filtering test passed, including Feature "
+        f"Importance exclusion."
+    )
 
 
 def test_summarize_model_performance_invalid_combination(regression_model):
@@ -393,7 +761,8 @@ def test_summarize_model_performance_invalid_combination(regression_model):
 @patch("builtins.print")
 def test_summarize_model_performance_print_output(mock_print, regression_model):
     """
-    Test that summarize_model_performance prints output correctly when return_df=False.
+    Test that summarize_model_performance prints output correctly when
+    return_df=False.
     """
     model, (X, y) = regression_model
     summarize_model_performance(
@@ -436,7 +805,8 @@ def test_extract_model_name(trained_model):
     assert name == "LogisticRegression"
 
 
-@patch("matplotlib.pyplot.show")  # Prevents figures from displaying during testing
+# Prevents figures from displaying during testing
+@patch("matplotlib.pyplot.show")
 def test_show_confusion_matrix_single_model(
     mock_show,
     trained_model,
@@ -472,7 +842,9 @@ def test_show_confusion_matrix_multiple_models(
 def test_show_confusion_matrix_saves_plot(
     mock_show, trained_model, sample_data, tmp_path
 ):
-    """Test if show_confusion_matrix saves the plot when save_plot=True."""
+    """
+    Test if show_confusion_matrix saves the plot when save_plot=True.
+    """
     X, y = sample_data
     image_path_png = tmp_path / "confusion_matrix.png"
     image_path_svg = tmp_path / "confusion_matrix.svg"
@@ -499,7 +871,9 @@ def test_show_confusion_matrix_with_class_labels(
     trained_model,
     sample_data,
 ):
-    """Test if show_confusion_matrix correctly handles custom class labels."""
+    """
+    Test if show_confusion_matrix correctly handles custom class labels.
+    """
     X, y = sample_data
     custom_labels = ["Negative", "Positive"]
 
@@ -517,7 +891,9 @@ def test_show_confusion_matrix_default_labels(
     trained_model,
     sample_data,
 ):
-    """Test if show_confusion_matrix correctly handles default class labels."""
+    """
+    Test if show_confusion_matrix correctly handles default class labels.
+    """
     X, y = sample_data
 
     try:
@@ -557,7 +933,11 @@ def test_show_confusion_matrix_with_colorbar(
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_confusion_matrix_grid(mock_show, trained_model, sample_data):
+def test_show_confusion_matrix_grid(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_confusion_matrix correctly handles grid layout."""
     X, y = sample_data
 
@@ -606,22 +986,12 @@ def test_show_confusion_matrix_saves_plot(
     assert image_path_svg.exists(), "SVG image was not saved."
 
 
-import pytest
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from unittest.mock import patch
-import os
-import math
-import textwrap
-from model_metrics.model_evaluator import (
-    show_roc_curve,
-    get_predictions,
-)  # Adjust import as needed
-
-
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_single(mock_show, trained_model, sample_data):
+def test_show_roc_curve_single(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_roc_curve runs correctly for a single model."""
     X, y = sample_data
     try:
@@ -632,7 +1002,11 @@ def test_show_roc_curve_single(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_multiple(mock_show, trained_model, sample_data):
+def test_show_roc_curve_multiple(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_roc_curve runs without errors for multiple models."""
     X, y = sample_data
     models = [trained_model, trained_model]
@@ -644,42 +1018,82 @@ def test_show_roc_curve_multiple(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_overlay(mock_show, trained_model, sample_data):
+def test_show_roc_curve_overlay(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_roc_curve runs correctly with overlay enabled."""
     X, y = sample_data
     models = [trained_model, trained_model]
     try:
-        show_roc_curve(models, X, y, overlay=True, save_plot=False)
+        show_roc_curve(
+            models,
+            X,
+            y,
+            overlay=True,
+            save_plot=False,
+        )
     except Exception as e:
         pytest.fail(f"show_roc_curve raised an exception: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_grid(mock_show, trained_model, sample_data):
+def test_show_roc_curve_grid(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_roc_curve runs correctly with grid enabled."""
     X, y = sample_data
     models = [trained_model, trained_model]
     try:
-        show_roc_curve(models, X, y, grid=True, n_cols=2, save_plot=False)
+        show_roc_curve(
+            models,
+            X,
+            y,
+            grid=True,
+            n_cols=2,
+            save_plot=False,
+        )
     except Exception as e:
         pytest.fail(f"show_roc_curve raised an exception: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_invalid_overlay_grid(mock_show, trained_model, sample_data):
-    """Ensure ValueError is raised if both overlay and grid are set to True."""
+def test_show_roc_curve_invalid_overlay_grid(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """
+    Ensure ValueError is raised if both overlay and grid are set to True.
+    """
     X, y = sample_data
     models = [trained_model, trained_model]
     with pytest.raises(
-        ValueError, match="`grid` cannot be set to True when `overlay` is True."
+        ValueError,
+        match="`grid` cannot be set to True when `overlay` is True.",
     ):
-        show_roc_curve(models, X, y, overlay=True, grid=True, save_plot=False)
+        show_roc_curve(
+            models,
+            X,
+            y,
+            overlay=True,
+            grid=True,
+            save_plot=False,
+        )
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_save_plot(mock_show, trained_model, sample_data, tmp_path):
+def test_show_roc_curve_save_plot(
+    mock_show,
+    trained_model,
+    sample_data,
+    tmp_path,
+):
     """Test if show_roc_curve saves the plot when save_plot=True."""
     X, y = sample_data
     image_path_png = tmp_path / "roc_curve.png"
@@ -703,7 +1117,11 @@ def test_show_roc_curve_save_plot(mock_show, trained_model, sample_data, tmp_pat
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_custom_titles(mock_show, trained_model, sample_data):
+def test_show_roc_curve_custom_titles(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test custom model_titles and title parameters."""
     X, y = sample_data
     models = [trained_model, trained_model]
@@ -725,7 +1143,11 @@ def test_show_roc_curve_custom_titles(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_empty_title(mock_show, trained_model, sample_data):
+def test_show_roc_curve_empty_title(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test handling of empty title string."""
     X, y = sample_data
     try:
@@ -736,7 +1158,11 @@ def test_show_roc_curve_empty_title(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_text_wrap(mock_show, trained_model, sample_data):
+def test_show_roc_curve_text_wrap(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test text wrapping for long titles."""
     X, y = sample_data
     long_title = "This is a very long title that should wrap when text_wrap is set"
@@ -755,7 +1181,11 @@ def test_show_roc_curve_text_wrap(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_curve_styling(mock_show, trained_model, sample_data):
+def test_show_roc_curve_curve_styling(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test custom curve styling with curve_kwgs."""
     X, y = sample_data
     models = [trained_model, trained_model]
@@ -780,13 +1210,22 @@ def test_show_roc_curve_curve_styling(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_group_category(mock_show, trained_model, sample_data):
+def test_show_roc_curve_group_category(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test ROC curves grouped by category with class counts."""
     X, y = sample_data
     # Convert y to pandas Series to match show_roc_curve's expectation
     y = pd.Series(y)
     # Create a simple categorical group (e.g., two groups)
-    group_category = pd.Series(np.random.choice(["Group1", "Group2"], size=len(y)))
+    group_category = pd.Series(
+        np.random.choice(
+            ["Group1", "Group2"],
+            size=len(y),
+        )
+    )
     try:
         show_roc_curve(
             trained_model,
@@ -825,7 +1264,11 @@ def test_show_roc_curve_decimal_places(
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_no_gridlines(mock_show, trained_model, sample_data):
+def test_show_roc_curve_no_gridlines(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test disabling gridlines."""
     X, y = sample_data
     try:
@@ -842,7 +1285,11 @@ def test_show_roc_curve_no_gridlines(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_figsize(mock_show, trained_model, sample_data):
+def test_show_roc_curve_figsize(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test custom figure size."""
     X, y = sample_data
     custom_figsize = (10, 8)
@@ -865,7 +1312,11 @@ def test_show_roc_curve_figsize(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_roc_curve_grid_layout(mock_show, trained_model, sample_data):
+def test_show_roc_curve_grid_layout(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test grid layout with custom rows and columns."""
     X, y = sample_data
     models = [trained_model, trained_model, trained_model]
@@ -884,33 +1335,32 @@ def test_show_roc_curve_grid_layout(mock_show, trained_model, sample_data):
     assert mock_show.called, "plt.show() was not called."
 
 
-import pytest
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.metrics import precision_recall_curve, average_precision_score
-from unittest.mock import patch
-import os
-import textwrap
-from model_metrics.model_evaluator import (
-    show_pr_curve,
-    get_predictions,
-)  # Adjust import as needed
-
-
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_single(mock_show, trained_model, sample_data):
+def test_show_pr_curve_single(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_pr_curve runs correctly for a single model."""
     X, y = sample_data
     try:
-        show_pr_curve(trained_model, X, y, save_plot=False)
+        show_pr_curve(
+            trained_model,
+            X,
+            y,
+            save_plot=False,
+        )
     except Exception as e:
         pytest.fail(f"show_pr_curve raised an exception: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_multiple(mock_show, trained_model, sample_data):
+def test_show_pr_curve_multiple(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_pr_curve runs without errors for multiple models."""
     X, y = sample_data
     models = [trained_model, trained_model]
@@ -922,42 +1372,75 @@ def test_show_pr_curve_multiple(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_overlay(mock_show, trained_model, sample_data):
+def test_show_pr_curve_overlay(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_pr_curve runs correctly with overlay enabled."""
     X, y = sample_data
     models = [trained_model, trained_model]
     try:
-        show_pr_curve(models, X, y, overlay=True, save_plot=False)
+        show_pr_curve(
+            models,
+            X,
+            y,
+            overlay=True,
+            save_plot=False,
+        )
     except Exception as e:
         pytest.fail(f"show_pr_curve raised an exception: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_grid(mock_show, trained_model, sample_data):
+def test_show_pr_curve_grid(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_pr_curve runs correctly with grid enabled."""
     X, y = sample_data
     models = [trained_model, trained_model]
     try:
-        show_pr_curve(models, X, y, grid=True, n_cols=2, save_plot=False)
+        show_pr_curve(
+            models,
+            X,
+            y,
+            grid=True,
+            n_cols=2,
+            save_plot=False,
+        )
     except Exception as e:
         pytest.fail(f"show_pr_curve raised an exception: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_invalid_overlay_grid(mock_show, trained_model, sample_data):
-    """Ensure ValueError is raised if both overlay and grid are set to True."""
+def test_show_pr_curve_invalid_overlay_grid(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """
+    Ensure ValueError is raised if both overlay and grid are set to True.
+    """
     X, y = sample_data
     models = [trained_model, trained_model]
     with pytest.raises(
-        ValueError, match="`grid` cannot be set to True when `overlay` is True."
+        ValueError,
+        match="`grid` cannot be set to True when `overlay` is True.",
     ):
         show_pr_curve(models, X, y, overlay=True, grid=True, save_plot=False)
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_save_plot(mock_show, trained_model, sample_data, tmp_path):
+def test_show_pr_curve_save_plot(
+    mock_show,
+    trained_model,
+    sample_data,
+    tmp_path,
+):
     """Test if show_pr_curve saves the plot when save_plot=True."""
     X, y = sample_data
     image_path_png = tmp_path / "pr_curve.png"
@@ -980,7 +1463,11 @@ def test_show_pr_curve_save_plot(mock_show, trained_model, sample_data, tmp_path
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_custom_titles(mock_show, trained_model, sample_data):
+def test_show_pr_curve_custom_titles(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test custom model_titles and title parameters."""
     X, y = sample_data
     models = [trained_model, trained_model]
@@ -1002,7 +1489,11 @@ def test_show_pr_curve_custom_titles(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_empty_title(mock_show, trained_model, sample_data):
+def test_show_pr_curve_empty_title(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test handling of empty title string."""
     X, y = sample_data
     try:
@@ -1013,7 +1504,11 @@ def test_show_pr_curve_empty_title(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_text_wrap(mock_show, trained_model, sample_data):
+def test_show_pr_curve_text_wrap(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test text wrapping for long titles."""
     X, y = sample_data
     long_title = "This is a very long title that should wrap when text_wrap is set"
@@ -1032,7 +1527,11 @@ def test_show_pr_curve_text_wrap(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_curve_styling(mock_show, trained_model, sample_data):
+def test_show_pr_curve_curve_styling(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test custom curve styling with curve_kwgs."""
     X, y = sample_data
     models = [trained_model, trained_model]
@@ -1057,11 +1556,20 @@ def test_show_pr_curve_curve_styling(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_group_category(mock_show, trained_model, sample_data):
+def test_show_pr_curve_group_category(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test PR curves grouped by category with class counts."""
     X, y = sample_data
     y = pd.Series(y)  # Ensure y is a pandas Series
-    group_category = pd.Series(np.random.choice(["Group1", "Group2"], size=len(y)))
+    group_category = pd.Series(
+        np.random.choice(
+            ["Group1", "Group2"],
+            size=len(y),
+        )
+    )
     try:
         show_pr_curve(
             trained_model,
@@ -1076,7 +1584,12 @@ def test_show_pr_curve_group_category(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_decimal_places(mock_show, trained_model, sample_data, capsys):
+def test_show_pr_curve_decimal_places(
+    mock_show,
+    trained_model,
+    sample_data,
+    capsys,
+):
     """Test AP formatting with decimal_places."""
     X, y = sample_data
     decimal_places = 3
@@ -1095,7 +1608,11 @@ def test_show_pr_curve_decimal_places(mock_show, trained_model, sample_data, cap
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_no_gridlines(mock_show, trained_model, sample_data):
+def test_show_pr_curve_no_gridlines(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test disabling gridlines."""
     X, y = sample_data
     try:
@@ -1112,7 +1629,11 @@ def test_show_pr_curve_no_gridlines(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_figsize(mock_show, trained_model, sample_data):
+def test_show_pr_curve_figsize(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test custom figure size."""
     X, y = sample_data
     custom_figsize = (10, 8)
@@ -1134,8 +1655,14 @@ def test_show_pr_curve_figsize(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_pr_curve_grid_layout(mock_show, trained_model, sample_data):
-    """Test grid layout with custom rows and columns and corrected labels."""
+def test_show_pr_curve_grid_layout(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """
+    Test grid layout with custom rows and columns and corrected labels.
+    """
     X, y = sample_data
     models = [trained_model, trained_model, trained_model]
     model_titles = ["ModelA", "ModelB", "ModelC"]
@@ -1156,7 +1683,11 @@ def test_show_pr_curve_grid_layout(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_lift_chart_single(mock_show, trained_model, sample_data):
+def test_show_lift_chart_single(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_lift_chart runs correctly for a single model."""
     X, y = sample_data
     try:
@@ -1166,7 +1697,11 @@ def test_show_lift_chart_single(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_lift_chart_multiple(mock_show, trained_model, sample_data):
+def test_show_lift_chart_multiple(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_lift_chart runs without errors for multiple models."""
     X, y = sample_data
     models = [trained_model, trained_model]
@@ -1177,23 +1712,44 @@ def test_show_lift_chart_multiple(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_lift_chart_overlay(mock_show, trained_model, sample_data):
+def test_show_lift_chart_overlay(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_lift_chart runs correctly with overlay enabled."""
     X, y = sample_data
     models = [trained_model, trained_model]
     try:
-        show_lift_chart(models, X, y, overlay=True, save_plot=False)
+        show_lift_chart(
+            models,
+            X,
+            y,
+            overlay=True,
+            save_plot=False,
+        )
     except Exception as e:
         pytest.fail(f"show_lift_chart raised an exception: {e}")
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_lift_chart_grid(mock_show, trained_model, sample_data):
+def test_show_lift_chart_grid(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test if show_lift_chart runs correctly with grid enabled."""
     X, y = sample_data
     models = [trained_model, trained_model]
     try:
-        show_lift_chart(models, X, y, grid=True, n_cols=2, save_plot=False)
+        show_lift_chart(
+            models,
+            X,
+            y,
+            grid=True,
+            n_cols=2,
+            save_plot=False,
+        )
     except Exception as e:
         pytest.fail(f"show_lift_chart raised an exception: {e}")
 
@@ -1204,10 +1760,13 @@ def test_show_lift_chart_invalid_overlay_grid(
     trained_model,
     sample_data,
 ):
-    """Ensure ValueError is raised if both overlay and grid are set to True."""
+    """
+    Ensure ValueError is raised if both overlay and grid are set to True.
+    """
     X, y = sample_data
     with pytest.raises(
-        ValueError, match="`grid` cannot be set to True when `overlay` is True."
+        ValueError,
+        match="`grid` cannot be set to True when `overlay` is True.",
     ):
         show_lift_chart(
             [trained_model, trained_model],
@@ -1230,7 +1789,9 @@ def test_show_gain_chart_single(mock_show, trained_model, sample_data):
 
 @patch("matplotlib.pyplot.show")
 def test_show_gain_chart_multiple(mock_show, trained_model, sample_data):
-    """Test if show_gain_chart runs without errors for multiple models."""
+    """
+    Test if show_gain_chart runs without errors for multiple models.
+    """
     X, y = sample_data
     models = [trained_model, trained_model]
     try:
@@ -1267,7 +1828,9 @@ def test_show_gain_chart_invalid_overlay_grid(
     trained_model,
     sample_data,
 ):
-    """Ensure ValueError is raised if both overlay and grid are set to True."""
+    """
+    Ensure ValueError is raised if both overlay and grid are set to True.
+    """
     X, y = sample_data
     with pytest.raises(
         ValueError, match="`grid` cannot be set to True when `overlay` is True."
@@ -1351,7 +1914,13 @@ def test_show_calibration_curve_overlay(trained_model, sample_data):
     X, y = sample_data
     models = [trained_model, trained_model]  # Use the same model twice
     try:
-        show_calibration_curve(models, X, y, overlay=True, title="Overlay Test")
+        show_calibration_curve(
+            models,
+            X,
+            y,
+            overlay=True,
+            title="Overlay Test",
+        )
     except Exception as e:
         pytest.fail(f"show_calibration_curve failed on overlay: {e}")
 
@@ -1366,7 +1935,10 @@ def test_show_calibration_curve_grid(trained_model, sample_data):
         pytest.fail(f"show_calibration_curve failed on grid layout: {e}")
 
 
-def test_show_calibration_curve_invalid_overlay_grid(trained_model, sample_data):
+def test_show_calibration_curve_invalid_overlay_grid(
+    trained_model,
+    sample_data,
+):
     """Ensure ValueError is raised if both overlay and grid are set to True."""
     X, y = sample_data
     with pytest.raises(
@@ -1377,7 +1949,11 @@ def test_show_calibration_curve_invalid_overlay_grid(trained_model, sample_data)
         )
 
 
-def test_show_calibration_curve_save_plot(trained_model, sample_data, tmp_path):
+def test_show_calibration_curve_save_plot(
+    trained_model,
+    sample_data,
+    tmp_path,
+):
     """Test saving the calibration curve plot."""
     X, y = sample_data
     save_path = str(tmp_path / "calibration.png")
@@ -1448,7 +2024,8 @@ def test_get_model_probabilities_pipeline(sample_data):
 def test_get_model_probabilities_decision_function(sample_data):
     """Test standalone model that has only `decision_function()`."""
     X, y = sample_data
-    model = SVC(probability=False)  # No predict_proba(), only decision_function()
+    # No predict_proba(), only decision_function()
+    model = SVC(probability=False)
     model.fit(X, y)
 
     probabilities = get_model_probabilities(model, X, "SVM Model")
@@ -1478,7 +2055,11 @@ def test_get_model_probabilities_invalid_model():
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_ks_curve_single_model(mock_show, trained_model, sample_data):
+def test_show_ks_curve_single_model(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test show_ks_curve with a single model."""
     X, y = sample_data  # Get sample test data
     try:
@@ -1488,10 +2069,15 @@ def test_show_ks_curve_single_model(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_ks_curve_multiple_models(mock_show, trained_model, sample_data):
+def test_show_ks_curve_multiple_models(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test show_ks_curve with multiple models."""
     X, y = sample_data  # Get sample test data
-    models = [trained_model, trained_model]  # Using the same model 2x for simplicity
+    # Using the same model 2x for simplicity
+    models = [trained_model, trained_model]
     try:
         show_ks_curve(models, X, y, save_plot=False)
     except Exception as e:
@@ -1499,7 +2085,12 @@ def test_show_ks_curve_multiple_models(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_ks_curve_saves_plot(mock_show, trained_model, sample_data, tmp_path):
+def test_show_ks_curve_saves_plot(
+    mock_show,
+    trained_model,
+    sample_data,
+    tmp_path,
+):
     """Test if show_ks_curve saves the plot correctly."""
     X, y = sample_data  # Get sample test data
     image_path_png = tmp_path / "ks_curve.png"
@@ -1522,7 +2113,11 @@ def test_show_ks_curve_saves_plot(mock_show, trained_model, sample_data, tmp_pat
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_ks_curve_empty_groups(mock_show, trained_model, sample_data):
+def test_show_ks_curve_empty_groups(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test show_ks_curve when one group is empty."""
     X, _ = sample_data  # Extract feature data
     y = np.zeros(len(X))  # Set all labels to zero (no positives)
@@ -1534,17 +2129,31 @@ def test_show_ks_curve_empty_groups(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_ks_curve_custom_threshold(mock_show, trained_model, sample_data):
+def test_show_ks_curve_custom_threshold(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test show_ks_curve with a custom threshold."""
     X, y = sample_data  # Get sample test data
     try:
-        show_ks_curve(trained_model, X, y, model_threshold=0.7, save_plot=False)
+        show_ks_curve(
+            trained_model,
+            X,
+            y,
+            model_threshold=0.7,
+            save_plot=False,
+        )
     except Exception as e:
         pytest.fail(f"show_ks_curve failed with custom threshold: {e}")
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_ks_curve_custom_labels(mock_show, trained_model, sample_data):
+def test_show_ks_curve_custom_labels(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test show_ks_curve with custom axis labels and title."""
     X, y = sample_data  # Get sample test data
     try:
@@ -1646,7 +2255,11 @@ def test_plot_threshold_metrics_lookup_metric(
 @patch("matplotlib.pyplot.show")
 @pytest.mark.parametrize("decimal_places", [2, 4, 6])
 def test_plot_threshold_metrics_decimal_places(
-    mock_show, mock_get_predictions, trained_model, sample_data, decimal_places
+    mock_show,
+    mock_get_predictions,
+    trained_model,
+    sample_data,
+    decimal_places,
 ):
     """Test if decimal_places parameter correctly formats outputs."""
     X, y = sample_data
@@ -1671,7 +2284,8 @@ def test_plot_threshold_metrics_decimal_places(
         )
     except Exception as e:
         pytest.fail(
-            f"plot_threshold_metrics failed for decimal_places={decimal_places}: {e}"
+            f"plot_threshold_metrics failed for "
+            f"decimal_places={decimal_places}: {e}"
         )
 
     mock_get_predictions.assert_called_once()
@@ -1708,7 +2322,11 @@ def test_plot_threshold_metrics_no_baseline(
 @patch("model_metrics.model_evaluator.get_predictions")
 @patch("matplotlib.pyplot.show")
 def test_plot_threshold_metrics_save_plot(
-    mock_show, mock_get_predictions, trained_model, sample_data, tmp_path
+    mock_show,
+    mock_get_predictions,
+    trained_model,
+    sample_data,
+    tmp_path,
 ):
     """Test that images are saved correctly when save_plot=True."""
     X, y = sample_data
@@ -1775,27 +2393,48 @@ def test_show_feat_roc_basic(mock_show, trained_model, sample_data):
     X, y = sample_data
     feature_names = ["A", "B"]
     try:
-        show_feat_roc(trained_model, X, y, feature_names=feature_names, save_plot=False)
+        show_feat_roc(
+            trained_model,
+            X,
+            y,
+            feature_names=feature_names,
+            save_plot=False,
+        )
     except Exception as e:
         pytest.fail(f"show_feat_roc failed unexpectedly: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_roc_multiple_models(mock_show, trained_model, sample_data):
+def test_show_feat_roc_multiple_models(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test show_feat_roc with multiple models."""
     X, y = sample_data
     feature_names = ["A", "B"]
     models = [trained_model, trained_model]  # Duplicate for simplicity
     try:
-        show_feat_roc(models, X, y, feature_names=feature_names, save_plot=False)
+        show_feat_roc(
+            models,
+            X,
+            y,
+            feature_names=feature_names,
+            save_plot=False,
+        )
     except Exception as e:
         pytest.fail(f"show_feat_roc failed with multiple models: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_roc_save_plot(mock_show, trained_model, sample_data, tmp_path):
+def test_show_feat_roc_save_plot(
+    mock_show,
+    trained_model,
+    sample_data,
+    tmp_path,
+):
     """Test if show_feat_roc saves plots correctly."""
     X, y = sample_data
     feature_names = ["A"]
@@ -1818,11 +2457,22 @@ def test_show_feat_roc_save_plot(mock_show, trained_model, sample_data, tmp_path
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_roc_missing_feature(mock_show, trained_model, sample_data, capsys):
+def test_show_feat_roc_missing_feature(
+    mock_show,
+    trained_model,
+    sample_data,
+    capsys,
+):
     """Test handling of missing features in X."""
     X, y = sample_data
     feature_names = ["A", "NonExistentFeature"]
-    show_feat_roc(trained_model, X, y, feature_names=feature_names, save_plot=False)
+    show_feat_roc(
+        trained_model,
+        X,
+        y,
+        feature_names=feature_names,
+        save_plot=False,
+    )
     captured = capsys.readouterr()
     assert (
         "Warning: Feature 'NonExistentFeature' not found in X. Skipping."
@@ -1832,7 +2482,11 @@ def test_show_feat_roc_missing_feature(mock_show, trained_model, sample_data, ca
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_roc_smooth_curves(mock_show, trained_model, sample_data):
+def test_show_feat_roc_smooth_curves(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test smooth_curves functionality."""
     X, y = sample_data
     feature_names = ["A"]
@@ -1849,7 +2503,11 @@ def test_show_feat_roc_smooth_curves(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_roc_custom_title(mock_show, trained_model, sample_data):
+def test_show_feat_roc_custom_title(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test custom title handling."""
     X, y = sample_data
     feature_names = ["A"]
@@ -1869,7 +2527,11 @@ def test_show_feat_roc_custom_title(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_roc_empty_title(mock_show, trained_model, sample_data):
+def test_show_feat_roc_empty_title(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test handling of empty title string."""
     X, y = sample_data
     feature_names = ["A"]
@@ -1885,7 +2547,11 @@ def test_show_feat_roc_empty_title(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_roc_model_titles(mock_show, trained_model, sample_data):
+def test_show_feat_roc_model_titles(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test model_titles parameter."""
     X, y = sample_data
     feature_names = ["A"]
@@ -1902,11 +2568,18 @@ def test_show_feat_roc_model_titles(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_roc_curve_styling(mock_show, trained_model, sample_data):
+def test_show_feat_roc_curve_styling(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test custom curve styling with curve_kwgs."""
     X, y = sample_data
     feature_names = ["A", "B"]
-    curve_kwgs = {"A": {"color": "red", "linestyle": "--"}, "B": {"color": "blue"}}
+    curve_kwgs = {
+        "A": {"color": "red", "linestyle": "--"},
+        "B": {"color": "blue"},
+    }
     show_feat_roc(
         trained_model,
         X,
@@ -1919,7 +2592,12 @@ def test_show_feat_roc_curve_styling(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_roc_feature_mismatch(mock_show, trained_model, sample_data, capsys):
+def test_show_feat_roc_feature_mismatch(
+    mock_show,
+    trained_model,
+    sample_data,
+    capsys,
+):
     """Test handling when model features don't match X columns."""
     X, y = sample_data
     # Modify trained_model to expect different features
@@ -1939,7 +2617,11 @@ def test_show_feat_roc_feature_mismatch(mock_show, trained_model, sample_data, c
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_roc_text_wrap(mock_show, trained_model, sample_data):
+def test_show_feat_roc_text_wrap(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test text wrapping for long titles."""
     X, y = sample_data
     feature_names = ["A"]
@@ -1957,7 +2639,11 @@ def test_show_feat_roc_text_wrap(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_roc_decimal_places(mock_show, trained_model, sample_data):
+def test_show_feat_roc_decimal_places(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test AUC decimal places formatting."""
     X, y = sample_data
     feature_names = ["A"]
@@ -1970,11 +2656,16 @@ def test_show_feat_roc_decimal_places(mock_show, trained_model, sample_data):
         save_plot=False,
     )
     assert mock_show.called, "plt.show() was not called."
-    # Verifying exact legend text would require deeper mocking; here we ensure it runs.
+    # Verifying exact legend text would require deeper mocking;
+    # here we ensure it runs.
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_roc_no_gridlines(mock_show, trained_model, sample_data):
+def test_show_feat_roc_no_gridlines(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test disabling gridlines."""
     X, y = sample_data
     feature_names = ["A"]
@@ -2016,27 +2707,48 @@ def test_show_feat_pr_basic(mock_show, trained_model, sample_data):
     X, y = sample_data
     feature_names = ["A", "B"]
     try:
-        show_feat_pr(trained_model, X, y, feature_names=feature_names, save_plot=False)
+        show_feat_pr(
+            trained_model,
+            X,
+            y,
+            feature_names=feature_names,
+            save_plot=False,
+        )
     except Exception as e:
         pytest.fail(f"show_feat_pr failed unexpectedly: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_pr_multiple_models(mock_show, trained_model, sample_data):
+def test_show_feat_pr_multiple_models(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test show_feat_pr with multiple models."""
     X, y = sample_data
     feature_names = ["A", "B"]
     models = [trained_model, trained_model]  # Duplicate for simplicity
     try:
-        show_feat_pr(models, X, y, feature_names=feature_names, save_plot=False)
+        show_feat_pr(
+            models,
+            X,
+            y,
+            feature_names=feature_names,
+            save_plot=False,
+        )
     except Exception as e:
         pytest.fail(f"show_feat_pr failed with multiple models: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_pr_save_plot(mock_show, trained_model, sample_data, tmp_path):
+def test_show_feat_pr_save_plot(
+    mock_show,
+    trained_model,
+    sample_data,
+    tmp_path,
+):
     """Test if show_feat_pr saves plots correctly."""
     X, y = sample_data
     feature_names = ["A"]
@@ -2059,11 +2771,22 @@ def test_show_feat_pr_save_plot(mock_show, trained_model, sample_data, tmp_path)
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_pr_missing_feature(mock_show, trained_model, sample_data, capsys):
+def test_show_feat_pr_missing_feature(
+    mock_show,
+    trained_model,
+    sample_data,
+    capsys,
+):
     """Test handling of missing features in X."""
     X, y = sample_data
     feature_names = ["A", "NonExistentFeature"]
-    show_feat_pr(trained_model, X, y, feature_names=feature_names, save_plot=False)
+    show_feat_pr(
+        trained_model,
+        X,
+        y,
+        feature_names=feature_names,
+        save_plot=False,
+    )
     captured = capsys.readouterr()
     assert (
         "Warning: Feature 'NonExistentFeature' not found in X. Skipping."
@@ -2073,7 +2796,11 @@ def test_show_feat_pr_missing_feature(mock_show, trained_model, sample_data, cap
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_pr_smooth_curves(mock_show, trained_model, sample_data):
+def test_show_feat_pr_smooth_curves(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test smooth_curves functionality."""
     X, y = sample_data
     feature_names = ["A"]
@@ -2090,7 +2817,11 @@ def test_show_feat_pr_smooth_curves(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_pr_custom_title(mock_show, trained_model, sample_data):
+def test_show_feat_pr_custom_title(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test custom title handling."""
     X, y = sample_data
     feature_names = ["A"]
@@ -2107,7 +2838,11 @@ def test_show_feat_pr_custom_title(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_pr_empty_title(mock_show, trained_model, sample_data):
+def test_show_feat_pr_empty_title(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test handling of empty title string."""
     X, y = sample_data
     feature_names = ["A"]
@@ -2123,7 +2858,11 @@ def test_show_feat_pr_empty_title(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_pr_model_titles(mock_show, trained_model, sample_data):
+def test_show_feat_pr_model_titles(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test model_titles parameter."""
     X, y = sample_data
     feature_names = ["A"]
@@ -2140,11 +2879,18 @@ def test_show_feat_pr_model_titles(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_pr_curve_styling(mock_show, trained_model, sample_data):
+def test_show_feat_pr_curve_styling(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test custom curve styling with curve_kwgs."""
     X, y = sample_data
     feature_names = ["A", "B"]
-    curve_kwgs = {"A": {"color": "red", "linestyle": "--"}, "B": {"color": "blue"}}
+    curve_kwgs = {
+        "A": {"color": "red", "linestyle": "--"},
+        "B": {"color": "blue"},
+    }
     show_feat_pr(
         trained_model,
         X,
@@ -2157,13 +2903,24 @@ def test_show_feat_pr_curve_styling(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_pr_feature_mismatch(mock_show, trained_model, sample_data, capsys):
+def test_show_feat_pr_feature_mismatch(
+    mock_show,
+    trained_model,
+    sample_data,
+    capsys,
+):
     """Test handling when model features don't match X columns."""
     X, y = sample_data
     # Modify trained_model to expect different features
     trained_model.feature_names_in_ = np.array(["A", "D"])  # 'D' not in X
     feature_names = ["A"]
-    show_feat_pr(trained_model, X, y, feature_names=feature_names, save_plot=False)
+    show_feat_pr(
+        trained_model,
+        X,
+        y,
+        feature_names=feature_names,
+        save_plot=False,
+    )
     captured = capsys.readouterr()
     assert "Warning: Model" in captured.out
     assert "do not match X columns" in captured.out
@@ -2189,7 +2946,11 @@ def test_show_feat_pr_text_wrap(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_pr_decimal_places(mock_show, trained_model, sample_data):
+def test_show_feat_pr_decimal_places(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test AP decimal places formatting."""
     X, y = sample_data
     feature_names = ["A"]
@@ -2205,7 +2966,11 @@ def test_show_feat_pr_decimal_places(mock_show, trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_pr_no_gridlines(mock_show, trained_model, sample_data):
+def test_show_feat_pr_no_gridlines(
+    mock_show,
+    trained_model,
+    sample_data,
+):
     """Test disabling gridlines."""
     X, y = sample_data
     feature_names = ["A"]
@@ -2230,17 +2995,36 @@ def test_show_feat_pr_invalid_model(mock_show, sample_data):
             return np.ones(len(X))
 
     feature_names = ["A"]
-    show_feat_pr(DummyModel(), X, y, feature_names=feature_names, save_plot=False)
+    show_feat_pr(
+        DummyModel(),
+        X,
+        y,
+        feature_names=feature_names,
+        save_plot=False,
+    )
     assert mock_show.called, "plt.show() was not called."
     # Expect an error message in the output, but function should still complete
 
 
 @patch("matplotlib.pyplot.show")
-def test_show_feat_pr_reference_line(mock_show, trained_model, sample_data):
-    """Test that the reference line is plotted at the positive class fraction."""
+def test_show_feat_pr_reference_line(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """
+    Test that the reference line is plotted at the positive class fraction.
+    """
     X, y = sample_data
     feature_names = ["A"]
-    show_feat_pr(trained_model, X, y, feature_names=feature_names, save_plot=False)
+    show_feat_pr(
+        trained_model,
+        X,
+        y,
+        feature_names=feature_names,
+        save_plot=False,
+    )
     assert mock_show.called, "plt.show() was not called."
-    # Note: Directly verifying the reference line position requires inspecting plt.plot calls,
-    # which is complex with mocking. Here we ensure it runs without errors.
+    # Note: Directly verifying the reference line position requires inspecting
+    # plt.plot calls, which is complex with mocking. Here we ensure it runs
+    # without errors.
