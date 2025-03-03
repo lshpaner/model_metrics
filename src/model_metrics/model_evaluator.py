@@ -248,7 +248,7 @@ def summarize_model_performance(
 ):
     """
     Summarizes model performance metrics, including overall metrics and model
-    coefficients.
+    coefficients or feature importances based on model type and attributes.
 
     Parameters:
     -----------
@@ -257,7 +257,8 @@ def summarize_model_performance(
         - Supports classification and regression models.
 
     X : pd.DataFrame
-        Feature matrix used for evaluation.
+        Feature matrix used for evaluation. Must have column names for feature
+        importance calculations if using tree-based models.
 
     y : pd.Series or np.array
         Target variable.
@@ -285,8 +286,8 @@ def summarize_model_performance(
         - If True, returns a DataFrame instead of printing results.
 
     overall_only : bool, default=False
-        - If True, returns only the "Overall Metrics" row.
-        - Removes "Variable", "Coefficient", and "P-value" columns.
+        - If True, returns only the "Overall Metrics" row for regression models.
+        - Removes "Variable", "Coefficient", and "Feat. Imp." columns.
         - Ensures index removal for a clean DataFrame display.
 
     decimal_places : int, default=3
@@ -314,11 +315,16 @@ def summarize_model_performance(
 
     - For regression models:
         - Computes MAE, MAPE, MSE, RMSE, Expl. Var., and R² Score.
-        - Uses statsmodels.OLS to extract coefficients.
+        - Uses statsmodels.OLS to extract coefficients for models with a `coef_`
+          attribute (e.g., linear models like Lasso, LinearRegression).
+        - Uses feature importances for models with a `feature_importances_`
+          attribute (e.g., tree-based models like RandomForestRegressor), displayed
+          in a "Feat. Imp." column.
 
     - If overall_only=True, the DataFrame will:
         - Contain only "Overall Metrics".
-        - Drop unnecessary coefficient-related columns.
+        - Drop unnecessary coefficient-related columns ("Variable", "Coefficient",
+          "Feat. Imp.").
         - Have an empty index to remove the leading row number.
     """
 
@@ -447,7 +453,7 @@ def summarize_model_performance(
             else:
                 mape = np.nan  # If all y-values are zero, return NaN
 
-            # Base columns for all regression models (without Feature Importance initially)
+            # Base columns for all regression models (without Feat. Imp. initially)
             base_columns = {
                 "Model": name,
                 "Metric": "Overall Metrics",
@@ -464,7 +470,7 @@ def summarize_model_performance(
             # Append overall metrics
             metrics_data.append(base_columns)
 
-            # Only append coefficients and feature importances if not overall_only
+            # Only append coefficients and Feat. Imp. if not overall_only
             if not overall_only:
                 # Determine feature importances
                 feature_importance = {}
@@ -517,7 +523,7 @@ def summarize_model_performance(
                         metrics_data.append(
                             {
                                 "Model": name,
-                                "Metric": "Feature Importance",
+                                "Metric": "Feat. Imp.",
                                 "Variable": feature,
                                 "Coefficient": "",
                                 "MAE": "",
@@ -526,7 +532,7 @@ def summarize_model_performance(
                                 "RMSE": "",
                                 "Expl. Var.": "",
                                 "R^2 Score": "",
-                                "Feature Importance": feature_importance[feature],
+                                "Feat. Imp.": feature_importance[feature],
                             }
                         )
 
@@ -564,7 +570,7 @@ def summarize_model_performance(
     # and it's regression
     columns = base_columns.copy()
     if has_feature_importances_any and model_type == "regression" and not overall_only:
-        columns.insert(4, "Feature Importance")  # Insert after "Coefficient"
+        columns.insert(4, "Feat. Imp.")  # Insert after "Coefficient"
 
     # Create DataFrame with the determined columns
     metrics_df = pd.DataFrame(metrics_data, columns=columns)
@@ -575,20 +581,22 @@ def summarize_model_performance(
     if model_type == "regression":
         # Remove "Feature Importance" column if no model has feature importances
         if not has_feature_importances_any:
-            if "Feature Importance" in metrics_df.columns:
+            if "Feat. Imp." in metrics_df.columns:
                 metrics_df = metrics_df.drop(
-                    columns=["Feature Importance"], errors="ignore"
+                    columns=["Feat. Imp."],
+                    errors="ignore",
                 )
 
-        # Check if the current model (or its pipeline's final step) has coef_
-        has_coef = hasattr(model, "coef_") or (
-            type(model) is Pipeline and hasattr(model[-1], "coef_")
+        # Check if any model in the list (or its pipeline's final step) has coef_
+        has_any_coef = any(
+            hasattr(m, "coef_") or (type(m) is Pipeline and hasattr(m[-1], "coef_"))
+            for m in models
         )
-        # Remove "Coefficient" and "Variable" columns if the model doesn't have coef_
-        if not has_coef:
+        # Remove "Coefficient" and "Variable" columns if no model has coef_
+        if not has_any_coef:
             if "Coefficient" in metrics_df.columns:
                 metrics_df = metrics_df.drop(
-                    columns=["Coefficient"],
+                    columns=["Coefficient", "Variable"],
                     errors="ignore",
                 )
 
@@ -601,9 +609,10 @@ def summarize_model_performance(
             )
 
             if not has_feature_importances_any:
-                if "Feature Importance" in metrics_df.columns:
+                if "Feat. Imp." in metrics_df.columns:
                     metrics_df = metrics_df.drop(
-                        columns=["Feature Importance"], errors="ignore"
+                        columns=["Feat. Imp."],
+                        errors="ignore",
                     )
             metrics_df.index = [""] * len(metrics_df)
 

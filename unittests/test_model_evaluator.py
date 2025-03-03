@@ -457,8 +457,8 @@ def test_summarize_model_performance_regression(regression_model):
         df_overall.iloc[0]["Metric"] == "Overall Metrics"
     ), "First row should be 'Overall Metrics'."
     assert (
-        "Feature Importance" not in df_overall.columns
-    ), "Feature Importance should not appear in overall_only mode."
+        "Feat. Imp." not in df_overall.columns
+    ), "Feat. Imp. should not appear in overall_only mode."
 
     print(
         f"Regression performance summary test passed, "
@@ -495,7 +495,7 @@ def test_summarize_model_performance_rf_regression(rf_regression_model):
     expected_columns_full = [
         "Model",
         "Metric",
-        "Feature Importance",
+        "Feat. Imp.",
         "MAE",
         "MAPE",
         "MSE",
@@ -513,8 +513,8 @@ def test_summarize_model_performance_rf_regression(rf_regression_model):
 
     # Ensure Feature Importance values are present for at least one feature
     assert any(
-        df_full["Metric"] == "Feature Importance"
-    ), "Feature Importance rows should exist in full output."
+        df_full["Metric"] == "Feat. Imp."
+    ), "Feat. Imp. rows should exist in full output."
 
     # Test overall_only=True output
     df_overall = summarize_model_performance(
@@ -560,8 +560,8 @@ def test_summarize_model_performance_rf_regression(rf_regression_model):
         df_overall.iloc[0]["Metric"] == "Overall Metrics"
     ), "First row should be 'Overall Metrics'."
     assert (
-        "Feature Importance" not in df_overall.columns
-    ), "Feature Importance should not appear in overall_only mode."
+        "Feat. Imp." not in df_overall.columns
+    ), "Feat. Imp. should not appear in overall_only mode."
     assert (
         "Coefficient" not in df_overall.columns
     ), "Coefficient should not appear in overall_only mode."
@@ -572,6 +572,127 @@ def test_summarize_model_performance_rf_regression(rf_regression_model):
     print(
         f"RandomForest regression performance summary test passed, "
         f"including overall_only behavior and feature importances."
+    )
+
+
+def test_summarize_model_performance_mixed_regression(
+    regression_model,
+    rf_regression_model,
+):
+    """
+    Test summarize_model_performance for a mix of regression models
+    (e.g., Lasso and RandomForestRegressor), ensuring 'Coefficient' and 'Variable'
+    are retained if any model has coef_, and 'Feat. Imp.' is included
+    if any model has feature_importances_.
+    """
+    lasso_model, (X_lasso, y_lasso) = regression_model
+    rf_model, (X_rf, y_rf) = rf_regression_model
+
+    # Ensure X and y are compatible (same shape and values for testing)
+    X = pd.DataFrame(X_lasso, columns=[f"Feature_{i}" for i in range(X_lasso.shape[1])])
+    # Use Lasso's y for consistency; assume both models were trained on similar data
+    y = y_lasso
+
+    # Test full regression output (overall_only=False) with mixed models
+    models = [rf_model, lasso_model]
+    df_full = summarize_model_performance(
+        models,
+        X,
+        y,
+        model_type="regression",
+        return_df=True,
+        overall_only=False,
+    )
+
+    # Ensure output is a DataFrame
+    assert isinstance(df_full, pd.DataFrame), "Output should be a pandas DataFrame."
+
+    # Expected columns in full regression output for mixed models
+    # (both Coefficient/Variable and Feat. Imp. should be present)
+    expected_columns_full = [
+        "Model",
+        "Metric",
+        "Variable",
+        "Coefficient",
+        "Feat. Imp.",
+        "MAE",
+        "MAPE",
+        "MSE",
+        "RMSE",
+        "Expl. Var.",
+        "R^2 Score",
+    ]
+
+    missing_columns_full = [
+        col for col in expected_columns_full if col not in df_full.columns
+    ]
+    assert (
+        not missing_columns_full
+    ), f"Missing expected columns in full output: {missing_columns_full}"
+
+    # Ensure both coefficient and feature importance rows exist (if applicable)
+    assert any(
+        df_full["Metric"] == "Coefficient"
+    ), "Coefficient rows should exist for Lasso."
+    assert any(
+        df_full["Metric"] == "Feat. Imp."
+    ), "Feat. Imp. rows should exist for RandomForest."
+
+    # Test overall_only=True output with mixed models
+    df_overall = summarize_model_performance(
+        models,
+        X,
+        y,
+        model_type="regression",
+        return_df=True,
+        overall_only=True,
+    )
+
+    # Ensure output is a DataFrame
+    assert isinstance(
+        df_overall, pd.DataFrame
+    ), "Output for overall_only=True should be a pandas DataFrame."
+
+    # Expected columns in overall_only output (no Coefficient, Variable, or Feat. Imp.)
+    expected_columns_overall = [
+        "Model",
+        "Metric",
+        "MAE",
+        "MAPE",
+        "MSE",
+        "RMSE",
+        "Expl. Var.",
+        "R^2 Score",
+    ]
+
+    missing_columns_overall = [
+        col for col in expected_columns_overall if col not in df_overall.columns
+    ]
+    assert (
+        not missing_columns_overall
+    ), f"Missing expected columns in overall_only output: {missing_columns_overall}"
+
+    # Ensure "Overall Metrics" is the only row and no coefficient-related or
+    # feature importance columns are present
+    assert (
+        len(df_overall) == 2
+    ), "Expected one row per model for 'Overall Metrics' in overall_only mode."
+    assert all(
+        df_overall["Metric"] == "Overall Metrics"
+    ), "All rows should be 'Overall Metrics'."
+    assert (
+        "Coefficient" not in df_overall.columns
+    ), "Coefficient should not appear in overall_only mode."
+    assert (
+        "Variable" not in df_overall.columns
+    ), "Variable should not appear in overall_only mode."
+    assert (
+        "Feat. Imp." not in df_overall.columns
+    ), "Feat. Imp. should not appear in overall_only mode."
+
+    print(
+        f"Mixed regression performance summary test passed, "
+        f"including overall_only behavior."
     )
 
 
@@ -607,8 +728,8 @@ def test_summarize_model_performance_overall_only(regression_model):
         "Coefficient" not in df.columns
     ), "Column 'Coefficient' should be removed in 'overall_only' mode."
     assert (
-        "Feature Importance" not in df.columns
-    ), "Column 'Feature Importance' should be removed in 'overall_only' mode."
+        "Feat. Imp." not in df.columns
+    ), "Column 'Feat. Imp.' should be removed in 'overall_only' mode."
 
     # Ensure index is empty for clean display
     assert df.index.tolist() == [""], "Index should be empty strings for clean display."
