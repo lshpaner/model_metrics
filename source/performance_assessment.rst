@@ -224,11 +224,6 @@ positive (1) at the expense of precision.
         custom_threshold=0.2,
     )
 
-.. note:: 
-
-    For the full context behind model training in Binary Classification Example 2, 
-    see :ref:`Example 1 <Binary_Classification_Example_1>`
-
 
 **Output**
 
@@ -244,7 +239,8 @@ positive (1) at the expense of precision.
     .tg .tg-kex3{font-weight:bold;text-align:right;vertical-align:bottom}
     .tg .tg-j6zm{font-weight:bold;text-align:right;vertical-align:bottom}
     .tg .tg-7zrl{text-align:right;vertical-align:bottom}
-    @media screen and (max-width: 767px) {.tg {width: auto !important;}.tg col {width: auto !important;}.tg-wrap {overflow-x: auto;-webkit-overflow-scrolling: touch;}}</style>
+    @media screen and (max-width: 767px) {.tg {width: auto !important;}.tg col 
+    {width: auto !important;}.tg-wrap {overflow-x: auto;-webkit-overflow-scrolling: touch;}}</style>
     <div class="tg-wrap"><table class="tg"><thead>
     <tr>
         <th class="tg-kex3">Metrics</th>
@@ -299,27 +295,44 @@ positive (1) at the expense of precision.
     <div style="height: 40px;"></div>
 
 
-
-Regression Example 1
+Regression Models
 ^^^^^^^^^^^^^^^^^^^^
+
+In this section, we load the diabetes dataset from ``scikit-learn``, which includes 
+features like age and BMI, along with a target variable representing disease 
+progression. The data is then split with ``train_test_split`` into training and 
+testing sets using an 80/20 ratio to facilitate model assessment. We train a 
+Linear Regression model on unscaled data for a straightforward baseline, followed b
+y a Random Forest Regressor with 100 trees, also on unscaled data, to introduce a 
+more complex approach. Additionally, we train a Ridge Regression model using a 
+``Pipeline`` that scales the features with ``StandardScaler`` before fitting, 
+incorporating regularization. These steps prepare the models for subsequent 
+evaluation and comparison using tools provided by the ``model_metrics`` library.
+
+**Models use in these regression examples:**
+
+- **Linear Regression:** A foundational model trained on unscaled data, simple yet effective for baseline evaluation.
+- **Ridge Regression:** A regularized model with a Pipeline for scaling, perfect for testing stability and overfitting.
+- **Random Forest Regressor:** An ensemble of 100 trees on unscaled data, offering complexity for comparative analysis.
+
+
 
 .. code-block:: python
 
-    from sklearn.datasets import make_regression
-    from sklearn.linear_model import LinearRegression
-    from sklearn.ensemble import RandomForestRegressor
+    import pandas as pd
+    from sklearn.datasets import load_diabetes
     from sklearn.model_selection import train_test_split
-    from model_metrics import summarize_model_performance
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.linear_model import LinearRegression, Ridge
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.pipeline import Pipeline
 
-    # Generate a synthetic regression dataset
-    X, y = make_regression(
-        n_samples=1000,
-        n_features=10,
-        noise=0.1,
-        random_state=42,
-    )
+    # Load dataset
+    diabetes = load_diabetes(as_frame=True)["frame"]
+    X = diabetes.drop(columns=["target"])
+    y = diabetes["target"]
 
-    # Split into training and testing sets
+    # Split into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
@@ -327,18 +340,446 @@ Regression Example 1
         random_state=42,
     )
 
-    # Train regression models
-    model1 = LinearRegression().fit(X_train, y_train)
-    model2 = RandomForestRegressor(n_estimators=100, random_state=42,).fit(
-        X_train,
-        y_train,
+    # Train Linear Regression (on unscaled data)
+    linear_model = LinearRegression()
+    linear_model.fit(X_train, y_train)
+
+    # Train Random Forest Regressor (on unscaled data)
+    rf_model = RandomForestRegressor(
+        n_estimators=100,
+        random_state=42,
+    )
+    rf_model.fit(X_train, y_train)
+
+    # Train Ridge Regression (on scaled data)
+    ridge_model = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("estimator", Ridge(alpha=1.0)),
+        ]
+    )
+    ridge_model.fit(X_train, y_train)
+
+
+
+Regression Example 1
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    from model_metrics import summarize_model_performance
+
+    regression_metrics = summarize_model_performance(
+        model=[linear_model, ridge_model],
+        model_titles=["Linear Regression", "Ridge Regression"],
+        X=X_test,
+        y=y_test,
+        model_type="regression",
+        return_df=True,
     )
 
-    # Evaluate regression model performance
+    regression_metrics
+
+
+The output below presents a detailed comparison of the performance and coefficients 
+for two regression models—Linear Regression and Ridge Regression—trained on the 
+diabetes dataset. It includes overall metrics such as Mean Absolute Error (MAE), 
+Mean Absolute Percentage Error (MAPE), Mean Squared Error (MSE), Root Mean Squared Error (RMSE), 
+Explained Variance, and R² Score for each model, showing their predictive accuracy. 
+Additionally, it lists the coefficients for each feature (e.g., age, bmi, s1–s6) 
+in both models, highlighting how each variable contributes to the prediction. 
+This output serves as a foundation for evaluating and comparing the models’ 
+effectiveness in [Your Library Name]'s documentation.
+
+**Output**
+
+.. raw:: html
+
+    <style type="text/css">
+    .tg {
+        border-collapse: collapse;
+        border-spacing: 0;
+        max-width: 450px; /* Fixed maximum width */
+        width: 100%;
+    }
+    .tg td {
+        border-color: black;
+        border-style: solid;
+        border-width: 1px;
+        font-family: Arial, sans-serif;
+        font-size: 12px; /* Reduced from 14px */
+        overflow: hidden;
+        padding: 0px 3px; /* Reduced from 0px 5px */
+        word-break: normal;
+    }
+    .tg th {
+        border-color: black;
+        border-style: solid;
+        border-width: 1px;
+        font-family: Arial, sans-serif;
+        font-size: 12px; /* Reduced from 14px */
+        font-weight: normal;
+        overflow: hidden;
+        padding: 0px 3px; /* Reduced from 0px 5px */
+        word-break: normal;
+    }
+    .tg .tg-oxe6 { font-weight: bold; text-align: right; vertical-align: bottom; }
+    .tg .tg-0thz { font-weight: bold; text-align: right; vertical-align: bottom; }
+    .tg .tg-jkyp { text-align: right; vertical-align: bottom; }
+    .tg .tg-za14 { text-align: right; vertical-align: bottom; }
+
+    @media screen and (max-width: 767px) {
+        .tg { width: auto !important; }
+        .tg col { width: auto !important; }
+        .tg-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    }
+    </style>
+
+    <div class="tg-wrap">
+        <table class="tg" style="table-layout: fixed; width: 450px;">
+            <colgroup>
+                <col style="width: 110px"> <!-- Model -->
+                <col style="width: 90px"> <!-- Metric -->
+                <col style="width: 60px"> <!-- Variable -->
+                <col style="width: 70px"> <!-- Coefficient -->
+                <col style="width: 50px"> <!-- MAE -->
+                <col style="width: 50px"> <!-- MAPE -->
+                <col style="width: 60px"> <!-- MSE -->
+                <col style="width: 60px"> <!-- RMSE -->
+                <col style="width: 70px"> <!-- Expl. Var. -->
+                <col style="width: 70px"> <!-- R² Score -->
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="tg-oxe6">Model</th>
+                    <th class="tg-oxe6">Metric</th>
+                    <th class="tg-oxe6">Variable</th>
+                    <th class="tg-oxe6">Coefficient</th>
+                    <th class="tg-oxe6">MAE</th>
+                    <th class="tg-oxe6">MAPE</th>
+                    <th class="tg-oxe6">MSE</th>
+                    <th class="tg-oxe6">RMSE</th>
+                    <th class="tg-0thz">Expl. Var.</th>
+                    <th class="tg-0thz">R^2 Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Overall Metrics</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp">42.794</td>
+                    <td class="tg-jkyp">37.5</td>
+                    <td class="tg-jkyp">2900.194</td>
+                    <td class="tg-jkyp">53.853</td>
+                    <td class="tg-za14">0.455</td>
+                    <td class="tg-za14">0.453</td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">const</td>
+                    <td class="tg-jkyp">151.346</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">age</td>
+                    <td class="tg-jkyp">37.904</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">sex</td>
+                    <td class="tg-jkyp">-241.964</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">bmi</td>
+                    <td class="tg-jkyp">542.429</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">bp</td>
+                    <td class="tg-jkyp">347.704</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s1</td>
+                    <td class="tg-jkyp">-931.489</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s2</td>
+                    <td class="tg-jkyp">518.062</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s3</td>
+                    <td class="tg-jkyp">163.42</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s4</td>
+                    <td class="tg-jkyp">275.318</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s5</td>
+                    <td class="tg-jkyp">736.199</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s6</td>
+                    <td class="tg-jkyp">48.671</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Overall Metrics</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp">42.812</td>
+                    <td class="tg-jkyp">37.448</td>
+                    <td class="tg-jkyp">2892.015</td>
+                    <td class="tg-jkyp">53.777</td>
+                    <td class="tg-za14">0.457</td>
+                    <td class="tg-za14">0.454</td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">const</td>
+                    <td class="tg-jkyp">153.737</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">age</td>
+                    <td class="tg-jkyp">1.807</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">sex</td>
+                    <td class="tg-jkyp">-11.448</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">bmi</td>
+                    <td class="tg-jkyp">25.733</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">bp</td>
+                    <td class="tg-jkyp">16.734</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s1</td>
+                    <td class="tg-jkyp">-34.672</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s2</td>
+                    <td class="tg-jkyp">17.053</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s3</td>
+                    <td class="tg-jkyp">3.37</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s4</td>
+                    <td class="tg-jkyp">11.764</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s5</td>
+                    <td class="tg-jkyp">31.378</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s6</td>
+                    <td class="tg-jkyp">2.458</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-za14"></td>
+                    <td class="tg-za14"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+
+Regression Example 2
+~~~~~~~~~~~~~~~~~~~~~~
+
+In this Regression Example 2, we extend the analysis by introducing a Random Forest 
+Regressor alongside Linear Regression and Ridge Regression to demonstrate how a 
+model with feature importances, rather than coefficients, impacts evaluation outcomes. 
+The code uses the ``summarize_model_performance`` function from ``model_metrics`` to 
+assess all three models on the diabetes dataset’s test set, ensuring the Random Forest’s 
+feature importance-based predictions are reflected in the results while preserving 
+the coefficient-based results of the other models, as shown in the subsequent table.
+
+.. code-block:: python
+
+    from model_metrics import summarize_model_performance
+
     regression_metrics = summarize_model_performance(
-        model=[linear_model, rf_model],
-        model_titles=["Linear Regression", "Random Forest"],
-        X=X_test_scaled,
+        model=[linear_model, ridge_model, rf_model],
+        model_titles=["Linear Regression", "Ridge Regression", "Random Forest"],
+        X=X_test,
         y=y_test,
         model_type="regression",
         return_df=True,
@@ -352,231 +793,386 @@ Regression Example 1
 .. raw:: html
 
     <style type="text/css">
-        .tg {
-            border-collapse: collapse;
-            border-spacing: 0;
-            max-width: 450px;
-            width: 100%;
-        }
-        .tg td {
-            border-color: black;
-            border-style: solid;
-            border-width: 1px;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            overflow: hidden;
-            padding: 0px 3px;
-            word-break: normal;
-        }
-        .tg th {
-            border-color: black;
-            border-style: solid;
-            border-width: 1px;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            font-weight: normal;
-            overflow: hidden;
-            padding: 0px 3px;
-            word-break: normal;
-        }
-        .tg .tg-2b7s { text-align: right; vertical-align: bottom; }
-        .tg .tg-kex3 { font-weight: bold; text-align: right; vertical-align: bottom; }
-        .tg .tg-j6zm { font-weight: bold; text-align: right; vertical-align: bottom; }
-        .tg .tg-7zrl { text-align: right; vertical-align: bottom; }
+    .tg {
+        border-collapse: collapse;
+        border-spacing: 0;
+        max-width: 450px; /* Fixed maximum width */
+        width: 100%;
+    }
+    .tg td {
+        border-color: black;
+        border-style: solid;
+        border-width: 1px;
+        font-family: Arial, sans-serif;
+        font-size: 12px; /* Reduced from 14px */
+        overflow: hidden;
+        padding: 0px 3px; /* Reduced from 0px 5px */
+        word-break: normal;
+    }
+    .tg th {
+        border-color: black;
+        border-style: solid;
+        border-width: 1px;
+        font-family: Arial, sans-serif;
+        font-size: 12px; /* Reduced from 14px */
+        font-weight: normal;
+        overflow: hidden;
+        padding: 0px 3px; /* Reduced from 0px 5px */
+        word-break: normal;
+    }
+    .tg .tg-oxe6 { font-weight: bold; text-align: right; vertical-align: bottom; }
+    .tg .tg-jkyp { text-align: right; vertical-align: bottom; }
+    .tg .tg-2b7s { text-align: right; vertical-align: bottom; }
 
-        @media screen and (max-width: 767px) {
-            .tg { width: auto !important; }
-            .tg col { width: auto !important; }
-            .tg-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        }
+    @media screen and (max-width: 767px) {
+        .tg { width: auto !important; }
+        .tg col { width: auto !important; }
+        .tg-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    }
     </style>
 
     <div class="tg-wrap">
         <table class="tg" style="table-layout: fixed; width: 450px;">
             <colgroup>
                 <col style="width: 106px"> <!-- Model -->
-                <col style="width: 67px"> <!-- Metric -->
-                <col style="width: 52px"> <!-- Variable -->
+                <col style="width: 90px"> <!-- Metric -->
+                <col style="width: 60px"> <!-- Variable -->
                 <col style="width: 70px"> <!-- Coefficient -->
-                <col style="width: 50px"> <!-- P-value -->
-                <col style="width: 45px"> <!-- MAE -->
-                <col style="width: 45px"> <!-- MAPE (%) -->
-                <col style="width: 55px"> <!-- MSE -->
-                <col style="width: 45px"> <!-- RMSE -->
-                <col style="width: 65px"> <!-- Expl. Var. -->
-                <col style="width: 70px"> <!-- R^2 Score -->
+                <col style="width: 65px"> <!-- Feat. Imp. -->
+                <col style="width: 50px"> <!-- MAE -->
+                <col style="width: 50px"> <!-- MAPE -->
+                <col style="width: 60px"> <!-- MSE -->
+                <col style="width: 50px"> <!-- RMSE -->
+                <col style="width: 46px"> <!-- Expl. Var. -->
+                <col style="width: 46px"> <!-- R^2 Score -->
             </colgroup>
             <thead>
                 <tr>
-                    <th class="tg-kex3">Model</th>
-                    <th class="tg-kex3">Metric</th>
-                    <th class="tg-kex3">Variable</th>
-                    <th class="tg-kex3">Coefficient</th>
-                    <th class="tg-kex3">P-value</th>
-                    <th class="tg-kex3">MAE</th>
-                    <th class="tg-kex3">MAPE</th>
-                    <th class="tg-kex3">MSE</th>
-                    <th class="tg-kex3">RMSE</th>
-                    <th class="tg-kex3">Expl. Var.</th>
-                    <th class="tg-j6zm">R^2 Score</th>
+                    <th class="tg-oxe6">Model</th>
+                    <th class="tg-oxe6">Metric</th>
+                    <th class="tg-oxe6">Variable</th>
+                    <th class="tg-oxe6">Coefficient</th>
+                    <th class="tg-oxe6">Feat. Imp.</th>
+                    <th class="tg-oxe6">MAE</th>
+                    <th class="tg-oxe6">MAPE</th>
+                    <th class="tg-oxe6">MSE</th>
+                    <th class="tg-oxe6">RMSE</th>
+                    <th class="tg-oxe6">Expl. Var.</th>
+                    <th class="tg-oxe6">R^2 Score</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td class="tg-2b7s">Linear Regression</td>
-                    <td class="tg-2b7s">Overall Metrics</td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s">42.794</td>
-                    <td class="tg-2b7s">37.5</td>
-                    <td class="tg-2b7s">2900.194</td>
-                    <td class="tg-2b7s">53.853</td>
-                    <td class="tg-2b7s">0.455</td>
-                    <td class="tg-7zrl">0.453</td>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Overall Metrics</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp">42.794</td>
+                    <td class="tg-jkyp">37.5</td>
+                    <td class="tg-jkyp">2900.194</td>
+                    <td class="tg-jkyp">53.853</td>
+                    <td class="tg-jkyp">0.455</td>
+                    <td class="tg-jkyp">0.453</td>
                 </tr>
                 <tr>
-                    <td class="tg-2b7s">Linear Regression</td>
-                    <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">const</td>
-                    <td class="tg-2b7s">154.311</td>
-                    <td class="tg-2b7s">0</td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">const</td>
+                    <td class="tg-jkyp">151.346</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
                 </tr>
                 <tr>
-                    <td class="tg-2b7s">Linear Regression</td>
-                    <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">age</td>
-                    <td class="tg-2b7s">-135.253</td>
-                    <td class="tg-2b7s">0.285</td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">age</td>
+                    <td class="tg-jkyp">37.904</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
                 </tr>
                 <tr>
-                    <td class="tg-2b7s">Linear Regression</td>
-                    <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">sex</td>
-                    <td class="tg-2b7s">257.411</td>
-                    <td class="tg-2b7s">0.121</td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">sex</td>
+                    <td class="tg-jkyp">-241.964</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
                 </tr>
                 <tr>
-                    <td class="tg-2b7s">Linear Regression</td>
-                    <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">bmi</td>
-                    <td class="tg-2b7s">425.591</td>
-                    <td class="tg-2b7s">0.004</td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">bmi</td>
+                    <td class="tg-jkyp">542.429</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
                 </tr>
                 <tr>
-                    <td class="tg-2b7s">Linear Regression</td>
-                    <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">bp</td>
-                    <td class="tg-2b7s">225.238</td>
-                    <td class="tg-2b7s">0.219</td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">bp</td>
+                    <td class="tg-jkyp">347.704</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
                 </tr>
                 <tr>
-                    <td class="tg-2b7s">Linear Regression</td>
-                    <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">s1</td>
-                    <td class="tg-2b7s">356.066</td>
-                    <td class="tg-2b7s">0.8</td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s1</td>
+                    <td class="tg-jkyp">-931.489</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
                 </tr>
                 <tr>
-                    <td class="tg-2b7s">Linear Regression</td>
-                    <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">s2</td>
-                    <td class="tg-2b7s">-247.304</td>
-                    <td class="tg-2b7s">0.838</td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s2</td>
+                    <td class="tg-jkyp">518.062</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
                 </tr>
                 <tr>
-                    <td class="tg-2b7s">Linear Regression</td>
-                    <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">s3</td>
-                    <td class="tg-2b7s">-418.291</td>
-                    <td class="tg-2b7s">0.503</td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s3</td>
+                    <td class="tg-jkyp">163.42</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
                 </tr>
                 <tr>
-                    <td class="tg-2b7s">Linear Regression</td>
-                    <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">s4</td>
-                    <td class="tg-2b7s">-183.756</td>
-                    <td class="tg-2b7s">0.606</td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s4</td>
+                    <td class="tg-jkyp">275.318</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
                 </tr>
                 <tr>
-                    <td class="tg-2b7s">Linear Regression</td>
-                    <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">s5</td>
-                    <td class="tg-2b7s">601.398</td>
-                    <td class="tg-2b7s">0.224</td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s5</td>
+                    <td class="tg-jkyp">736.199</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
                 </tr>
                 <tr>
-                    <td class="tg-2b7s">Linear Regression</td>
-                    <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">s6</td>
-                    <td class="tg-2b7s">165.374</td>
-                    <td class="tg-2b7s">0.317</td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-jkyp">Linear Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s6</td>
+                    <td class="tg-jkyp">48.671</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Overall Metrics</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp">42.812</td>
+                    <td class="tg-jkyp">37.448</td>
+                    <td class="tg-jkyp">2892.015</td>
+                    <td class="tg-jkyp">53.777</td>
+                    <td class="tg-jkyp">0.457</td>
+                    <td class="tg-jkyp">0.454</td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">const</td>
+                    <td class="tg-jkyp">153.737</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">age</td>
+                    <td class="tg-jkyp">1.807</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">sex</td>
+                    <td class="tg-jkyp">-11.448</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">bmi</td>
+                    <td class="tg-jkyp">25.733</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">bp</td>
+                    <td class="tg-jkyp">16.734</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s1</td>
+                    <td class="tg-jkyp">-34.672</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s2</td>
+                    <td class="tg-jkyp">17.053</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s3</td>
+                    <td class="tg-jkyp">3.37</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s4</td>
+                    <td class="tg-jkyp">11.764</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s5</td>
+                    <td class="tg-jkyp">31.378</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                </tr>
+                <tr>
+                    <td class="tg-jkyp">Ridge Regression</td>
+                    <td class="tg-jkyp">Coefficient</td>
+                    <td class="tg-jkyp">s6</td>
+                    <td class="tg-jkyp">2.458</td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
+                    <td class="tg-jkyp"></td>
                 </tr>
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
@@ -589,150 +1185,137 @@ Regression Example 1
                     <td class="tg-2b7s">2952.011</td>
                     <td class="tg-2b7s">54.332</td>
                     <td class="tg-2b7s">0.443</td>
-                    <td class="tg-7zrl">0.443</td>
+                    <td class="tg-2b7s">0.443</td>
                 </tr>
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
-                    <td class="tg-2b7s">Coefficient</td>
-                    <td class="tg-2b7s">const</td>
-                    <td class="tg-2b7s">154.311</td>
-                    <td class="tg-2b7s">0</td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
-                </tr>
-                <tr>
-                    <td class="tg-2b7s">Random Forest</td>
-                    <td class="tg-2b7s">Coefficient</td>
+                    <td class="tg-2b7s">Feat. Imp.</td>
                     <td class="tg-2b7s">age</td>
-                    <td class="tg-2b7s">-135.253</td>
-                    <td class="tg-2b7s">0.285</td>
+                    <td class="tg-2b7s"></td>
+                    <td class="tg-2b7s">0.059</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-2b7s"></td>
                 </tr>
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
-                    <td class="tg-2b7s">Coefficient</td>
+                    <td class="tg-2b7s">Feat. Imp.</td>
                     <td class="tg-2b7s">sex</td>
-                    <td class="tg-2b7s">257.411</td>
-                    <td class="tg-2b7s">0.121</td>
+                    <td class="tg-2b7s"></td>
+                    <td class="tg-2b7s">0.01</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-2b7s"></td>
                 </tr>
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
-                    <td class="tg-2b7s">Coefficient</td>
+                    <td class="tg-2b7s">Feat. Imp.</td>
                     <td class="tg-2b7s">bmi</td>
-                    <td class="tg-2b7s">425.591</td>
-                    <td class="tg-2b7s">0.004</td>
+                    <td class="tg-2b7s"></td>
+                    <td class="tg-2b7s">0.355</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-2b7s"></td>
                 </tr>
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
-                    <td class="tg-2b7s">Coefficient</td>
+                    <td class="tg-2b7s">Feat. Imp.</td>
                     <td class="tg-2b7s">bp</td>
-                    <td class="tg-2b7s">229.238</td>
-                    <td class="tg-2b7s">0.219</td>
+                    <td class="tg-2b7s"></td>
+                    <td class="tg-2b7s">0.088</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-2b7s"></td>
                 </tr>
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
-                    <td class="tg-2b7s">Coefficient</td>
+                    <td class="tg-2b7s">Feat. Imp.</td>
                     <td class="tg-2b7s">s1</td>
-                    <td class="tg-2b7s">356.066</td>
-                    <td class="tg-2b7s">0.8</td>
+                    <td class="tg-2b7s"></td>
+                    <td class="tg-2b7s">0.053</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-2b7s"></td>
                 </tr>
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
-                    <td class="tg-2b7s">Coefficient</td>
+                    <td class="tg-2b7s">Feat. Imp.</td>
                     <td class="tg-2b7s">s2</td>
-                    <td class="tg-2b7s">-247.304</td>
-                    <td class="tg-2b7s">0.838</td>
+                    <td class="tg-2b7s"></td>
+                    <td class="tg-2b7s">0.057</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-2b7s"></td>
                 </tr>
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
-                    <td class="tg-2b7s">Coefficient</td>
+                    <td class="tg-2b7s">Feat. Imp.</td>
                     <td class="tg-2b7s">s3</td>
-                    <td class="tg-2b7s">-418.281</td>
-                    <td class="tg-2b7s">0.503</td>
+                    <td class="tg-2b7s"></td>
+                    <td class="tg-2b7s">0.051</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-2b7s"></td>
                 </tr>
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
-                    <td class="tg-2b7s">Coefficient</td>
+                    <td class="tg-2b7s">Feat. Imp.</td>
                     <td class="tg-2b7s">s4</td>
-                    <td class="tg-2b7s">-183.756</td>
-                    <td class="tg-2b7s">0.606</td>
+                    <td class="tg-2b7s"></td>
+                    <td class="tg-2b7s">0.024</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-2b7s"></td>
                 </tr>
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
-                    <td class="tg-2b7s">Coefficient</td>
+                    <td class="tg-2b7s">Feat. Imp.</td>
                     <td class="tg-2b7s">s5</td>
-                    <td class="tg-2b7s">601.398</td>
-                    <td class="tg-2b7s">0.224</td>
+                    <td class="tg-2b7s"></td>
+                    <td class="tg-2b7s">0.231</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-2b7s"></td>
                 </tr>
                 <tr>
                     <td class="tg-2b7s">Random Forest</td>
-                    <td class="tg-2b7s">Coefficient</td>
+                    <td class="tg-2b7s">Feat. Imp.</td>
                     <td class="tg-2b7s">s6</td>
-                    <td class="tg-2b7s">165.374</td>
-                    <td class="tg-2b7s">0.317</td>
+                    <td class="tg-2b7s"></td>
+                    <td class="tg-2b7s">0.071</td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
                     <td class="tg-2b7s"></td>
-                    <td class="tg-7zrl"></td>
+                    <td class="tg-2b7s"></td>
                 </tr>
             </tbody>
         </table>
@@ -742,23 +1325,34 @@ Regression Example 1
 
     <div style="height: 40px;"></div>
 
+Regression Example 3
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Regression Example 2
-^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In some scenarios, you may want to simplify the output by excluding variables, 
+coefficients, and feature importances from the model results. This example 
+demonstrates how to achieve that by setting ``overall_only=True`` in the 
+``summarize_model_performance`` function, producing a concise table that 
+focuses on key metrics: model name, Mean Absolute Error (MAE), 
+Mean Absolute Percentage Error (MAPE), Mean Squared Error (MSE), 
+Root Mean Squared Error (RMSE), Explained Variance, and R² Score.
 
 .. code-block:: python
 
     from model_metrics import summarize_model_performance
 
-
-    # Evaluate regression model performance
     regression_metrics = summarize_model_performance(
-        model=[linear_model, rf_model],
-        model_titles=["Linear Regression", "Random Forest"],
-        X=X_test_scaled,
+        model=[linear_model, ridge_model, rf_model],
+        model_titles=["Linear Regression", "Ridge Regression", "Random Forest"],
+        X=X_test,
         y=y_test,
         model_type="regression",
+        overall_only=True,
         return_df=True,
     )
 
     regression_metrics
+
+---
+
+This version adds a bit more detail about the metrics for clarity but keeps it brief and aligned with your library’s documentation style. If you prefer to keep it exactly as is, it’s already strong and functional! Let me know if you’d like further tweaks.
