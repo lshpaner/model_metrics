@@ -24,7 +24,7 @@
    
    <div style="height: 100px;"></div>
 
-Model Performance Summary
+Model Performance Summaries
 -----------------------------
 
 **Summarizes model performance metrics for classification and regression models.**
@@ -72,21 +72,26 @@ Model Performance Summary
         - Uses ``statsmodels.OLS`` to extract coefficients and p-values.
         - If ``overall_only=True``, the DataFrame retains only overall performance metrics.
 
-    - If ``return_df=False``, the function prints results in a structured format.
+    - **All Models:**
+        - When ``decimal_places`` is specified with a desired number, it controls the precision of decimal places displayed in the results.
+        - If ``return_df=False``, the function outputs results in a printed, formatted, readable structure instead of returning a DataFrame.
 
 The ``summarize_model_performance`` function provides a structured evaluation of classification and regression models, generating key performance metrics. For classification models, it computes precision, recall, specificity, F1-score, and AUC ROC. For regression models, it extracts coefficients and evaluates error metrics like MSE, RMSE, and R². The function allows specifying custom thresholds, metric rounding, and formatted display options.
 
 Below are two examples demonstrating how to evaluate multiple models using ``summarize_model_performance``. The function calculates and presents metrics for classification and regression models.
 
-.. _Binary_Classification_Example_1:
-
-Binary Classification Example 1
+Binary Classification Models
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In this example, we demonstrate binary classification using two popular machine 
-learning models: Logistic Regression and Random Forest. Both models are evaluated 
-with a default classification threshold of 0.5, meaning predictions are classified 
-as positive (1) if the predicted probability exceeds 0.5, and negative (0) otherwise.
+This section introduces binary classification using two widely used machine 
+learning models: Logistic Regression and Random Forest Classifier.
+
+These examples demonstrate how ``model_metrics`` prepares and trains models on a 
+synthetic dataset, setting the stage for evaluating their performance in subsequent sections. 
+Both models use a default classification threshold of 0.5, where predictions are 
+classified as positive (1) if the predicted probability exceeds 0.5, and negative (0) 
+otherwise.
+
 
 .. code-block:: python
 
@@ -94,7 +99,6 @@ as positive (1) if the predicted probability exceeds 0.5, and negative (0) other
     from sklearn.linear_model import LogisticRegression
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.model_selection import train_test_split
-    from model_metrics import summarize_model_performance
 
     # Generate a synthetic dataset
     X, y = make_classification(
@@ -117,7 +121,15 @@ as positive (1) if the predicted probability exceeds 0.5, and negative (0) other
 
     model_titles = ["Logistic Regression", "Random Forest"]
 
-    # Evaluate model performance
+
+
+Binary Classification Example 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    from model_metrics import summarize_model_performance
+
     model_performance = summarize_model_performance(
         model=[model1, model2],
         model_titles=model_titles,
@@ -135,64 +147,103 @@ as positive (1) if the predicted probability exceeds 0.5, and negative (0) other
 .. raw:: html
 
     <style type="text/css">
-    .tg  {border-collapse:collapse;border-spacing:0;}
-    .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-    overflow:hidden;padding:0px 5px;word-break:normal;}
-    .tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-    font-weight:normal;overflow:hidden;padding:0px 5px;word-break:normal;}
-    .tg .tg-2b7s{text-align:right;vertical-align:bottom}
-    .tg .tg-kex3{font-weight:bold;text-align:right;vertical-align:bottom}
-    .tg .tg-j6zm{font-weight:bold;text-align:right;vertical-align:bottom}
-    .tg .tg-7zrl{text-align:right;vertical-align:bottom}
-    @media screen and (max-width: 767px) {.tg {width: auto !important;}.tg col {width: auto !important;}.tg-wrap {overflow-x: auto;-webkit-overflow-scrolling: touch;}}</style>
-    <div class="tg-wrap"><table class="tg"><thead>
-    <tr>
-        <th class="tg-kex3">Metrics</th>
-        <th class="tg-j6zm">Logistic Regression</th>
-        <th class="tg-j6zm">Random Forest</th>
-    </tr></thead>
-    <tbody>
-    <tr>
-        <td class="tg-2b7s">Precision/PPV</td>
-        <td class="tg-7zrl">0.867</td>
-        <td class="tg-7zrl">0.912</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">Average Precision</td>
-        <td class="tg-7zrl">0.937</td>
-        <td class="tg-7zrl">0.966</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">Sensitivity/Recall</td>
-        <td class="tg-7zrl">0.82</td>
-        <td class="tg-7zrl">0.838</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">Specificity</td>
-        <td class="tg-7zrl">0.843</td>
-        <td class="tg-7zrl">0.899</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">F1-Score</td>
-        <td class="tg-7zrl">0.843</td>
-        <td class="tg-7zrl">0.873</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">AUC ROC</td>
-        <td class="tg-7zrl">0.913</td>
-        <td class="tg-7zrl">0.95</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">Brier Score</td>
-        <td class="tg-7zrl">0.118</td>
-        <td class="tg-7zrl">0.086</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">Model Threshold</td>
-        <td class="tg-7zrl">0.5</td>
-        <td class="tg-7zrl">0.5</td>
-    </tr>
-    </tbody></table></div>
+    .tg {
+        border-collapse: collapse;
+        border-spacing: 0;
+        max-width: 450px; /* Fixed maximum width */
+        width: 100%;
+    }
+    .tg td {
+        border-color: black;
+        border-style: solid;
+        border-width: 1px;
+        font-family: Arial, sans-serif;
+        font-size: 12px; /* Reduced from 14px */
+        overflow: hidden;
+        padding: 0px 3px; /* Reduced from 0px 5px */
+        word-break: normal;
+    }
+    .tg th {
+        border-color: black;
+        border-style: solid;
+        border-width: 1px;
+        font-family: Arial, sans-serif;
+        font-size: 12px; /* Reduced from 14px */
+        font-weight: normal;
+        overflow: hidden;
+        padding: 0px 3px; /* Reduced from 0px 5px */
+        word-break: normal;
+    }
+    .tg .tg-kex3 { font-weight: bold; text-align: right; vertical-align: bottom; }
+    .tg .tg-j6zm { font-weight: bold; text-align: right; vertical-align: bottom; }
+    .tg .tg-2b7s { text-align: right; vertical-align: bottom; }
+    .tg .tg-7zrl { text-align: right; vertical-align: bottom; }
+
+    @media screen and (max-width: 767px) {
+        .tg { width: auto !important; }
+        .tg col { width: auto !important; }
+        .tg-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    }
+    </style>
+
+    <div class="tg-wrap">
+        <table class="tg" style="table-layout: fixed; width: 450px;">
+            <colgroup>
+                <col style="width: 231px"> <!-- Metrics -->
+                <col style="width: 231px"> <!-- Logistic Regression -->
+                <col style="width: 231px"> <!-- Random Forest -->
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="tg-kex3">Metrics</th>
+                    <th class="tg-j6zm">Logistic Regression</th>
+                    <th class="tg-j6zm">Random Forest</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="tg-2b7s">Precision/PPV</td>
+                    <td class="tg-7zrl">0.867</td>
+                    <td class="tg-7zrl">0.912</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">Average Precision</td>
+                    <td class="tg-7zrl">0.937</td>
+                    <td class="tg-7zrl">0.966</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">Sensitivity/Recall</td>
+                    <td class="tg-7zrl">0.82</td>
+                    <td class="tg-7zrl">0.838</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">Specificity</td>
+                    <td class="tg-7zrl">0.843</td>
+                    <td class="tg-7zrl">0.899</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">F1-Score</td>
+                    <td class="tg-7zrl">0.843</td>
+                    <td class="tg-7zrl">0.873</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">AUC ROC</td>
+                    <td class="tg-7zrl">0.913</td>
+                    <td class="tg-7zrl">0.95</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">Brier Score</td>
+                    <td class="tg-7zrl">0.118</td>
+                    <td class="tg-7zrl">0.086</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">Model Threshold</td>
+                    <td class="tg-7zrl">0.5</td>
+                    <td class="tg-7zrl">0.5</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
 .. raw:: html
 
@@ -200,7 +251,7 @@ as positive (1) if the predicted probability exceeds 0.5, and negative (0) other
 
 
 Binary Classification Example 2
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In this example, we revisit binary classification with the same two models—Logistic 
 Regression and Random Forest—but adjust the classification threshold 
@@ -213,7 +264,6 @@ positive (1) at the expense of precision.
 
     from model_metrics import summarize_model_performance
 
-    # Evaluate model performance
     model_performance = summarize_model_performance(
         model=[model1, model2],
         model_titles=model_titles,
@@ -224,71 +274,111 @@ positive (1) at the expense of precision.
         custom_threshold=0.2,
     )
 
+    model_performance
+
 
 **Output**
 
 .. raw:: html
 
     <style type="text/css">
-    .tg  {border-collapse:collapse;border-spacing:0;}
-    .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-    overflow:hidden;padding:0px 5px;word-break:normal;}
-    .tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-    font-weight:normal;overflow:hidden;padding:0px 5px;word-break:normal;}
-    .tg .tg-2b7s{text-align:right;vertical-align:bottom}
-    .tg .tg-kex3{font-weight:bold;text-align:right;vertical-align:bottom}
-    .tg .tg-j6zm{font-weight:bold;text-align:right;vertical-align:bottom}
-    .tg .tg-7zrl{text-align:right;vertical-align:bottom}
-    @media screen and (max-width: 767px) {.tg {width: auto !important;}.tg col 
-    {width: auto !important;}.tg-wrap {overflow-x: auto;-webkit-overflow-scrolling: touch;}}</style>
-    <div class="tg-wrap"><table class="tg"><thead>
-    <tr>
-        <th class="tg-kex3">Metrics</th>
-        <th class="tg-j6zm">Logistic Regression</th>
-        <th class="tg-j6zm">Random Forest</th>
-    </tr></thead>
-    <tbody>
-    <tr>
-        <td class="tg-2b7s">Precision/PPV</td>
-        <td class="tg-7zrl">0.803</td>
-        <td class="tg-7zrl">0.831</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">Average Precision</td>
-        <td class="tg-7zrl">0.937</td>
-        <td class="tg-7zrl">0.966</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">Sensitivity/Recall</td>
-        <td class="tg-7zrl">0.919</td>
-        <td class="tg-7zrl">0.928</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">Specificity</td>
-        <td class="tg-7zrl">0.719</td>
-        <td class="tg-7zrl">0.764</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">F1-Score</td>
-        <td class="tg-7zrl">0.857</td>
-        <td class="tg-7zrl">0.877</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">AUC ROC</td>
-        <td class="tg-7zrl">0.913</td>
-        <td class="tg-7zrl">0.949</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">Brier Score</td>
-        <td class="tg-7zrl">0.118</td>
-        <td class="tg-7zrl">0.085</td>
-    </tr>
-    <tr>
-        <td class="tg-2b7s">Model Threshold</td>
-        <td class="tg-7zrl">0.2</td>
-        <td class="tg-7zrl">0.2</td>
-    </tr>
-    </tbody></table></div>
+    .tg {
+        border-collapse: collapse;
+        border-spacing: 0;
+        max-width: 450px; /* Fixed maximum width */
+        width: 100%;
+    }
+    .tg td {
+        border-color: black;
+        border-style: solid;
+        border-width: 1px;
+        font-family: Arial, sans-serif;
+        font-size: 12px; /* Reduced from 14px */
+        overflow: hidden;
+        padding: 0px 3px; /* Reduced from 0px 5px */
+        word-break: normal;
+    }
+    .tg th {
+        border-color: black;
+        border-style: solid;
+        border-width: 1px;
+        font-family: Arial, sans-serif;
+        font-size: 12px; /* Reduced from 14px */
+        font-weight: normal;
+        overflow: hidden;
+        padding: 0px 3px; /* Reduced from 0px 5px */
+        word-break: normal;
+    }
+    .tg .tg-kex3 { font-weight: bold; text-align: right; vertical-align: bottom; }
+    .tg .tg-j6zm { font-weight: bold; text-align: right; vertical-align: bottom; }
+    .tg .tg-2b7s { text-align: right; vertical-align: bottom; }
+    .tg .tg-7zrl { text-align: right; vertical-align: bottom; }
+
+    @media screen and (max-width: 767px) {
+        .tg { width: auto !important; }
+        .tg col { width: auto !important; }
+        .tg-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    }
+    </style>
+
+    <div class="tg-wrap">
+        <table class="tg" style="table-layout: fixed; width: 450px;">
+            <colgroup>
+                <col style="width: 231px"> <!-- Metrics -->
+                <col style="width: 231px"> <!-- Logistic Regression -->
+                <col style="width: 231px"> <!-- Random Forest -->
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="tg-kex3">Metrics</th>
+                    <th class="tg-j6zm">Logistic Regression</th>
+                    <th class="tg-j6zm">Random Forest</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="tg-2b7s">Precision/PPV</td>
+                    <td class="tg-7zrl">0.803</td>
+                    <td class="tg-7zrl">0.831</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">Average Precision</td>
+                    <td class="tg-7zrl">0.937</td>
+                    <td class="tg-7zrl">0.966</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">Sensitivity/Recall</td>
+                    <td class="tg-7zrl">0.919</td>
+                    <td class="tg-7zrl">0.928</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">Specificity</td>
+                    <td class="tg-7zrl">0.719</td>
+                    <td class="tg-7zrl">0.764</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">F1-Score</td>
+                    <td class="tg-7zrl">0.857</td>
+                    <td class="tg-7zrl">0.877</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">AUC ROC</td>
+                    <td class="tg-7zrl">0.913</td>
+                    <td class="tg-7zrl">0.949</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">Brier Score</td>
+                    <td class="tg-7zrl">0.118</td>
+                    <td class="tg-7zrl">0.085</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">Model Threshold</td>
+                    <td class="tg-7zrl">0.2</td>
+                    <td class="tg-7zrl">0.2</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
 .. raw:: html
 
@@ -298,7 +388,7 @@ positive (1) at the expense of precision.
 Regression Models
 ^^^^^^^^^^^^^^^^^^^^
 
-In this section, we load the diabetes dataset from ``scikit-learn``, which includes 
+In this section, we load the `diabetes dataset` [1]_ from ``scikit-learn``, which includes 
 features like age and BMI, along with a target variable representing disease 
 progression. The data is then split with ``train_test_split`` into training and 
 testing sets using an 80/20 ratio to facilitate model assessment. We train a 
@@ -1353,6 +1443,111 @@ Root Mean Squared Error (RMSE), Explained Variance, and R² Score.
 
     regression_metrics
 
----
 
-This version adds a bit more detail about the metrics for clarity but keeps it brief and aligned with your library’s documentation style. If you prefer to keep it exactly as is, it’s already strong and functional! Let me know if you’d like further tweaks.
+**Output**
+
+.. raw:: html
+
+    <style type="text/css">
+    .tg {
+        border-collapse: collapse;
+        border-spacing: 0;
+        max-width: 450px; /* Fixed maximum width */
+        width: 100%;
+    }
+    .tg td {
+        border-color: black;
+        border-style: solid;
+        border-width: 1px;
+        font-family: Arial, sans-serif;
+        font-size: 12px; /* Reduced from 14px */
+        overflow: hidden;
+        padding: 0px 3px; /* Reduced from 0px 5px */
+        word-break: normal;
+    }
+    .tg th {
+        border-color: black;
+        border-style: solid;
+        border-width: 1px;
+        font-family: Arial, sans-serif;
+        font-size: 12px; /* Reduced from 14px */
+        font-weight: normal;
+        overflow: hidden;
+        padding: 0px 3px; /* Reduced from 0px 5px */
+        word-break: normal;
+    }
+    .tg .tg-kex3 { font-weight: bold; text-align: right; vertical-align: bottom; }
+    .tg .tg-2b7s { text-align: right; vertical-align: bottom; }
+
+    @media screen and (max-width: 767px) {
+        .tg { width: auto !important; }
+        .tg col { width: auto !important; }
+        .tg-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    }
+    </style>
+
+    <div class="tg-wrap">
+        <table class="tg" style="table-layout: fixed; width: 450px;">
+            <colgroup>
+                <col style="width: 120px"> <!-- Model -->
+                <col style="width: 120px"> <!-- Metric -->
+                <col style="width: 75px"> <!-- MAE -->
+                <col style="width: 75px"> <!-- MAPE -->
+                <col style="width: 75px"> <!-- MSE -->
+                <col style="width: 75px"> <!-- RMSE -->
+                <col style="width: 75px"> <!-- Expl. Var. -->
+                <col style="width: 75px"> <!-- R² Score -->
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="tg-kex3">Model</th>
+                    <th class="tg-kex3">Metric</th>
+                    <th class="tg-kex3">MAE</th>
+                    <th class="tg-kex3">MAPE</th>
+                    <th class="tg-kex3">MSE</th>
+                    <th class="tg-kex3">RMSE</th>
+                    <th class="tg-kex3">Expl. Var.</th>
+                    <th class="tg-kex3">R^2 Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="tg-2b7s">Linear Regression</td>
+                    <td class="tg-2b7s">Overall Metrics</td>
+                    <td class="tg-2b7s">42.794</td>
+                    <td class="tg-2b7s">37.5</td>
+                    <td class="tg-2b7s">2900.194</td>
+                    <td class="tg-2b7s">53.853</td>
+                    <td class="tg-2b7s">0.455</td>
+                    <td class="tg-2b7s">0.453</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">Ridge Regression</td>
+                    <td class="tg-2b7s">Overall Metrics</td>
+                    <td class="tg-2b7s">42.812</td>
+                    <td class="tg-2b7s">37.448</td>
+                    <td class="tg-2b7s">2892.015</td>
+                    <td class="tg-2b7s">53.777</td>
+                    <td class="tg-2b7s">0.457</td>
+                    <td class="tg-2b7s">0.454</td>
+                </tr>
+                <tr>
+                    <td class="tg-2b7s">Random Forest</td>
+                    <td class="tg-2b7s">Overall Metrics</td>
+                    <td class="tg-2b7s">44.053</td>
+                    <td class="tg-2b7s">40.005</td>
+                    <td class="tg-2b7s">2952.011</td>
+                    <td class="tg-2b7s">54.332</td>
+                    <td class="tg-2b7s">0.443</td>
+                    <td class="tg-2b7s">0.443</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+
+.. [1] Efron, B., Hastie, T., Johnstone, I., & Tibshirani, R. (2004). *Diabetes Dataset*. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. `https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset <https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset>`_.

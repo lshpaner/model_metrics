@@ -46,6 +46,7 @@ Table of Contents
    contributors
    citations
    changelog
+   references
 
 
    
