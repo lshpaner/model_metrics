@@ -1207,7 +1207,7 @@ def show_roc_curve(
                     ncol=1,
                 )
             else:
-                ax.legend(loc="lower left", fontsize=tick_fontsize)
+                ax.legend(loc="lower right", fontsize=tick_fontsize)
             ax.grid(visible=gridlines)
         else:
             plt.figure(figsize=figsize)
@@ -1253,7 +1253,7 @@ def show_roc_curve(
                     ncol=1,
                 )
             else:
-                plt.legend(loc="lower left", fontsize=tick_fontsize)
+                plt.legend(loc="lower right", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
                 f"{name}_ROC",
@@ -1291,7 +1291,7 @@ def show_roc_curve(
                 ncol=1,
             )
         else:
-            plt.legend(loc="lower left", fontsize=tick_fontsize)
+            plt.legend(loc="lower right", fontsize=tick_fontsize)
         plt.grid()
         save_plot_images(
             "Overlay_ROC",
@@ -1305,7 +1305,12 @@ def show_roc_curve(
         for ax in axes[len(models) :]:
             ax.axis("off")
         plt.tight_layout()
-        save_plot_images("Grid_ROC", save_plot, image_path_png, image_path_svg)
+        save_plot_images(
+            "Grid_ROC",
+            save_plot,
+            image_path_png,
+            image_path_svg,
+        )
         plt.show()
 
 
