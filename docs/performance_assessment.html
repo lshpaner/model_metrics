@@ -70,6 +70,7 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="#roc-auc-evaluation">ROC AUC Evaluation</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">About Model Metrics</span></p>
 <ul>
@@ -176,7 +177,7 @@
 <p>The <code class="docutils literal notranslate"><span class="pre">summarize_model_performance</span></code> function provides a structured evaluation of classification and regression models, generating key performance metrics. For classification models, it computes precision, recall, specificity, F1-score, and AUC ROC. For regression models, it extracts coefficients and evaluates error metrics like MSE, RMSE, and R². The function allows specifying custom thresholds, metric rounding, and formatted display options.</p>
 <p>Below are two examples demonstrating how to evaluate multiple models using <code class="docutils literal notranslate"><span class="pre">summarize_model_performance</span></code>. The function calculates and presents metrics for classification and regression models.</p>
 <section id="binary-classification-models">
-<h2>Binary Classification Models<a class="headerlink" href="#binary-classification-models" title="Link to this heading"></a></h2>
+<span id="binary-classification"></span><h2>Binary Classification Models<a class="headerlink" href="#binary-classification-models" title="Link to this heading"></a></h2>
 <p>This section introduces binary classification using two widely used machine
 learning models: Logistic Regression and Random Forest Classifier.</p>
 <p>These examples demonstrate how <code class="docutils literal notranslate"><span class="pre">model_metrics</span></code> prepares and trains models on a
@@ -1567,14 +1568,25 @@ Root Mean Squared Error (RMSE), Explained Variance, and R² Score.</p>
             </tr>
         </tbody>
     </table>
-</div><div style="height: 40px;"></div><aside class="footnote-list brackets">
+</div><div style="height: 40px;"></div></section>
+</section>
+</section>
+<section id="roc-auc-evaluation">
+<h1>ROC AUC Evaluation<a class="headerlink" href="#roc-auc-evaluation" title="Link to this heading"></a></h1>
+<p>This section demonstrates how to evaluate the performance of binary classification
+models using ROC AUC curves, a key metric for assessing the trade-off between true
+positive and false positive rates. Using the Logistic Regression and Random Forest
+Classifier models trained on the <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the previous (Binary Classification Models) section</span></a>, we
+generate ROC curves to visualize their discriminatory power.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+<div style="height: 40px;"></div><aside class="footnote-list brackets">
 <aside class="footnote brackets" id="id2" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
 <p>Efron, B., Hastie, T., Johnstone, I., &amp; Tibshirani, R. (2004). <em>Diabetes Dataset</em>. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. <a class="reference external" href="https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset">https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset</a>.</p>
 </aside>
 </aside>
-</section>
-</section>
 </section>
 
 

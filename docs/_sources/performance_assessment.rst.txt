@@ -80,6 +80,8 @@ The ``summarize_model_performance`` function provides a structured evaluation of
 
 Below are two examples demonstrating how to evaluate multiple models using ``summarize_model_performance``. The function calculates and presents metrics for classification and regression models.
 
+.. _Binary_Classification:
+
 Binary Classification Models
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1549,5 +1551,23 @@ Root Mean Squared Error (RMSE), Explained Variance, and R² Score.
 
     <div style="height: 40px;"></div>
 
+
+ROC AUC Evaluation
+--------------------
+
+This section demonstrates how to evaluate the performance of binary classification 
+models using ROC AUC curves, a key metric for assessing the trade-off between true 
+positive and false positive rates. Using the Logistic Regression and Random Forest 
+Classifier models trained on the :ref:`synthetic dataset from the previous (Binary Classification Models) section <Binary_Classification>`, we 
+generate ROC curves to visualize their discriminatory power. 
+
+.. code-block:: python
+
+    
+
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
 
 .. [1] Efron, B., Hastie, T., Johnstone, I., & Tibshirani, R. (2004). *Diabetes Dataset*. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. `https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset <https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset>`_.
