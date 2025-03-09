@@ -1180,7 +1180,7 @@ def show_roc_curve(
                         **curve_style,
                     )
             else:
-                ax.plot(fpr, tpr, label=f"(AUC = {auc_str})", **curve_style)
+                ax.plot(fpr, tpr, label=f"AUC = {auc_str}", **curve_style)
             ax.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
@@ -1224,7 +1224,7 @@ def show_roc_curve(
                     )
 
             else:
-                plt.plot(fpr, tpr, label=f"(AUC = {auc_str})", **curve_style)
+                plt.plot(fpr, tpr, label=f"AUC = {auc_str}", **curve_style)
             plt.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
@@ -1294,7 +1294,7 @@ def show_roc_curve(
             plt.legend(loc="lower right", fontsize=tick_fontsize)
         plt.grid()
         save_plot_images(
-            "Overlay_ROC",
+            "overlay_roc_auc_plot",
             save_plot,
             image_path_png,
             image_path_svg,
@@ -1306,7 +1306,7 @@ def show_roc_curve(
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(
-            "Grid_ROC",
+            "grid_roc_auc_plot",
             save_plot,
             image_path_png,
             image_path_svg,
@@ -1640,7 +1640,7 @@ def show_pr_curve(
             plt.legend(loc="lower left", fontsize=tick_fontsize)
         plt.grid()
         save_plot_images(
-            "Overlay_PR",
+            "overlay_pr_plot",
             save_plot,
             image_path_png,
             image_path_svg,
@@ -1651,7 +1651,12 @@ def show_pr_curve(
         for ax in axes[len(models) :]:
             ax.axis("off")
         plt.tight_layout()
-        save_plot_images("Grid_PR", save_plot, image_path_png, image_path_svg)
+        save_plot_images(
+            "grid_pr_plot",
+            save_plot,
+            image_path_png,
+            image_path_svg,
+        )
         plt.show()
 
 
