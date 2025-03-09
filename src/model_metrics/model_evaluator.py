@@ -1180,7 +1180,7 @@ def show_roc_curve(
                         **curve_style,
                     )
             else:
-                ax.plot(fpr, tpr, label=f"AUC = {auc_str})", **curve_style)
+                ax.plot(fpr, tpr, label=f"(AUC = {auc_str})", **curve_style)
             ax.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
@@ -1224,7 +1224,7 @@ def show_roc_curve(
                     )
 
             else:
-                plt.plot(fpr, tpr, label=f"AUC = {auc_str})", **curve_style)
+                plt.plot(fpr, tpr, label=f"(AUC = {auc_str})", **curve_style)
             plt.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
