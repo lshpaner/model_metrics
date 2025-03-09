@@ -452,10 +452,10 @@ class ModelCalculator:
             else:
                 raise ValueError(f"Unexpected SHAP output type: {type(shap_output)}")
 
-            # 🔹 Convert to NumPy array before checking shape
+            # Convert to NumPy array before checking shape
             shap_values = np.array(shap_values)
 
-            # 🔹 Now check for unexpected shapes
+            # Now check for unexpected shapes
             if len(shap_values.shape) not in {2, 3}:
                 raise ValueError(f"Unexpected SHAP values shape: {shap_values.shape}")
 
