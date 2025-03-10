@@ -1616,7 +1616,7 @@ add a grid, and save the plot for reporting purposes.
 
    <div class="no-click">
 
-.. image:: ../assets/grid_roc_auc_plot.svg
+.. image:: ../assets/grid_roc_auc.svg
    :alt: ROC AUC Example 1
    :align: left
    :width: 900px
@@ -1628,6 +1628,33 @@ add a grid, and save the plot for reporting purposes.
 
 ROC AUC Evaluation Example 2
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this second ROC AUC evaluation example, we focus on overlaying the results of 
+two models—Logistic Regression and Random Forest Classifier—trained on the 
+:ref:`synthetic dataset from the Binary Classification Models section 
+<Binary_Classification>` onto a single plot. Using the ``show_roc_curve`` 
+function with the ``overlay=True`` parameter, the ROC curves for both models are 
+displayed together, with Logistic Regression in blue and Random Forest in black, 
+both with a ``linewidth=2``. A red dashed line serves as the random guessing 
+baseline, and the plot includes a custom title for clarity.
+
+
+
+.. raw:: html
+
+   <div class="no-click">
+
+.. image:: ../assets/overlay_roc_auc_plot.svg
+   :alt: ROC AUC Example 1
+   :align: left
+   :width: 900px
+
+.. raw:: html
+
+   </div>
+
+
+
 
 
 
