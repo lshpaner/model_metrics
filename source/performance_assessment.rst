@@ -1556,14 +1556,79 @@ ROC AUC Evaluation
 --------------------
 
 This section demonstrates how to evaluate the performance of binary classification 
-models using ROC AUC curves, a key metric for assessing the trade-off between true 
-positive and false positive rates. Using the Logistic Regression and Random Forest 
-Classifier models trained on the :ref:`synthetic dataset from the previous (Binary Classification Models) section <Binary_Classification>`, we 
-generate ROC curves to visualize their discriminatory power. 
+models using ROC AUC curves, a key metric for assessing the trade-off between 
+true positive and false positive rates. Using the Logistic Regression and 
+Random Forest Classifier models trained on the :ref:`synthetic dataset from the 
+previous (Binary Classification Models) section <Binary_Classification>`, 
+we generate ROC curves to visualize their discriminatory power.
+
+ROC AUC (Receiver Operating Characteristic Area Under the Curve) provides a 
+single scalar value representing a model’s ability to distinguish between 
+positive and negative classes, with a value of 1 indicating perfect classification 
+and 0.5 representing random guessing. The curves are plotted by varying the 
+classification threshold and calculating the true positive rate (sensitivity) 
+against the false positive rate (1-specificity). This makes ROC AUC particularly 
+useful for comparing models like Logistic Regression, which relies on linear 
+decision boundaries, and Random Forest Classifier, which leverages ensemble 
+decision trees, especially when class imbalances or threshold sensitivity are 
+concerns. The ``show_roc_curve`` function simplifies this process, enabling 
+users to visualize and compare these curves effectively, setting the stage for 
+detailed performance analysis in subsequent examples.
+
+ROC AUC Evaluation Example 1
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this first ROC AUC evaluation example, we plot the ROC curves for two 
+models: Logistic Regression and Random Forest Classifier, trained on the 
+:ref:`synthetic dataset from the Binary Classification Models section 
+<Binary_Classification>`. The curves are displayed side by side 
+using a grid layout (``n_cols=2, n_rows=1``), with the Logistic Regression curve 
+in blue and the Random Forest curve in green for clear differentiation. 
+A red dashed line represents the random guessing baseline. This example 
+demonstrates how the ``show_roc_curve`` function enables straightforward 
+visualization of model performance, with options to customize colors, 
+add a grid, and save the plot for reporting purposes.
 
 .. code-block:: python
 
-    
+    from model_metrics import show_roc_curve
+
+    show_roc_curve(
+        models=[model1, model2],
+        X=X_test,
+        y=y_test,
+        model_titles=model_titles,
+        decimal_places=2,
+        n_cols=2,
+        n_rows=1,
+        curve_kwgs={
+            "Logistic Regression": {"color": "blue", "linewidth": 2},
+            "Random Forest": {"color": "green", "linewidth": 2},
+        },
+        linestyle_kwgs={"color": "red", "linestyle": "--"},
+        save_plot=True,
+        grid=True,
+        figsize=(12, 6),
+    )
+
+
+.. raw:: html
+
+   <div class="no-click">
+
+.. image:: ../assets/grid_roc_auc_plot.svg
+   :alt: ROC AUC Example 1
+   :align: left
+   :width: 900px
+
+.. raw:: html
+
+   </div>
+
+
+ROC AUC Evaluation Example 2
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 
 
 .. raw:: html
