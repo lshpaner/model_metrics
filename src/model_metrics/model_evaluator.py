@@ -1067,10 +1067,10 @@ def show_roc_curve(
         group with AUC and class counts (Total, Pos, Neg) in the legend.
 
     Raises:
-    - ValueError: If `grid=True` and `overlay=True` are both set, if
-        `grid=True` and `group_category` is provided, or if `overlay=True` and
-        `group_category` is provided.
-
+        - ValueError: If `grid=True` and `overlay=True` are both set, if
+            `grid=True` and `group_category` is provided, if `overlay=True` and
+            `group_category` is provided, or if `overlay=True` and only one
+            model is provided.
     Notes:
     - When `group_category` is provided, the legend includes AUC, total count,
       and positive/negative class counts for each group (e.g., "AUC = 0.XX,
@@ -1088,6 +1088,13 @@ def show_roc_curve(
             f"`grid` cannot be set to True when `group_category` is provided. "
             f"When selecting `group_category`, make sure `grid` and `overlay` "
             f"are set to `False`."
+        )
+
+    if overlay and len(models) == 1:
+        raise ValueError(
+            f"Cannot use `overlay=True` with only one model. "
+            f"Use `overlay=False` to plot a single model, or provide multiple "
+            f"models for overlay."
         )
 
     if overlay and group_category is not None:
