@@ -1654,8 +1654,37 @@ baseline, and the plot includes a custom title for clarity.
    </div>
 
 
+ROC AUC Evaluation Example 3
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this third ROC AUC evaluation example, we utilize the well-known Adult Income 
+dataset [2]_, a practical benchmark for binary classification tasks. This dataset 
+contains a rich set of categorical and numerical features that make it particularly 
+suitable for analyzing model performance across different subgroups.
+
+To build and evaluate our model, we make use of the ``model_tuner`` library [3]_. 
+:ref:`(Click here to view the corresponding codebase for this workflow.) <Adult_Income_Training>`
 
 
+
+In this scenario, our objective is to assess ROC AUC scores **not just overall**, 
+but **for each individual category within a selected feature**—such as *occupation, 
+education,* or *marital-status*. This enables a deeper examination of how model 
+performance may vary across groups, which is especially important in contexts 
+involving fairness, bias detection, or subgroup-level interpretability.
+
+Using the ``show_roc_curve`` function, we compute and plot the ROC AUC scores 
+for a model (e.g., Random Forest) across all unique values in the selected feature. 
+For example, when analyzing the *occupation* column, the plot shows the ROC AUC for 
+each job category, helping us understand whether the classifier performs consistently 
+across different employment types.
+
+The resulting visualization displays all ROC curves on a shared axis, enabling 
+direct comparison across categories. Customization options include curve color, 
+line style, plot size, and title, giving users flexibility to tailor the output 
+to their analytical needs. This subgroup-level visualization provides a powerful 
+lens for identifying discrepancies in model behavior—especially in scenarios 
+where transparency, fairness, and accountability are key.
 
 
 .. raw:: html
@@ -1663,3 +1692,5 @@ baseline, and the plot includes a custom title for clarity.
     <div style="height: 40px;"></div>
 
 .. [1] Efron, B., Hastie, T., Johnstone, I., & Tibshirani, R. (2004). *Diabetes Dataset*. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. `https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset <https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset>`_.
+.. [2] Kohavi, R. (1996). *Census Income*. UCI Machine Learning Repository. `https://doi.org/10.24432/C5GP7S <https://doi.org/10.24432/C5GP7S>`_.
+.. [3] Funnell, A., Shpaner, L., & Petousis, P. (2024). *Model Tuner* (Version 0.0.28b) [Software]. Zenodo. `https://doi.org/10.5281/zenodo.12727322 <https://doi.org/10.5281/zenodo.12727322>`_.

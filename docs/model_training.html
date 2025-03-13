@@ -1,0 +1,270 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Model Training Example: Adult Census Income Dataset &mdash; Model Metrics 0.0.0.a2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=e83f046f" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=e83f046f" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.js?v=f9206548" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=b8a57ceb"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=a0ccc04e"></script>
+      <script src="_static/custom.js?v=f9206548"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Acknowledgements" href="acknowledgements.html" />
+    <link rel="prev" title="Model Performance Summaries" href="performance_assessment.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Model Metrics
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Welcome to the Model Metrics Python Library Documentation!</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Performance Assessment</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="performance_assessment.html">Model Performance Summaries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance_assessment.html#roc-auc-evaluation">ROC AUC Evaluation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Model Training Example: Adult Census Income Dataset</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">About Model Metrics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="acknowledgements.html">Acknowledgements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributors.html">Contributors/Maintainers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citations.html">Citing Model Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Model Metrics</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Model Training Example: Adult Census Income Dataset</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" style="width: 300px;" />
+</a>
+</div><div style="height: 100px;"></div><section id="model-training-example-adult-census-income-dataset">
+<span id="adult-income-training"></span><h1>Model Training Example: Adult Census Income Dataset<a class="headerlink" href="#model-training-example-adult-census-income-dataset" title="Link to this heading"></a></h1>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRegression</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.ensemble</span><span class="w"> </span><span class="kn">import</span> <span class="n">RandomForestClassifier</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.tree</span><span class="w"> </span><span class="kn">import</span> <span class="n">DecisionTreeClassifier</span>
+
+<span class="c1">################################################################################</span>
+<span class="c1">############################# Path Variables ###################################</span>
+<span class="c1">################################################################################</span>
+
+<span class="n">model_output</span> <span class="o">=</span> <span class="s2">&quot;model_output&quot;</span>  <span class="c1"># model output path</span>
+
+<span class="c1">################################################################################</span>
+<span class="c1">############################ Global Constants ##################################</span>
+<span class="c1">################################################################################</span>
+
+<span class="n">rstate</span> <span class="o">=</span> <span class="mi">222</span>  <span class="c1"># random state for reproducibility</span>
+
+<span class="c1">################################################################################</span>
+<span class="c1">############################# Stratification ###################################</span>
+<span class="c1">################################################################################</span>
+
+<span class="c1"># create bins for age along with labels such that age as a continuous series</span>
+<span class="c1"># can be converted to something more manageable for visualization and analysis</span>
+
+<span class="n">bin_ages</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">60</span><span class="p">,</span> <span class="mi">70</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">,</span> <span class="mi">100</span><span class="p">]</span>
+
+<span class="c1">################################################################################</span>
+<span class="c1">########################## Logistic Regression #################################</span>
+<span class="c1">################################################################################</span>
+
+<span class="c1"># Define the hyperparameters for Logistic Regression</span>
+<span class="n">lr_name</span> <span class="o">=</span> <span class="s2">&quot;lr&quot;</span>
+
+<span class="n">lr_penalties</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;l2&quot;</span><span class="p">]</span>
+<span class="n">lr_Cs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="c1"># lr_max_iter = [100, 500]</span>
+
+<span class="c1"># Structure the parameters similarly to the RF template</span>
+<span class="n">tuned_parameters_lr</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;lr__penalty&quot;</span><span class="p">:</span> <span class="n">lr_penalties</span><span class="p">,</span>
+        <span class="s2">&quot;lr__C&quot;</span><span class="p">:</span> <span class="n">lr_Cs</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">]</span>
+
+<span class="n">lr</span> <span class="o">=</span> <span class="n">LogisticRegression</span><span class="p">(</span>
+    <span class="n">class_weight</span><span class="o">=</span><span class="s2">&quot;balanced&quot;</span><span class="p">,</span>
+    <span class="n">random_state</span><span class="o">=</span><span class="n">rstate</span><span class="p">,</span>
+    <span class="n">n_jobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">lr_definition</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;clc&quot;</span><span class="p">:</span> <span class="n">lr</span><span class="p">,</span>
+    <span class="s2">&quot;estimator_name&quot;</span><span class="p">:</span> <span class="n">lr_name</span><span class="p">,</span>
+    <span class="s2">&quot;tuned_parameters&quot;</span><span class="p">:</span> <span class="n">tuned_parameters_lr</span><span class="p">,</span>
+    <span class="s2">&quot;randomized_grid&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s2">&quot;early&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1">################################################################################</span>
+<span class="c1">############################### Decision Trees #################################</span>
+<span class="c1">################################################################################</span>
+
+<span class="c1"># Define Decision Tree parameters</span>
+<span class="n">dt_name</span> <span class="o">=</span> <span class="s2">&quot;dt&quot;</span>
+
+<span class="c1"># Simplified hyperparameters</span>
+<span class="n">dt_max_depth</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">]</span>  <span class="c1"># Unbounded, shallow, and medium depths</span>
+<span class="n">dt_min_samples_split</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="p">]</span>  <span class="c1"># Default and a stricter option</span>
+<span class="n">dt_min_samples_leaf</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>  <span class="c1"># Default and larger leaf nodes for regularization</span>
+
+<span class="c1"># Define the parameter grid for Decision Trees</span>
+<span class="n">tuned_parameters_dt</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;dt__max_depth&quot;</span><span class="p">:</span> <span class="n">dt_max_depth</span><span class="p">,</span>
+        <span class="s2">&quot;dt__min_samples_split&quot;</span><span class="p">:</span> <span class="n">dt_min_samples_split</span><span class="p">,</span>
+        <span class="s2">&quot;dt__min_samples_leaf&quot;</span><span class="p">:</span> <span class="n">dt_min_samples_leaf</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">]</span>
+
+<span class="c1"># Define the Decision Tree model</span>
+<span class="n">dt</span> <span class="o">=</span> <span class="n">DecisionTreeClassifier</span><span class="p">(</span>
+    <span class="n">class_weight</span><span class="o">=</span><span class="s2">&quot;balanced&quot;</span><span class="p">,</span>
+    <span class="n">random_state</span><span class="o">=</span><span class="n">rstate</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Define the Decision Tree model configuration</span>
+<span class="n">dt_definition</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;clc&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="p">,</span>
+    <span class="s2">&quot;estimator_name&quot;</span><span class="p">:</span> <span class="n">dt_name</span><span class="p">,</span>
+    <span class="s2">&quot;tuned_parameters&quot;</span><span class="p">:</span> <span class="n">tuned_parameters_dt</span><span class="p">,</span>
+    <span class="s2">&quot;randomized_grid&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s2">&quot;early&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1">################################################################################</span>
+<span class="c1">##############################  Random Forest  #################################</span>
+<span class="c1">################################################################################</span>
+
+
+<span class="c1"># Define the hyperparameters for Random Forest (trimmed for efficiency)</span>
+<span class="n">rf_name</span> <span class="o">=</span> <span class="s2">&quot;rf&quot;</span>
+
+<span class="c1"># Reduced hyperparameters for tuning</span>
+<span class="n">rf_parameters</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;rf__n_estimators&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">50</span><span class="p">],</span>  <span class="c1"># Reduce number of trees for speed</span>
+        <span class="s2">&quot;rf__max_depth&quot;</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>  <span class="c1"># Limit depth to prevent overfitting</span>
+        <span class="s2">&quot;rf__min_samples_split&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>  <span class="c1"># Fewer options for splitting</span>
+    <span class="p">}</span>
+<span class="p">]</span>
+
+<span class="c1"># Initialize the Random Forest Classifier with a smaller number of trees</span>
+<span class="n">rf</span> <span class="o">=</span> <span class="n">RandomForestClassifier</span><span class="p">(</span>
+    <span class="n">n_estimators</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">max_depth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+    <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Define the Random Forest model setup</span>
+<span class="n">rf_definition</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;clc&quot;</span><span class="p">:</span> <span class="n">rf</span><span class="p">,</span>
+    <span class="s2">&quot;estimator_name&quot;</span><span class="p">:</span> <span class="n">rf_name</span><span class="p">,</span>
+    <span class="s2">&quot;tuned_parameters&quot;</span><span class="p">:</span> <span class="n">rf_parameters</span><span class="p">,</span>
+    <span class="s2">&quot;randomized_grid&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s2">&quot;early&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1">################################################################################</span>
+
+<span class="n">model_definitions</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">lr_name</span><span class="p">:</span> <span class="n">lr_definition</span><span class="p">,</span>
+    <span class="n">dt_name</span><span class="p">:</span> <span class="n">dt_definition</span><span class="p">,</span>
+    <span class="n">rf_name</span><span class="p">:</span> <span class="n">rf_definition</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="performance_assessment.html" class="btn btn-neutral float-left" title="Model Performance Summaries" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="acknowledgements.html" class="btn btn-neutral float-right" title="Acknowledgements" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Leonid Shpaner.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -36,7 +36,8 @@ Table of Contents
    :caption: Performance Assessment
 
    performance_assessment
-
+   model_training
+   
 
 .. toctree::
    :maxdepth: 4
