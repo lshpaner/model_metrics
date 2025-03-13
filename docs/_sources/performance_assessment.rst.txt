@@ -1644,10 +1644,10 @@ baseline, and the plot includes a custom title for clarity.
 
    <div class="no-click">
 
-.. image:: ../assets/overlay_roc_auc_plot.svg
+.. image:: ../assets/overlay_roc_curves.svg
    :alt: ROC AUC Example 1
-   :align: left
-   :width: 900px
+   :align: center
+   :width: 500px
 
 .. raw:: html
 
