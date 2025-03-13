@@ -1663,9 +1663,7 @@ contains a rich set of categorical and numerical features that make it particula
 suitable for analyzing model performance across different subgroups.
 
 To build and evaluate our model, we make use of the ``model_tuner`` library [3]_. 
-:ref:`(Click here to view the corresponding codebase for this workflow.) <Adult_Income_Training>`
-
-
+:ref:`Click here to view the corresponding codebase for this workflow. <Adult_Income_Training>`
 
 In this scenario, our objective is to assess ROC AUC scores **not just overall**, 
 but **for each individual category within a selected feature**—such as *occupation, 

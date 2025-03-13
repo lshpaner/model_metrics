@@ -6,12 +6,12 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Model Training Example: Adult Census Income Dataset &mdash; Model Metrics 0.0.0.a2 documentation</title>
+  <title>Adult Income Dataset &mdash; Model Metrics 0.0.0.a2 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=e83f046f" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=e83f046f" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=222de27e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=222de27e" />
       <link rel="stylesheet" type="text/css" href="_static/custom.js?v=f9206548" />
 
   
@@ -26,8 +26,8 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Acknowledgements" href="acknowledgements.html" />
-    <link rel="prev" title="Model Performance Summaries" href="performance_assessment.html" /> 
+    <link rel="next" title="Model Performance Summaries" href="performance_assessment.html" />
+    <link rel="prev" title="Welcome to the Model Metrics Python Library Documentation!" href="getting_started.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -53,11 +53,18 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Welcome to the Model Metrics Python Library Documentation!</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Performance Assessment</span></p>
+<p class="caption" role="heading"><span class="caption-text">Model Training</span></p>
 <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Adult Income Dataset</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#model-configuration-hyperparameters-model-params-py">Model Configuration &amp; Hyperparameters (<code class="docutils literal notranslate"><span class="pre">model_params.py</span></code>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model-training-train-py">Model Training (<code class="docutils literal notranslate"><span class="pre">train.py</span></code>)</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Performance Assessment</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="performance_assessment.html">Model Performance Summaries</a></li>
 <li class="toctree-l1"><a class="reference internal" href="performance_assessment.html#roc-auc-evaluation">ROC AUC Evaluation</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Model Training Example: Adult Census Income Dataset</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">About Model Metrics</span></p>
 <ul>
@@ -82,7 +89,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Model Training Example: Adult Census Income Dataset</li>
+      <li class="breadcrumb-item active">Adult Income Dataset</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -91,21 +98,43 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" style="width: 300px;" />
+  <span class="target" id="model-training"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" style="width: 300px;" />
 </a>
-</div><div style="height: 100px;"></div><section id="model-training-example-adult-census-income-dataset">
-<span id="adult-income-training"></span><h1>Model Training Example: Adult Census Income Dataset<a class="headerlink" href="#model-training-example-adult-census-income-dataset" title="Link to this heading"></a></h1>
+</div><div style="height: 100px;"></div><section id="adult-income-dataset">
+<span id="adult-income-training"></span><h1>Adult Income Dataset<a class="headerlink" href="#adult-income-dataset" title="Link to this heading"></a></h1>
+<p>This example shows an example of what a <code class="docutils literal notranslate"><span class="pre">train.py</span></code> script could look like to train
+and concisely evaluate classification models on the Adult Census Income dataset <a class="footnote-reference brackets" href="#id7" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> using
+the <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id8" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>. The dataset presents a classic binary classification
+problem—predicting whether an individual’s income exceeds $50K per year—based on
+a variety of demographic and employment-related features. The model_tuner
+framework streamlines model development by handling preprocessing, cross-validation,
+hyperparameter tuning, and performance evaluation, enabling rapid experimentation
+with minimal boilerplate code.</p>
+<section id="model-configuration-hyperparameters-model-params-py">
+<h2>Model Configuration &amp; Hyperparameters (<code class="docutils literal notranslate"><span class="pre">model_params.py</span></code>)<a class="headerlink" href="#model-configuration-hyperparameters-model-params-py" title="Link to this heading"></a></h2>
+<p>This script defines the model configurations and hyperparameter grids for three
+classifiers—Logistic Regression, Decision Tree, and Random Forest—used in our
+evaluation of the Adult Income dataset <a class="footnote-reference brackets" href="#id7" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.</p>
+<p>Each model is structured into a standardized dictionary format compatible with
+the model_tuner pipeline, containing the estimator, its name, a hyperparameter grid,
+and metadata flags for tuning strategies. To ensure consistent and reproducible results,
+a fixed random state (<code class="docutils literal notranslate"><span class="pre">rstate</span> <span class="pre">=</span> <span class="pre">222</span></code>) is used across models.</p>
+<p>The <strong>Logistic Regression</strong> model is tuned over a range of regularization strengths
+(<code class="docutils literal notranslate"><span class="pre">C</span></code>) using an <code class="docutils literal notranslate"><span class="pre">L2</span></code> penalty. It is configured with class balancing and parallel
+processing to improve performance and scalability. The <strong>Decision Tree</strong> model
+explores various tree depths along with different minimum sample thresholds for
+both splits and leaves, offering a balance between flexibility and regularization,
+with class balancing also enabled. Lastly, the <strong>Random Forest</strong> model is optimized
+for efficiency by using a reduced number of estimators and constraining tree depth
+to help prevent overfitting. Like Logistic Regression, it leverages parallel
+processing for faster computation.</p>
+<p>All three model definitions are collected in a dictionary (<code class="docutils literal notranslate"><span class="pre">model_definitions</span></code>) that can be easily passed into the model_tuner workflow for training, evaluation, and comparison.</p>
+<p>Let me know if you’d like to add default scoring metrics or cross-validation strategy info to this section as well.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRegression</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.ensemble</span><span class="w"> </span><span class="kn">import</span> <span class="n">RandomForestClassifier</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.tree</span><span class="w"> </span><span class="kn">import</span> <span class="n">DecisionTreeClassifier</span>
-
-<span class="c1">################################################################################</span>
-<span class="c1">############################# Path Variables ###################################</span>
-<span class="c1">################################################################################</span>
-
-<span class="n">model_output</span> <span class="o">=</span> <span class="s2">&quot;model_output&quot;</span>  <span class="c1"># model output path</span>
 
 <span class="c1">################################################################################</span>
 <span class="c1">############################ Global Constants ##################################</span>
@@ -226,13 +255,227 @@
 </pre></div>
 </div>
 </section>
+<section id="model-training-train-py">
+<h2>Model Training (<code class="docutils literal notranslate"><span class="pre">train.py</span></code>)<a class="headerlink" href="#model-training-train-py" title="Link to this heading"></a></h2>
+<p>This script defines the end-to-end workflow for training and evaluating
+classification models on the Adult Income dataset using the <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id8" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>.
+The process is structured as a command-line interface (CLI) application using <a class="reference external" href="https://pypi.org/project/typer/">typer</a>,
+with steps that include dataset fetching, preprocessing, model tuning, training,
+calibration, evaluation, and serialization.</p>
+<p>After importing the necessary libraries and establishing paths, the script fetches
+the Adult dataset <a class="footnote-reference brackets" href="#id7" id="id5" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> directly from the UCI Mahcine Learning Repository <a class="footnote-reference brackets" href="#id9" id="id6" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a> via
+<code class="docutils literal notranslate"><span class="pre">ucimlrepo</span></code>. The target column is cleaned and encoded into binary format,
+while only numeric features are retained for modeling. Additionally, subgroup
+columns (race and sex) are extracted for stratified sampling.</p>
+<p>The script retrieves the model configuration based on the model_type argument
+(e.g., <code class="docutils literal notranslate"><span class="pre">&quot;lr&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;dt&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;rf&quot;</span></code>), then builds a preprocessing pipeline consisting of
+a standard scaler and simple imputer. This pipeline is passed into the Model
+class from <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code>, along with tuning parameters, model metadata, and
+training settings—including stratification, calibration, and scoring criteria.</p>
+<p>A grid search is performed with optional F1-beta optimization, and the dataset
+is split into training, validation, and test sets. The selected model is trained,
+optionally calibrated, and evaluated using ROC AUC as the primary metric. Final
+metrics are printed and returned as a DataFrame, and the trained model object is
+saved to disk for future use.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1">################################################################################</span>
+<span class="c1">## Step 1. Import Libraries</span>
+<span class="c1">################################################################################</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">typer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">loguru</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ucimlrepo</span><span class="w"> </span><span class="kn">import</span> <span class="n">fetch_ucirepo</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">model_tuner</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">model_tuner</span><span class="w"> </span><span class="kn">import</span> <span class="n">Model</span><span class="p">,</span> <span class="n">dumpObjects</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.preprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">StandardScaler</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.impute</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleImputer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">py_scripts.model_params</span><span class="w"> </span><span class="kn">import</span> <span class="n">model_definitions</span><span class="p">,</span> <span class="n">rstate</span>
+
+<span class="c1">################################################################################</span>
+<span class="c1">## Step 2. Initialize CLI App and Paths</span>
+<span class="c1">################################################################################</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Typer</span><span class="p">()</span>
+
+<span class="n">PROCESSED_DATA_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;model_files&quot;</span><span class="p">)</span>
+<span class="n">MODELS_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;model_files&quot;</span><span class="p">)</span>
+<span class="n">RESULTS_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;model_files/results&quot;</span><span class="p">)</span>
+
+<span class="c1">################################################################################</span>
+<span class="c1">## Step 3. Define Main Function with CLI Command</span>
+<span class="c1">################################################################################</span>
+
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span>
+    <span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;lr&quot;</span><span class="p">,</span>
+<span class="p">):</span>
+
+    <span class="c1">############################################################################</span>
+    <span class="c1">## Display Model Tuner Version Info</span>
+    <span class="c1">############################################################################</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Model Tuner version: </span><span class="si">{</span><span class="n">model_tuner</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Model Tuner authors: </span><span class="si">{</span><span class="n">model_tuner</span><span class="o">.</span><span class="n">__author__</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1">############################################################################</span>
+    <span class="c1">## Step 4. Fetch and Prepare Dataset</span>
+    <span class="c1">############################################################################</span>
+
+    <span class="c1"># Fetch dataset</span>
+    <span class="n">adult</span> <span class="o">=</span> <span class="n">fetch_ucirepo</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># UCI Adult dataset</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">adult</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">features</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">adult</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">targets</span>
+
+    <span class="c1"># Copy X to retrieve original features, used for stratification</span>
+    <span class="n">stratify_df</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># Log first five rows of features and targets</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">80</span><span class="si">}</span><span class="se">\n</span><span class="s2">X</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">80</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">X</span><span class="o">.</span><span class="n">head</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">80</span><span class="si">}</span><span class="se">\n</span><span class="s2">y</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">80</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">y</span><span class="o">.</span><span class="n">head</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Retain numeric columns only</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">select_dtypes</span><span class="p">(</span><span class="n">include</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">)</span>
+
+    <span class="c1"># Subset stratify_df to those features uses for stratification</span>
+    <span class="n">stratify_df</span> <span class="o">=</span> <span class="n">stratify_df</span><span class="p">[[</span><span class="s2">&quot;race&quot;</span><span class="p">,</span> <span class="s2">&quot;sex&quot;</span><span class="p">]]</span>
+
+    <span class="c1"># Clean target column by removing trailing period</span>
+    <span class="n">y</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s2">&quot;income&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="s2">&quot;income&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Display class balance</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Breakdown of y:</span><span class="se">\n</span><span class="si">{</span><span class="n">y</span><span class="p">[</span><span class="s1">&#39;income&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Encode target to binary</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="s2">&quot;income&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">({</span><span class="s2">&quot;&lt;=50K&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;&gt;50K&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span>
+
+    <span class="c1">############################################################################</span>
+    <span class="c1">## Step 5. Extract Model Settings</span>
+    <span class="c1">############################################################################</span>
+
+    <span class="n">clc</span> <span class="o">=</span> <span class="n">model_definitions</span><span class="p">[</span><span class="n">model_type</span><span class="p">][</span><span class="s2">&quot;clc&quot;</span><span class="p">]</span>
+    <span class="n">estimator_name</span> <span class="o">=</span> <span class="n">model_definitions</span><span class="p">[</span><span class="n">model_type</span><span class="p">][</span><span class="s2">&quot;estimator_name&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Set the parameters</span>
+    <span class="n">tuned_parameters</span> <span class="o">=</span> <span class="n">model_definitions</span><span class="p">[</span><span class="n">model_type</span><span class="p">][</span><span class="s2">&quot;tuned_parameters&quot;</span><span class="p">]</span>
+    <span class="n">early_stop</span> <span class="o">=</span> <span class="n">model_definitions</span><span class="p">[</span><span class="n">model_type</span><span class="p">][</span><span class="s2">&quot;early&quot;</span><span class="p">]</span>
+
+    <span class="n">metrics</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Training </span><span class="si">{</span><span class="n">estimator_name</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+
+    <span class="c1">############################################################################</span>
+    <span class="c1">## Step 6. Create Preprocessing Pipeline</span>
+    <span class="c1">###########################################################################</span>
+
+    <span class="n">pipeline</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;StandardScalar&quot;</span><span class="p">,</span> <span class="n">StandardScaler</span><span class="p">()),</span>
+        <span class="p">(</span><span class="s2">&quot;Preprocessor&quot;</span><span class="p">,</span> <span class="n">SimpleImputer</span><span class="p">()),</span>
+    <span class="p">]</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+
+    <span class="c1">############################################################################</span>
+    <span class="c1">## Step 7. Instantiate Model Tuner</span>
+    <span class="c1">############################################################################</span>
+
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span>
+        <span class="n">pipeline_steps</span><span class="o">=</span><span class="n">pipeline</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">estimator_name</span><span class="p">,</span>
+        <span class="n">model_type</span><span class="o">=</span><span class="s2">&quot;classification&quot;</span><span class="p">,</span>
+        <span class="n">estimator_name</span><span class="o">=</span><span class="n">estimator_name</span><span class="p">,</span>
+        <span class="n">calibrate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">estimator</span><span class="o">=</span><span class="n">clc</span><span class="p">,</span>
+        <span class="n">kfold</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">grid</span><span class="o">=</span><span class="n">tuned_parameters</span><span class="p">,</span>
+        <span class="n">n_jobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="n">randomized_grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">scoring</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;roc_auc&quot;</span><span class="p">],</span>
+        <span class="n">random_state</span><span class="o">=</span><span class="n">rstate</span><span class="p">,</span>
+        <span class="n">stratify_cols</span><span class="o">=</span><span class="n">stratify_df</span><span class="p">,</span>
+        <span class="n">stratify_y</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">boost_early</span><span class="o">=</span><span class="n">early_stop</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1">############################################################################</span>
+    <span class="c1">## Step 8. Grid Search &amp; Data Splitting</span>
+    <span class="c1">############################################################################</span>
+
+    <span class="n">model</span><span class="o">.</span><span class="n">grid_search_param_tuning</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">f1_beta_tune</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_test_data</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">X_valid</span><span class="p">,</span> <span class="n">y_valid</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_valid_data</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+    <span class="c1">############################################################################</span>
+    <span class="c1">## Step 9. Train and Calibrate Model</span>
+    <span class="c1">############################################################################</span>
+
+    <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">score</span><span class="o">=</span><span class="s2">&quot;roc_auc&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">calibrate</span><span class="p">:</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">calibrateModel</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">score</span><span class="o">=</span><span class="s2">&quot;roc_auc&quot;</span><span class="p">)</span>
+
+    <span class="c1">############################################################################</span>
+    <span class="c1">## Step 10. Evaluate Model</span>
+    <span class="c1">############################################################################</span>
+
+    <span class="n">return_metrics_dict</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">return_metrics</span><span class="p">(</span>
+        <span class="n">X</span><span class="p">,</span>
+        <span class="n">y</span><span class="p">,</span>
+        <span class="n">optimal_threshold</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">print_threshold</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">model_metrics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">return_dict</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">metrics</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">return_metrics_dict</span><span class="p">)</span><span class="o">.</span><span class="n">to_frame</span><span class="p">(</span><span class="n">estimator_name</span><span class="p">)</span>
+    <span class="n">metrics</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">metrics</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>
+
+    <span class="c1">############################################################################</span>
+    <span class="c1">## Step 11. Save Trained Model</span>
+    <span class="c1">############################################################################</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>
+    <span class="n">dumpObjects</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">model</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="n">RESULTS_DIR</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">clc</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">.pkl&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">app</span><span class="p">()</span>
+</pre></div>
+</div>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id7" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id1">1</a>,<a role="doc-backlink" href="#id3">2</a>,<a role="doc-backlink" href="#id5">3</a>)</span>
+<p>Kohavi, R. (1996). <em>Census Income</em>. UCI Machine Learning Repository. <a class="reference external" href="https://doi.org/10.24432/C5GP7S">https://doi.org/10.24432/C5GP7S</a>.</p>
+</aside>
+<aside class="footnote brackets" id="id8" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id2">1</a>,<a role="doc-backlink" href="#id4">2</a>)</span>
+<p>Funnell, A., Shpaner, L., &amp; Petousis, P. (2024). <em>Model Tuner</em> (Version 0.0.28b) [Software]. Zenodo. <a class="reference external" href="https://doi.org/10.5281/zenodo.12727322">https://doi.org/10.5281/zenodo.12727322</a>.</p>
+</aside>
+<aside class="footnote brackets" id="id9" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id6">3</a><span class="fn-bracket">]</span></span>
+<p>Dua, D. &amp; Graff, C. (2019). UCI Machine Learning Repository. University of California, Irvine, School of Information and Computer Sciences. <a class="reference external" href="https://archive.ics.uci.edu">https://archive.ics.uci.edu</a>.</p>
+</aside>
+</aside>
+</section>
+</section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="performance_assessment.html" class="btn btn-neutral float-left" title="Model Performance Summaries" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="acknowledgements.html" class="btn btn-neutral float-right" title="Acknowledgements" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="getting_started.html" class="btn btn-neutral float-left" title="Welcome to the Model Metrics Python Library Documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="performance_assessment.html" class="btn btn-neutral float-right" title="Model Performance Summaries" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

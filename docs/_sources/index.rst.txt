@@ -33,11 +33,15 @@ Table of Contents
 
 .. toctree::
    :maxdepth: 4
+   :caption: Model Training Overview
+
+   model_training
+
+.. toctree::
+   :maxdepth: 4
    :caption: Performance Assessment
 
-   performance_assessment
-   model_training
-   
+   performance_assessment  
 
 .. toctree::
    :maxdepth: 4
