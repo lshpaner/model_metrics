@@ -10,8 +10,8 @@
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=beeb4825" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=beeb4825" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=df76116e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=df76116e" />
       <link rel="stylesheet" type="text/css" href="_static/custom.js?v=f9206548" />
 
   
@@ -1672,10 +1672,21 @@ line style, plot size, and title, giving users flexibility to tailor the output
 to their analytical needs. This subgroup-level visualization provides a powerful
 lens for identifying discrepancies in model behavior—especially in scenarios
 where transparency, fairness, and accountability are key.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_roc_curve</span>
+
+<span class="n">show_roc_curve</span><span class="p">(</span>
+    <span class="n">models</span><span class="o">=</span><span class="n">pipelines_or_models</span><span class="p">,</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
+    <span class="n">model_titles</span><span class="o">=</span><span class="n">model_titles</span><span class="p">,</span>
+    <span class="n">decimal_places</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">group_category</span><span class="o">=</span><span class="n">X_test_2</span><span class="p">[</span><span class="s2">&quot;race&quot;</span><span class="p">],</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 <p><strong>Output</strong></p>
+<div class="no-click"><a class="reference internal image-reference" href="_images/decision_tree_classifier_race_roc_auc.svg"><img alt="Decision Tree ROC AUC" class="align-center" src="_images/decision_tree_classifier_race_roc_auc.svg" style="width: 82%;" />
+</a>
 <div style="height: 40px;"></div><aside class="footnote-list brackets">
 <aside class="footnote brackets" id="id4" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>

@@ -1685,16 +1685,34 @@ where transparency, fairness, and accountability are key.
 
 .. code-block:: python
 
+    from model_metrics import show_roc_curve
     
+    show_roc_curve(
+        models=pipelines_or_models,
+        X=X_test,
+        y=y_test,
+        model_titles=model_titles,
+        decimal_places=2,
+        group_category=X_test_2["race"],
+    )
 
 **Output**
 
+.. raw:: html
+
+   <div class="no-click">
 
 
+.. image:: ../assets/decision_tree_classifier_race_roc_auc.svg
+    :alt: Decision Tree ROC AUC
+    :width: 82%
+    :align: center
 
 .. raw:: html
 
     <div style="height: 40px;"></div>
+
+
 
 .. [1] Efron, B., Hastie, T., Johnstone, I., & Tibshirani, R. (2004). *Diabetes Dataset*. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. `https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset <https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset>`_.
 .. [2] Kohavi, R. (1996). *Census Income*. UCI Machine Learning Repository. `https://doi.org/10.24432/C5GP7S <https://doi.org/10.24432/C5GP7S>`_.
