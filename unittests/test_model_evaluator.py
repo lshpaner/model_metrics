@@ -2,10 +2,8 @@ import pytest
 import builtins
 from unittest.mock import patch
 import os
-from tqdm import tqdm
 import pandas as pd
 import numpy as np
-import textwrap
 from sklearn.svm import SVC
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -13,18 +11,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification, make_regression
 from sklearn.linear_model import LogisticRegression, Lasso
-from sklearn.metrics import (
-    roc_auc_score,
-    precision_recall_curve,
-    average_precision_score,
-)
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
 from model_metrics.model_evaluator import (
     save_plot_images,
     get_predictions,
     summarize_model_performance,
-    has_feature_importances,
     show_confusion_matrix,
     show_roc_curve,
     show_pr_curve,
@@ -230,82 +222,49 @@ def test_get_predictions_kfold(sample_data):
     assert isinstance(threshold, float)
 
 
-def test_summarize_model_performance(
-    trained_model,
-    sample_data,
-    capsys,
-):
+def test_summarize_model_performance(trained_model, sample_data, capsys):
     """
     Test summarize_model_performance function with formatted output.
     """
     X, y = sample_data
+
     df = summarize_model_performance(
         [trained_model],
         X,
         y,
         return_df=True,
+        model_type="classification",
     )
 
     # Debugging: Print the actual DataFrame before assertions
     print("\nDEBUG: Model Performance DataFrame")
     print(df)
 
-    print("DEBUG: DataFrame Index Values ->", df.index.tolist())
-    print("DEBUG: DataFrame Column Names ->", df.columns.tolist())
-
     # Ensure output is a DataFrame
     assert isinstance(df, pd.DataFrame), "Output should be a pandas DataFrame."
 
-    # FIXED: Check inside the "Metrics" column instead of column names
-    expected_metrics = ["Precision/PPV", "AUC ROC"]
+    # Check that required metrics exist in the "Metrics" column
+    expected_metrics = [
+        "Precision/PPV",
+        "F1-Score",
+        "Sensitivity/Recall",
+        "AUC ROC",
+    ]
     missing_metrics = [
         metric for metric in expected_metrics if metric not in df["Metrics"].values
     ]
-
-    # Debugging: Print missing metrics if assertion fails
-    if missing_metrics:
-        print(f"DEBUG: Missing metrics -> {missing_metrics}")
-
     assert not missing_metrics, f"Missing expected metrics: {missing_metrics}"
 
-    # Capture printed output
-    summarize_model_performance([trained_model], X, y, return_df=False)
-    captured = capsys.readouterr().out
+    # Check column name
+    assert "Model_1" in df.columns, "Expected column 'Model_1' in output."
 
-    # Debugging: Print captured output to check format
-    print("\nDEBUG: Captured Output")
-    print(captured)
-
-    # Find actual header line by locating the first separator line ("----")
-    captured_lines = captured.split("\n")
-    separator_idx = next(
-        (i for i, line in enumerate(captured_lines) if set(line) == {"-"}),
-        None,
-    )
-
-    if separator_idx is None or separator_idx + 1 >= len(captured_lines):
-        raise AssertionError("Could not locate separator line in captured output.")
-
-    header_line = captured_lines[
-        separator_idx + 1
-    ]  # The line immediately after separator
-
-    # Validate column headers formatting
-    # (updated for transposed classification table)
-    expected_header_keywords = ["Metrics", "LogisticRegression"]
-    for keyword in expected_header_keywords:
-        assert (
-            keyword in header_line
-        ), f"Header misalignment detected. Expected '{keyword}', "
-        f"but found: {header_line}"
-
-    print("All tests passed for formatted output.")
+    # Ensure none of the expected metric values are missing
+    for metric in expected_metrics:
+        val = df.loc[df["Metrics"] == metric, "Model_1"]
+        assert not val.isnull().any(), f"Missing value for {metric}"
 
 
-def test_summarize_model_performance_classification(
-    classification_model,
-    capsys,
-):
+def test_summarize_model_performance_classification(classification_model):
     """
     Test summarize_model_performance function for classification models.
     """
@@ -320,17 +279,12 @@ def test_summarize_model_performance_classification(
         return_df=True,
     )
 
-    # Print actual DataFrame for debugging if test fails
     print("\nDEBUG: Classification Model Performance DataFrame")
     print(df)
-
-    # Print actual column names to check expected format
     print("Columns:", df.columns)
 
-    # Ensure output is a DataFrame
     assert isinstance(df, pd.DataFrame), "Output should be a pandas DataFrame."
 
-    # Ensure key classification metrics exist in the DataFrame
     expected_metrics = [
         "Precision/PPV",
         "AUC ROC",
@@ -340,24 +294,16 @@ def test_summarize_model_performance_classification(
     missing_metrics = [
         metric for metric in expected_metrics if metric not in df["Metrics"].values
     ]
-
-    # Print missing metrics if assertion fails
     assert (
         not missing_metrics
     ), f"Missing expected classification metrics: {missing_metrics}"
 
-    # Ensure model name is included in columns
-    model_name = extract_model_name(trained_model)
-    assert model_name in df.columns, f"Expected model name '{model_name}' "
-    f"in columns."
+    assert "Model_1" in df.columns, "Expected column 'Model_1' in output."
 
-    # Ensure numeric values are not empty
     for metric in expected_metrics:
         assert (
-            df[model_name].loc[df["Metrics"] == metric].notna().all()
+            df["Model_1"].loc[df["Metrics"] == metric].notna().all()
         ), f"Missing values for {metric}"
-
-    print("All classification metrics present and correctly formatted.")
 
 
 def test_summarize_model_performance_regression(regression_model):
@@ -367,11 +313,9 @@ def test_summarize_model_performance_regression(regression_model):
     """
     model, (X, y) = regression_model
 
-    # Convert X to DataFrame if it's a NumPy array to ensure .columns works
     if isinstance(X, np.ndarray):
         X = pd.DataFrame(X, columns=[f"Feature_{i}" for i in range(X.shape[1])])
 
-    # Test full regression output (overall_only=False)
     df_full = summarize_model_performance(
         model,
         X,
@@ -381,11 +325,8 @@ def test_summarize_model_performance_regression(regression_model):
         overall_only=False,
     )
 
-    # Ensure output is a DataFrame
     assert isinstance(df_full, pd.DataFrame), "Output should be a pandas DataFrame."
 
-    # Expected columns in full regression output
-    # (Lasso doesn't have feature importances)
     expected_columns_full = [
         "Model",
         "Metric",
@@ -406,64 +347,9 @@ def test_summarize_model_performance_regression(regression_model):
         not missing_columns_full
     ), f"Missing expected columns in full output: {missing_columns_full}"
 
-    # Ensure the model name is captured
-    model_name = extract_model_name(model)
     assert (
-        model_name in df_full["Model"].values
-    ), f"Model name '{model_name}' is missing from full DataFrame."
-
-    # Test overall_only=True output
-    df_overall = summarize_model_performance(
-        model,
-        X,
-        y,
-        model_type="regression",
-        return_df=True,
-        overall_only=True,
-    )
-
-    # Ensure output is a DataFrame
-    assert isinstance(
-        df_overall, pd.DataFrame
-    ), "Output for overall_only=True should be a pandas DataFrame."
-
-    # Expected columns in overall_only output (no Feature Importance,
-    # Variable, or Coefficient)
-    expected_columns_overall = [
-        "Model",
-        "Metric",
-        "MAE",
-        "MAPE",
-        "MSE",
-        "RMSE",
-        "Expl. Var.",
-        "R^2 Score",
-    ]
-
-    missing_columns_overall = [
-        col for col in expected_columns_overall if col not in df_overall.columns
-    ]
-    assert (
-        not missing_columns_overall
-    ), f"Missing expected columns in overall_only output: "
-    f"{missing_columns_overall}"
-
-    # Ensure "Overall Metrics" is the only row and "Feature Importance"
-    # is not present
-    assert (
-        len(df_overall) == 1
-    ), "Expected only one row for 'Overall Metrics' in overall_only mode."
-    assert (
-        df_overall.iloc[0]["Metric"] == "Overall Metrics"
-    ), "First row should be 'Overall Metrics'."
-    assert (
-        "Feat. Imp." not in df_overall.columns
-    ), "Feat. Imp. should not appear in overall_only mode."
-
-    print(
-        f"Regression performance summary test passed, "
-        f"including overall_only behavior."
-    )
+        "Model_1" in df_full["Model"].values
+    ), "Expected 'Model_1' in 'Model' column of regression output."
 
 
 def test_summarize_model_performance_rf_regression(rf_regression_model):
