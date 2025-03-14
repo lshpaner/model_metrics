@@ -81,7 +81,6 @@ logistic_regression:
 	$(PYTHON_INTERPRETER) \
 	py_scripts/train_adult_income.py \
 	--model-type lr \
-	--exp-name logistic_regression \
 	2>&1 | tee model_files/results/logistic_regression.txt
 
 ## Make Decision Tree
@@ -90,7 +89,6 @@ decision_tree:
 	$(PYTHON_INTERPRETER) \
 	py_scripts/train_adult_income.py \
 	--model-type dt \
-	--exp-name dt \
 	2>&1 | tee model_files/results/decision_tree.txt
 
 ## Make Random Forest Classifier
@@ -99,7 +97,6 @@ random_forest:
 	$(PYTHON_INTERPRETER) \
 	py_scripts/train_adult_income.py \
 	--model-type rf \
-	--exp-name rf \
 	2>&1 | tee model_files/results/random_forest.txt
 
 all_models: single_model_lasso_reg single_model_logistic_reg \
