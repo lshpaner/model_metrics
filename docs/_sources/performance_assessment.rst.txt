@@ -1610,6 +1610,7 @@ add a grid, and save the plot for reporting purposes.
         figsize=(12, 6),
     )
 
+**Output**
 
 .. raw:: html
 
@@ -1636,7 +1637,7 @@ displayed together, with Logistic Regression in blue and Random Forest in black,
 both with a ``linewidth=2``. A red dashed line serves as the random guessing 
 baseline, and the plot includes a custom title for clarity.
 
-
+**Output**
 
 .. raw:: html
 
@@ -1680,6 +1681,15 @@ line style, plot size, and title, giving users flexibility to tailor the output
 to their analytical needs. This subgroup-level visualization provides a powerful 
 lens for identifying discrepancies in model behavior—especially in scenarios 
 where transparency, fairness, and accountability are key.
+
+
+.. code-block:: python
+
+    
+
+**Output**
+
+
 
 
 .. raw:: html
