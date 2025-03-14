@@ -1262,8 +1262,9 @@ def show_roc_curve(
             else:
                 plt.legend(loc="lower right", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
+            name_clean = name.lower().replace(" ", "_")
             save_plot_images(
-                f"{name}_{group_category.name}_roc_auc",
+                f"{name_clean}_{group_category.name}_roc_auc",
                 save_plot,
                 image_path_png,
                 image_path_svg,
@@ -1609,8 +1610,9 @@ def show_pr_curve(
             else:
                 plt.legend(loc="lower left", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
+            name_clean = name.lower().replace(" ", "_")
             save_plot_images(
-                f"{name}_{group_category.name}_pr",
+                f"{name_clean}_{group_category.name}_precision_recall",
                 save_plot,
                 image_path_png,
                 image_path_svg,
