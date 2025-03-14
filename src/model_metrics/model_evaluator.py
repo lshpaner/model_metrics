@@ -2638,7 +2638,7 @@ def show_calibration_curve(
         Features for prediction.
     - y: array-like
         True labels.
-    - model_titles: list of str, optional
+    - model_titles: list or str, optional
         Titles for individual models.
     - overlay: bool
         Whether to overlay multiple models on a single plot.
@@ -2678,8 +2678,17 @@ def show_calibration_curve(
     if not isinstance(model, list):
         model = [model]
 
+    # Normalize model_titles input
     if model_titles is None:
-        model_titles = extract_model_titles(model)
+        model_titles = [f"Model_{i+1}" for i in range(len(model))]
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]
+    elif isinstance(model_titles, pd.Series):
+        model_titles = model_titles.tolist()
+    elif not isinstance(model_titles, list):
+        raise TypeError(
+            "model_titles must be a string, list of strings, Series, or None."
+        )
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
