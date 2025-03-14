@@ -2897,7 +2897,7 @@ def show_ks_curve(
     - models: List of trained models or a single model.
     - X: Features for prediction.
     - y: True binary labels.
-    - model_titles: List of model names for labeling.
+    - model_titles: str or list of model names for labeling.
     - xlabel, ylabel: Axis labels.
     - title: Title for the plot.
     - save_plot: Whether to save the plot.
@@ -2916,8 +2916,17 @@ def show_ks_curve(
     if not isinstance(models, list):
         models = [models]
 
+    # Normalize model_titles input
     if model_titles is None:
-        model_titles = [f"Model {i+1}" for i in range(len(models))]
+        model_titles = [f"Model_{i+1}" for i in range(len(models))]
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]
+    elif isinstance(model_titles, pd.Series):
+        model_titles = model_titles.tolist()
+    elif not isinstance(model_titles, list):
+        raise TypeError(
+            "model_titles must be a string, list of strings, Series, or None."
+        )
 
     curve_kwgs = curve_kwgs or {}
     linestyle_kwgs = linestyle_kwgs or {"linestyle": "--", "linewidth": 2}
