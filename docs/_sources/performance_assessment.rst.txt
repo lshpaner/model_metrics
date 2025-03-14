@@ -1703,9 +1703,9 @@ where transparency, fairness, and accountability are key.
    <div class="no-click">
 
 
-.. image:: ../assets/decision_tree_classifier_race_roc_auc.svg
+.. image:: ../assets/decision_tree_classifier_roc_auc_race.svg
     :alt: Decision Tree ROC AUC
-    :width: 82%
+    :width: 900px
     :align: center
 
 .. raw:: html
