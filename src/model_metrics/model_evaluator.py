@@ -750,7 +750,7 @@ def show_confusion_matrix(
     classification reports. Supports both individual and grid-based plots.
 
     Parameters:
-    - model (list or estimator): A single model or a list of models/pipelines.
+    - model (estimator): A single model (string) or a list of models/pipelines.
     - X (array-like): Feature matrix for predictions.
     - y (array-like): True labels.
     - model_titles (list, optional): Custom titles for models.
