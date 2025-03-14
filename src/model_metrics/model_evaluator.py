@@ -271,8 +271,11 @@ def summarize_model_performance(
         - If provided, contains threshold values for classification models.
         - Used when custom_threshold is not set.
 
-    model_titles : list or None, default=None
-        Custom model names for display. If None, model names are inferred.
+    model_titles : str, list of str, pd.Series, or None, default=None
+        Custom model names for display.
+        - If a single string is provided, it is automatically wrapped in a list.
+        - If a Series is provided, it is converted to a list.
+        - If None, default names like "Model_1", "Model_2", etc. are used.
 
     custom_threshold : float or None, default=None
         - If set, overrides model_threshold and applies a fixed threshold for
@@ -349,13 +352,20 @@ def summarize_model_performance(
 
     metrics_data = []
 
-    for i, model in enumerate(models):
-        # Determine the model name
-        if model_titles:
-            name = model_titles[i] if i < len(model_titles) else f"Model_{i+1}"
-        else:
-            name = extract_model_name(model)  # Extract detailed name
+    # Normalize model_titles input
+    if model_titles is None:
+        model_titles = [f"Model_{i+1}" for i in range(len(models))]
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]
+    elif isinstance(model_titles, pd.Series):
+        model_titles = model_titles.tolist()
+    elif not isinstance(model_titles, list):
+        raise TypeError(
+            "model_titles must be a string, list of strings, Series, or None."
+        )
 
+    for i, model in enumerate(models):
+        name = model_titles[i]
         if model_type == "classification":
             y_true, y_prob, y_pred, threshold = get_predictions(
                 model, X, y, model_threshold, custom_threshold, score
