@@ -6,7 +6,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 from model_metrics.model_calculator import ModelCalculator
-import shap
 
 
 @pytest.fixture
@@ -93,7 +92,10 @@ def test_generate_predictions_with_coefficients(model_calculator, sample_data):
     assert any(col.startswith("top_") for col in result_df.columns)
 
 
-def test_generate_predictions_with_conflicting_params(model_calculator, sample_data):
+def test_generate_predictions_with_conflicting_params(
+    model_calculator,
+    sample_data,
+):
     """Test for ValueError when conflicting parameters are set."""
     _, X_test, _, y_test = sample_data
     y_test_df = pd.DataFrame({"outcome_1": y_test, "outcome_2": y_test})
@@ -208,7 +210,10 @@ def test_add_metrics(model_calculator, sample_data):
 def test_generate_predictions_with_threshold(
     model_calculator, trained_models, sample_data
 ):
-    """Test if the thresholding mechanism applies correctly when `threshold` is present."""
+    """
+    Test if the thresholding mechanism applies correctly when `threshold`
+    is present.
+    """
     _, X_test, _, y_test = sample_data
     y_test_df = pd.DataFrame({"outcome_1": y_test})  # Ensure only outcome_1 is tested
 
@@ -348,7 +353,9 @@ def test_calculate_shap_explainer_failure(model_calculator, sample_data):
 
 
 def test_calculate_shap_kernel_explainer_failure(model_calculator, sample_data):
-    """Test handling of a model that breaks both SHAP explainer and KernelExplainer."""
+    """
+    Test handling of a model that breaks both SHAP explainer and KernelExplainer.
+    """
 
     class CompletelyBrokenModel:
         """Mock model that fails on both SHAP and KernelExplainer."""
@@ -404,7 +411,11 @@ def test_calculate_shap_singleclass(model_calculator, sample_data):
     assert shap_df.shape == (len(X_test), len(X_test.columns))  # Ensure correct shape
 
 
-def test_calculate_shap_unexpected_shape(model_calculator, sample_data, monkeypatch):
+def test_calculate_shap_unexpected_shape(
+    model_calculator,
+    sample_data,
+    monkeypatch,
+):
     """Test error handling when SHAP values have an unexpected shape."""
     _, X_test, _, _ = sample_data
 
@@ -424,7 +435,11 @@ def test_calculate_shap_unexpected_shape(model_calculator, sample_data, monkeypa
         print(shap_values.shape)  # Explicitly check the shape
 
 
-def test_calculate_shap_keyboard_interrupt(model_calculator, sample_data, monkeypatch):
+def test_calculate_shap_keyboard_interrupt(
+    model_calculator,
+    sample_data,
+    monkeypatch,
+):
     """Test handling of KeyboardInterrupt during SHAP calculation."""
     _, X_test, _, _ = sample_data
 
@@ -439,7 +454,11 @@ def test_calculate_shap_keyboard_interrupt(model_calculator, sample_data, monkey
         )
 
 
-def test_calculate_shap_partial_results(model_calculator, sample_data, monkeypatch):
+def test_calculate_shap_partial_results(
+    model_calculator,
+    sample_data,
+    monkeypatch,
+):
     """Test returning partial SHAP values after an interruption."""
     _, X_test, _, _ = sample_data
     partial_shap_values = np.random.rand(5, len(X_test.columns))  # Partial results
@@ -449,7 +468,9 @@ def test_calculate_shap_partial_results(model_calculator, sample_data, monkeypat
             raise KeyboardInterrupt
 
     monkeypatch.setattr(
-        model_calculator, "_calculate_shap_values", lambda model, X: partial_shap_values
+        model_calculator,
+        "_calculate_shap_values",
+        lambda model, X: partial_shap_values,
     )
 
     try:
