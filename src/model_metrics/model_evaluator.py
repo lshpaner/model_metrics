@@ -1011,9 +1011,10 @@ def show_roc_curve(
         Feature data for prediction, typically a pandas DataFrame or NumPy array.
     - y: array-like
         True binary labels for evaluation,(e.g., a pandas Series or NumPy array).
-    - model_titles: list of str, optional
-        Titles for individual models. If not provided, defaults to "Model 1",
-        "Model 2", etc. Required when providing a nested dictionary for
+    - model_titles: str or list of str, optional
+        Title or list of titles for the models. If a single string is provided,
+        it is automatically converted to a one-element list. If None, defaults to
+        "Model 1", "Model 2", etc. Required when using a nested dictionary for
         `curve_kwgs`.
     - xlabel: str, optional
         Label for the x-axis (default: "False Positive Rate").
@@ -1062,9 +1063,10 @@ def show_roc_curve(
     - gridlines: bool, optional
         Whether to display grid lines on the plot (default: True).
     - group_category: array-like, optional
-        Categorical data (e.g., pandas Series or NumPy array) to group ROC
-        curves by unique values. If provided, plots separate ROC curves for each
-        group with AUC and class counts (Total, Pos, Neg) in the legend.
+        Categorical data (e.g., pandas Series or NumPy array) to group ROC curves
+        by unique values. Cannot be used with `grid=True` or `overlay=True`.
+        If provided, separate ROC curves are plotted for each group, with AUC
+        and class counts (Total, Pos, Neg) shown in the legend.
 
     Raises:
         - ValueError: If `grid=True` and `overlay=True` are both set, if
@@ -1104,11 +1106,17 @@ def show_roc_curve(
             f"`overlay` are set to `False`."
         )
 
+    # Ensure models is a list
     if not isinstance(models, list):
         models = [models]
 
+    # Normalize model_titles input
     if model_titles is None:
         model_titles = [f"Model {i+1}" for i in range(len(models))]
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]
+    elif not isinstance(model_titles, list):
+        raise TypeError("model_titles must be a string, a list of strings, or None.")
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
@@ -1263,12 +1271,21 @@ def show_roc_curve(
                 plt.legend(loc="lower right", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             name_clean = name.lower().replace(" ", "_")
-            save_plot_images(
-                f"{name_clean}_{group_category.name}_roc_auc",
-                save_plot,
-                image_path_png,
-                image_path_svg,
-            )
+            if group_category is not None:
+                save_plot_images(
+                    f"{name_clean}_{group_category.name}_roc_auc",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                )
+            else:
+                save_plot_images(
+                    f"{name_clean}_roc_auc",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                )
+
             plt.show()
 
     if overlay:
@@ -1363,10 +1380,11 @@ def show_pr_curve(
         by unique values. If provided, plots separate PR curves for each group
         with Average Precision (AP) and class counts (Total, Pos, Neg) in the
         legend.
-    - model_titles: list of str, optional
-        Titles for individual models. If not provided, defaults to "Model 1",
-        "Model 2", etc. Required when providing a nested dictionary for
-        `curve_styles`.
+    - model_titles: str or list of str, optional
+        Title or list of titles for the models. If a single string is provided,
+        it is automatically converted to a one-element list. If None, defaults to
+        "Model 1", "Model 2", etc. Required when using a nested dictionary for
+        `curve_kwgs`.
     - xlabel: str, optional
         Label for the x-axis (default: "Recall").
     - ylabel: str, optional
@@ -1413,6 +1431,12 @@ def show_pr_curve(
         Font size for tick labels and legend (default: 10).
     - gridlines: bool, optional
         Whether to display grid lines on the plot (default: True).
+    - group_category: array-like, optional
+        Categorical data (e.g., pandas Series or NumPy array) to group ROC curves
+        by unique values. Cannot be used with `grid=True` or `overlay=True`.
+        If provided, separate ROC curves are plotted for each group, with AUC
+        and class counts (Total, Pos, Neg) shown in the legend.
+
 
     Raises:
     - ValueError: If `grid=True` and `overlay=True` are both set, if
@@ -1450,8 +1474,13 @@ def show_pr_curve(
     if not isinstance(models, list):
         models = [models]
 
+    # Normalize model_titles input
     if model_titles is None:
         model_titles = [f"Model {i+1}" for i in range(len(models))]
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]
+    elif not isinstance(model_titles, list):
+        raise TypeError("model_titles must be a string, a list of strings, or None.")
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
@@ -1611,12 +1640,20 @@ def show_pr_curve(
                 plt.legend(loc="lower left", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             name_clean = name.lower().replace(" ", "_")
-            save_plot_images(
-                f"{name_clean}_{group_category.name}_precision_recall",
-                save_plot,
-                image_path_png,
-                image_path_svg,
-            )
+            if group_category is not None:
+                save_plot_images(
+                    f"{name_clean}_{group_category.name}_precision_recall",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                )
+            else:
+                save_plot_images(
+                    f"{name_clean}_precision_recall",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                )
             plt.show()
 
     if overlay:
