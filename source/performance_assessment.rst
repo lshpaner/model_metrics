@@ -1618,13 +1618,12 @@ add a grid, and save the plot for reporting purposes.
 
 .. image:: ../assets/grid_roc_auc.svg
    :alt: ROC AUC Example 1
-   :align: left
+   :align: center
    :width: 900px
 
 .. raw:: html
 
-   </div>
-
+    <div style="height: 40px;"></div>
 
 ROC AUC Evaluation Example 2
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1644,15 +1643,14 @@ baseline, and the plot includes a custom title for clarity.
 
    <div class="no-click">
 
-.. image:: ../assets/overlay_roc_curves.svg
-   :alt: ROC AUC Example 1
+.. image:: ../assets/overlay_roc_curve_plots.svg
+   :alt: ROC AUC Example 2
    :align: center
-   :width: 500px
+   :width: 900px
 
 .. raw:: html
 
-   </div>
-
+    <div style="height: 40px;"></div>
 
 ROC AUC Evaluation Example 3
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
