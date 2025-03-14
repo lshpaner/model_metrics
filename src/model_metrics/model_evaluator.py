@@ -1263,7 +1263,7 @@ def show_roc_curve(
                 plt.legend(loc="lower right", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
-                f"{name}_ROC",
+                f"{name}_{group_category.name}_roc_auc",
                 save_plot,
                 image_path_png,
                 image_path_svg,
@@ -1610,7 +1610,7 @@ def show_pr_curve(
                 plt.legend(loc="lower left", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
-                f"{name}_PR",
+                f"{name}_{group_category.name}_pr",
                 save_plot,
                 image_path_png,
                 image_path_svg,
