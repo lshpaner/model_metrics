@@ -271,8 +271,11 @@ def summarize_model_performance(
         - If provided, contains threshold values for classification models.
         - Used when custom_threshold is not set.
 
-    model_titles : list or None, default=None
-        Custom model names for display. If None, model names are inferred.
+    model_titles : str, list of str, pd.Series, or None, default=None
+        Custom model names for display.
+        - If a single string is provided, it is automatically wrapped in a list.
+        - If a Series is provided, it is converted to a list.
+        - If None, default names like "Model_1", "Model_2", etc. are used.
 
     custom_threshold : float or None, default=None
         - If set, overrides model_threshold and applies a fixed threshold for
@@ -349,13 +352,20 @@ def summarize_model_performance(
 
     metrics_data = []
 
-    for i, model in enumerate(models):
-        # Determine the model name
-        if model_titles:
-            name = model_titles[i] if i < len(model_titles) else f"Model_{i+1}"
-        else:
-            name = extract_model_name(model)  # Extract detailed name
+    # Normalize model_titles input
+    if model_titles is None:
+        model_titles = [f"Model_{i+1}" for i in range(len(models))]
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]
+    elif isinstance(model_titles, pd.Series):
+        model_titles = model_titles.tolist()
+    elif not isinstance(model_titles, list):
+        raise TypeError(
+            "model_titles must be a string, list of strings, Series, or None."
+        )
 
+    for i, model in enumerate(models):
+        name = model_titles[i]
         if model_type == "classification":
             y_true, y_prob, y_pred, threshold = get_predictions(
                 model, X, y, model_threshold, custom_threshold, score
@@ -740,7 +750,7 @@ def show_confusion_matrix(
     classification reports. Supports both individual and grid-based plots.
 
     Parameters:
-    - model (list or estimator): A single model or a list of models/pipelines.
+    - model (estimator): A single model (string) or a list of models/pipelines.
     - X (array-like): Feature matrix for predictions.
     - y (array-like): True labels.
     - model_titles (list, optional): Custom titles for models.
@@ -768,8 +778,13 @@ def show_confusion_matrix(
     if not isinstance(model, list):
         model = [model]
 
+    # Normalize model_titles input
     if model_titles is None:
-        model_titles = [extract_model_name(model) for model in model]
+        model_titles = [f"Model {i+1}" for i in range(len(model))]
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]
+    elif not isinstance(model_titles, list):
+        raise TypeError("model_titles must be a string, a list of strings, or None.")
 
     # Setup grid if enabled
     if grid:
@@ -1011,9 +1026,10 @@ def show_roc_curve(
         Feature data for prediction, typically a pandas DataFrame or NumPy array.
     - y: array-like
         True binary labels for evaluation,(e.g., a pandas Series or NumPy array).
-    - model_titles: list of str, optional
-        Titles for individual models. If not provided, defaults to "Model 1",
-        "Model 2", etc. Required when providing a nested dictionary for
+    - model_titles: str or list of str, optional
+        Title or list of titles for the models. If a single string is provided,
+        it is automatically converted to a one-element list. If None, defaults to
+        "Model 1", "Model 2", etc. Required when using a nested dictionary for
         `curve_kwgs`.
     - xlabel: str, optional
         Label for the x-axis (default: "False Positive Rate").
@@ -1062,9 +1078,10 @@ def show_roc_curve(
     - gridlines: bool, optional
         Whether to display grid lines on the plot (default: True).
     - group_category: array-like, optional
-        Categorical data (e.g., pandas Series or NumPy array) to group ROC
-        curves by unique values. If provided, plots separate ROC curves for each
-        group with AUC and class counts (Total, Pos, Neg) in the legend.
+        Categorical data (e.g., pandas Series or NumPy array) to group ROC curves
+        by unique values. Cannot be used with `grid=True` or `overlay=True`.
+        If provided, separate ROC curves are plotted for each group, with AUC
+        and class counts (Total, Pos, Neg) shown in the legend.
 
     Raises:
         - ValueError: If `grid=True` and `overlay=True` are both set, if
@@ -1104,11 +1121,17 @@ def show_roc_curve(
             f"`overlay` are set to `False`."
         )
 
+    # Ensure models is a list
     if not isinstance(models, list):
         models = [models]
 
+    # Normalize model_titles input
     if model_titles is None:
         model_titles = [f"Model {i+1}" for i in range(len(models))]
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]
+    elif not isinstance(model_titles, list):
+        raise TypeError("model_titles must be a string, a list of strings, or None.")
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
@@ -1263,12 +1286,21 @@ def show_roc_curve(
                 plt.legend(loc="lower right", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             name_clean = name.lower().replace(" ", "_")
-            save_plot_images(
-                f"{name_clean}_{group_category.name}_roc_auc",
-                save_plot,
-                image_path_png,
-                image_path_svg,
-            )
+            if group_category is not None:
+                save_plot_images(
+                    f"{name_clean}_{group_category.name}_roc_auc",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                )
+            else:
+                save_plot_images(
+                    f"{name_clean}_roc_auc",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                )
+
             plt.show()
 
     if overlay:
@@ -1363,10 +1395,11 @@ def show_pr_curve(
         by unique values. If provided, plots separate PR curves for each group
         with Average Precision (AP) and class counts (Total, Pos, Neg) in the
         legend.
-    - model_titles: list of str, optional
-        Titles for individual models. If not provided, defaults to "Model 1",
-        "Model 2", etc. Required when providing a nested dictionary for
-        `curve_styles`.
+    - model_titles: str or list of str, optional
+        Title or list of titles for the models. If a single string is provided,
+        it is automatically converted to a one-element list. If None, defaults to
+        "Model 1", "Model 2", etc. Required when using a nested dictionary for
+        `curve_kwgs`.
     - xlabel: str, optional
         Label for the x-axis (default: "Recall").
     - ylabel: str, optional
@@ -1413,6 +1446,12 @@ def show_pr_curve(
         Font size for tick labels and legend (default: 10).
     - gridlines: bool, optional
         Whether to display grid lines on the plot (default: True).
+    - group_category: array-like, optional
+        Categorical data (e.g., pandas Series or NumPy array) to group ROC curves
+        by unique values. Cannot be used with `grid=True` or `overlay=True`.
+        If provided, separate ROC curves are plotted for each group, with AUC
+        and class counts (Total, Pos, Neg) shown in the legend.
+
 
     Raises:
     - ValueError: If `grid=True` and `overlay=True` are both set, if
@@ -1450,8 +1489,13 @@ def show_pr_curve(
     if not isinstance(models, list):
         models = [models]
 
+    # Normalize model_titles input
     if model_titles is None:
         model_titles = [f"Model {i+1}" for i in range(len(models))]
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]
+    elif not isinstance(model_titles, list):
+        raise TypeError("model_titles must be a string, a list of strings, or None.")
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
@@ -1611,12 +1655,20 @@ def show_pr_curve(
                 plt.legend(loc="lower left", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             name_clean = name.lower().replace(" ", "_")
-            save_plot_images(
-                f"{name_clean}_{group_category.name}_precision_recall",
-                save_plot,
-                image_path_png,
-                image_path_svg,
-            )
+            if group_category is not None:
+                save_plot_images(
+                    f"{name_clean}_{group_category.name}_precision_recall",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                )
+            else:
+                save_plot_images(
+                    f"{name_clean}_precision_recall",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                )
             plt.show()
 
     if overlay:
@@ -2591,7 +2643,7 @@ def show_calibration_curve(
         Features for prediction.
     - y: array-like
         True labels.
-    - model_titles: list of str, optional
+    - model_titles: list or str, optional
         Titles for individual models.
     - overlay: bool
         Whether to overlay multiple models on a single plot.
@@ -2631,8 +2683,17 @@ def show_calibration_curve(
     if not isinstance(model, list):
         model = [model]
 
+    # Normalize model_titles input
     if model_titles is None:
-        model_titles = extract_model_titles(model)
+        model_titles = [f"Model_{i+1}" for i in range(len(model))]
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]
+    elif isinstance(model_titles, pd.Series):
+        model_titles = model_titles.tolist()
+    elif not isinstance(model_titles, list):
+        raise TypeError(
+            "model_titles must be a string, list of strings, Series, or None."
+        )
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
@@ -2850,7 +2911,7 @@ def show_ks_curve(
     - models: List of trained models or a single model.
     - X: Features for prediction.
     - y: True binary labels.
-    - model_titles: List of model names for labeling.
+    - model_titles: str or list of model names for labeling.
     - xlabel, ylabel: Axis labels.
     - title: Title for the plot.
     - save_plot: Whether to save the plot.
@@ -2869,8 +2930,17 @@ def show_ks_curve(
     if not isinstance(models, list):
         models = [models]
 
+    # Normalize model_titles input
     if model_titles is None:
-        model_titles = [f"Model {i+1}" for i in range(len(models))]
+        model_titles = [f"Model_{i+1}" for i in range(len(models))]
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]
+    elif isinstance(model_titles, pd.Series):
+        model_titles = model_titles.tolist()
+    elif not isinstance(model_titles, list):
+        raise TypeError(
+            "model_titles must be a string, list of strings, Series, or None."
+        )
 
     curve_kwgs = curve_kwgs or {}
     linestyle_kwgs = linestyle_kwgs or {"linestyle": "--", "linewidth": 2}
