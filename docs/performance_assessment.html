@@ -75,9 +75,9 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#roc-auc-evaluation">ROC AUC Evaluation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#roc-auc-evaluation-example-1">ROC AUC Evaluation Example 1</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#roc-auc-evaluation-example-2">ROC AUC Evaluation Example 2</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#roc-auc-evaluation-example-3">ROC AUC Evaluation Example 3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#roc-auc-example-1-original">ROC AUC Example 1 (Original)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#roc-auc-example-2-overlayed">ROC AUC Example 2 (Overlayed)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#roc-auc-example-3-by-category">ROC AUC Example 3 (by Category)</a></li>
 </ul>
 </li>
 </ul>
@@ -1600,8 +1600,8 @@ decision trees, especially when class imbalances or threshold sensitivity are
 concerns. The <code class="docutils literal notranslate"><span class="pre">show_roc_curve</span></code> function simplifies this process, enabling
 users to visualize and compare these curves effectively, setting the stage for
 detailed performance analysis in subsequent examples.</p>
-<section id="roc-auc-evaluation-example-1">
-<h2>ROC AUC Evaluation Example 1<a class="headerlink" href="#roc-auc-evaluation-example-1" title="Link to this heading"></a></h2>
+<section id="roc-auc-example-1-original">
+<h2>ROC AUC Example 1 (Original)<a class="headerlink" href="#roc-auc-example-1-original" title="Link to this heading"></a></h2>
 <p>In this first ROC AUC evaluation example, we plot the ROC curves for two
 models: Logistic Regression and Random Forest Classifier, trained on the
 <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a>. The curves are displayed side by side
@@ -1626,7 +1626,6 @@ add a grid, and save the plot for reporting purposes.</p>
         <span class="s2">&quot;Random Forest&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;green&quot;</span><span class="p">,</span> <span class="s2">&quot;linewidth&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span>
     <span class="p">},</span>
     <span class="n">linestyle_kwgs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="s2">&quot;linestyle&quot;</span><span class="p">:</span> <span class="s2">&quot;--&quot;</span><span class="p">},</span>
-    <span class="n">save_plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">grid</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
 <span class="p">)</span>
@@ -1635,8 +1634,8 @@ add a grid, and save the plot for reporting purposes.</p>
 <div class="no-click"><a class="reference internal image-reference" href="_images/grid_roc_auc.svg"><img alt="ROC AUC Example 1" class="align-center" src="_images/grid_roc_auc.svg" style="width: 900px;" />
 </a>
 <div style="height: 40px;"></div></section>
-<section id="roc-auc-evaluation-example-2">
-<h2>ROC AUC Evaluation Example 2<a class="headerlink" href="#roc-auc-evaluation-example-2" title="Link to this heading"></a></h2>
+<section id="roc-auc-example-2-overlayed">
+<h2>ROC AUC Example 2 (Overlayed)<a class="headerlink" href="#roc-auc-example-2-overlayed" title="Link to this heading"></a></h2>
 <p>In this second ROC AUC evaluation example, we focus on overlaying the results of
 two models—Logistic Regression and Random Forest Classifier—trained on the
 <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a> onto a single plot. Using the <code class="docutils literal notranslate"><span class="pre">show_roc_curve</span></code>
@@ -1644,11 +1643,11 @@ function with the <code class="docutils literal notranslate"><span class="pre">o
 displayed together, with Logistic Regression in blue and Random Forest in black,
 both with a <code class="docutils literal notranslate"><span class="pre">linewidth=2</span></code>. A red dashed line serves as the random guessing
 baseline, and the plot includes a custom title for clarity.</p>
-<div class="no-click"><a class="reference internal image-reference" href="_images/overlay_roc_curve_plots.svg"><img alt="ROC AUC Example 2" class="align-center" src="_images/overlay_roc_curve_plots.svg" style="width: 900px;" />
+<div class="no-click"><a class="reference internal image-reference" href="_images/roc_auc_overlay.svg"><img alt="ROC AUC Example 2" class="align-center" src="_images/roc_auc_overlay.svg" style="width: 900px;" />
 </a>
 <div style="height: 40px;"></div></section>
-<section id="roc-auc-evaluation-example-3">
-<h2>ROC AUC Evaluation Example 3<a class="headerlink" href="#roc-auc-evaluation-example-3" title="Link to this heading"></a></h2>
+<section id="roc-auc-example-3-by-category">
+<h2>ROC AUC Example 3 (by Category)<a class="headerlink" href="#roc-auc-example-3-by-category" title="Link to this heading"></a></h2>
 <p>In this third ROC AUC evaluation example, we utilize the well-known Adult Income
 dataset <a class="footnote-reference brackets" href="#id5" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, a practical benchmark for binary classification tasks. This dataset
 contains a rich set of categorical and numerical features that make it particularly

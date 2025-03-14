@@ -1575,8 +1575,8 @@ concerns. The ``show_roc_curve`` function simplifies this process, enabling
 users to visualize and compare these curves effectively, setting the stage for 
 detailed performance analysis in subsequent examples.
 
-ROC AUC Evaluation Example 1
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ROC AUC Example 1 (Original)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this first ROC AUC evaluation example, we plot the ROC curves for two 
 models: Logistic Regression and Random Forest Classifier, trained on the 
@@ -1606,7 +1606,6 @@ add a grid, and save the plot for reporting purposes.
             "Random Forest": {"color": "green", "linewidth": 2},
         },
         linestyle_kwgs={"color": "red", "linestyle": "--"},
-        save_plot=True,
         grid=True,
         figsize=(12, 6),
     )
@@ -1625,8 +1624,8 @@ add a grid, and save the plot for reporting purposes.
 
     <div style="height: 40px;"></div>
 
-ROC AUC Evaluation Example 2
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ROC AUC Example 2 (Overlayed)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this second ROC AUC evaluation example, we focus on overlaying the results of 
 two models—Logistic Regression and Random Forest Classifier—trained on the 
@@ -1643,7 +1642,7 @@ baseline, and the plot includes a custom title for clarity.
 
    <div class="no-click">
 
-.. image:: ../assets/overlay_roc_curve_plots.svg
+.. image:: ../assets/roc_auc_overlay.svg
    :alt: ROC AUC Example 2
    :align: center
    :width: 900px
@@ -1652,8 +1651,8 @@ baseline, and the plot includes a custom title for clarity.
 
     <div style="height: 40px;"></div>
 
-ROC AUC Evaluation Example 3
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ROC AUC Example 3 (by Category)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this third ROC AUC evaluation example, we utilize the well-known Adult Income 
 dataset [2]_, a practical benchmark for binary classification tasks. This dataset 
