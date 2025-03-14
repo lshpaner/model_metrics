@@ -778,8 +778,13 @@ def show_confusion_matrix(
     if not isinstance(model, list):
         model = [model]
 
+    # Normalize model_titles input
     if model_titles is None:
-        model_titles = [extract_model_name(model) for model in model]
+        model_titles = [f"Model {i+1}" for i in range(len(model))]
+    elif isinstance(model_titles, str):
+        model_titles = [model_titles]
+    elif not isinstance(model_titles, list):
+        raise TypeError("model_titles must be a string, a list of strings, or None.")
 
     # Setup grid if enabled
     if grid:
