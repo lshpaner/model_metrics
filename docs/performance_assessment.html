@@ -85,6 +85,7 @@
 <li class="toctree-l1"><a class="reference internal" href="#precision-recall-curves">Precision-Recall Curves</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#show_pr_curve"><code class="docutils literal notranslate"><span class="pre">show_pr_curve()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#precision-recall-example-1-original">Precision-Recall Example 1 (Original)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#precision-recall-curve-example-2-overlay">Precision-Recall Curve Example 2 (Overlay)</a></li>
 </ul>
 </li>
 </ul>
@@ -1950,8 +1951,8 @@ analysis and final reporting.</p>
     <span class="n">model_titles</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Logistic Regression&quot;</span><span class="p">,</span> <span class="s2">&quot;Random Forest&quot;</span><span class="p">],</span>
     <span class="n">decimal_places</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
     <span class="n">grid</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">n_rows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">n_cols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">n_rows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">curve_kwgs</span><span class="o">=</span><span class="p">[</span>
         <span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;blue&quot;</span><span class="p">},</span>
         <span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;green&quot;</span><span class="p">}</span>
@@ -1962,6 +1963,35 @@ analysis and final reporting.</p>
 </div>
 <p><strong>Output</strong></p>
 <div class="no-click"><a class="reference internal image-reference" href="_images/grid_pr_plot.svg"><img alt="Precision-Recall Curve Example 1" class="align-center" src="_images/grid_pr_plot.svg" width="900px" /></a>
+<div style="height: 40px;"></div></section>
+<section id="precision-recall-curve-example-2-overlay">
+<h2>Precision-Recall Curve Example 2 (Overlay)<a class="headerlink" href="#precision-recall-curve-example-2-overlay" title="Permalink to this heading"></a></h2>
+<p>In this second Precision-Recall evaluation example, we focus on overlaying the
+results of two models—Logistic Regression and Random Forest Classifier—trained
+on the <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a> onto a single plot. Using the <code class="docutils literal notranslate"><span class="pre">show_pr_curve</span></code>
+function with the <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code> parameter, the Precision-Recall curves for
+both models are displayed together, with Logistic Regression in blue and Random
+Forest in black, both with a <code class="docutils literal notranslate"><span class="pre">linewidth=2</span></code>. The plot includes a custom title
+for clarity.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_pr_curve</span>
+
+<span class="n">show_pr_curve</span><span class="p">(</span>
+    <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
+    <span class="n">model_titles</span><span class="o">=</span><span class="n">model_titles</span><span class="p">,</span>
+    <span class="n">decimal_places</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">curve_kwgs</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;Logistic Regression&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="s2">&quot;linewidth&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span>
+        <span class="s2">&quot;Random Forest&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="s2">&quot;linewidth&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span>
+    <span class="p">},</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;ROC Curves: Logistic Regression and Random Forest&quot;</span><span class="p">,</span>
+    <span class="n">overlay</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Output</strong></p>
+<div class="no-click"><a class="reference internal image-reference" href="_images/overlay_pr_plot.svg"><img alt="Precision-Recall Curve Example 1" class="align-center" src="_images/overlay_pr_plot.svg" width="900px" /></a>
 <div style="height: 40px;"></div><p>The <code class="docutils literal notranslate"><span class="pre">show_pr_curve</span></code> function simplifies this evaluation process, offering a
 flexible and intuitive way to visualize PR curves for one or more models. It
 supports overlaying multiple models on a single axis or plotting them in a grid

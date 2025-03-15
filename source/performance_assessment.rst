@@ -1959,8 +1959,8 @@ analysis and final reporting.
         model_titles=["Logistic Regression", "Random Forest"],
         decimal_places=2,
         grid=True,
-        n_rows=1,
         n_cols=2,
+        n_rows=1,
         curve_kwgs=[
             {"color": "blue"},
             {"color": "green"}
@@ -1983,6 +1983,59 @@ analysis and final reporting.
 .. raw:: html
 
     <div style="height: 40px;"></div>
+
+Precision-Recall Curve Example 2 (Overlay)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this second Precision-Recall evaluation example, we focus on overlaying the 
+results of two models—Logistic Regression and Random Forest Classifier—trained 
+on the :ref:`synthetic dataset from the Binary Classification Models section 
+<Binary_Classification>` onto a single plot. Using the ``show_pr_curve`` 
+function with the ``overlay=True`` parameter, the Precision-Recall curves for 
+both models are displayed together, with Logistic Regression in blue and Random 
+Forest in black, both with a ``linewidth=2``. The plot includes a custom title 
+for clarity.
+
+
+.. code-block:: python
+
+    from model_metrics import show_pr_curve
+
+    show_pr_curve(
+        models=[model1, model2],
+        X=X_test,
+        y=y_test,
+        model_titles=model_titles,
+        decimal_places=2,
+        curve_kwgs={
+            "Logistic Regression": {"color": "blue", "linewidth": 2},
+            "Random Forest": {"color": "black", "linewidth": 2},
+        },
+        title="ROC Curves: Logistic Regression and Random Forest",
+        overlay=True,
+    )
+
+**Output**
+
+.. raw:: html
+
+   <div class="no-click">
+
+
+.. image:: ../assets/overlay_pr_plot.svg
+    :alt: Precision-Recall Curve Example 1
+    :width: 900px
+    :align: center
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+
+
+
+
+
 
 
 
