@@ -42,7 +42,7 @@ Model Performance Summaries
     :param model_threshold: Threshold values for classification models. If provided, this dictionary specifies thresholds per model. Defaults to ``None``.
     :type model_threshold: dict, optional
     :param model_titles: Custom model names for display. If ``None``, names are inferred from the models. Defaults to ``None``.
-    :type model_titles: list, optional
+    :type model_titles: str or list, optional
     :param custom_threshold: A fixed threshold for classification, overriding ``model_threshold``. If set, the `"Model Threshold"` row is excluded. Defaults to ``None``.
     :type custom_threshold: float, optional
     :param score: A custom scoring metric for classification models. Defaults to ``None``.
@@ -1575,6 +1575,100 @@ concerns. The ``show_roc_curve`` function simplifies this process, enabling
 users to visualize and compare these curves effectively, setting the stage for 
 detailed performance analysis in subsequent examples.
 
+The ``show_roc_curve`` function provides a flexible and powerful way to visualize 
+the performance of binary classification models using Receiver Operating Characteristic 
+(ROC) curves. Whether you're comparing multiple models, evaluating subgroup fairness, 
+or preparing publication-ready plots, this function allows full control over layout,
+styling, and annotations. It supports single and multiple model inputs, optional overlay 
+or grid layouts, and group-wise comparisons via a categorical feature. Additional options 
+allow custom axis labels, AUC precision, curve styling, and export to PNG/SVG. 
+Designed to be both user-friendly and highly configurable, ``show_roc_curve`` 
+is a practical tool for model evaluation and stakeholder communication.
+
+
+.. function:: show_roc_curve(models, X, y, xlabel="False Positive Rate", ylabel="True Positive Rate", model_titles=None, decimal_places=2, overlay=False, title=None, save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, curve_kwgs=None, linestyle_kwgs=None, grid=False, n_rows=None, n_cols=2, figsize=(8, 6), label_fontsize=12, tick_fontsize=10, gridlines=True, group_category=None)
+
+    :param models: A trained model, a string placeholder, or a list containing models or strings to evaluate.
+    :type models: object or str or list[object or str]
+    :param X: Feature matrix used for prediction.
+    :type X: pd.DataFrame or np.ndarray
+    :param y: True binary labels for evaluation.
+    :type y: pd.Series or np.ndarray
+    :param xlabel: Label for the x-axis. Defaults to ``"False Positive Rate"``.
+    :type xlabel: str, optional
+    :param ylabel: Label for the y-axis. Defaults to ``"True Positive Rate"``.
+    :type ylabel: str, optional
+    :param model_titles: Custom titles for the models. Can be a string or list of strings. If ``None``, defaults to ``"Model 1"``, ``"Model 2"``, etc.
+    :type model_titles: str or list[str], optional
+    :param decimal_places: Number of decimal places for AUC values. Defaults to ``2``.
+    :type decimal_places: int, optional
+    :param overlay: Whether to overlay multiple models on a single plot. Defaults to ``False``.
+    :type overlay: bool, optional
+    :param title: Title for the plot (used in overlay mode or as global title). If ``""``, disables the title. Defaults to ``None``.
+    :type title: str, optional
+    :param save_plot: Whether to save the plot(s) to file. Defaults to ``False``.
+    :type save_plot: bool, optional
+    :param image_path_png: File path to save the plot(s) as PNG.
+    :type image_path_png: str, optional
+    :param image_path_svg: File path to save the plot(s) as SVG.
+    :type image_path_svg: str, optional
+    :param text_wrap: Maximum character width before wrapping plot titles. If ``None``, no wrapping is applied.
+    :type text_wrap: int, optional
+    :param curve_kwgs: Plot styling for ROC curves. Accepts a list of dictionaries or a nested dictionary keyed by model_titles.
+    :type curve_kwgs: list[dict] or dict[str, dict], optional
+    :param linestyle_kwgs: Style for the random guess (diagonal) line. Defaults to ``{"color": "gray", "linestyle": "--", "linewidth": 2}``.
+    :type linestyle_kwgs: dict, optional
+    :param grid: Whether to organize the ROC plots in a subplot grid layout. Cannot be used with ``overlay=True`` or ``group_category``.
+    :type grid: bool, optional
+    :param n_rows: Number of rows in the grid layout. If ``None``, calculated automatically based on number of models and columns.
+    :type n_rows: int, optional
+    :param n_cols: Number of columns in the grid layout. Defaults to ``2``.
+    :type n_cols: int, optional
+    :param figsize: Size of the plot or grid of plots, in inches. Defaults to ``(8, 6)``.
+    :type figsize: tuple, optional
+    :param label_fontsize: Font size for axis labels and titles. Defaults to ``12``.
+    :type label_fontsize: int, optional
+    :param tick_fontsize: Font size for ticks and legend text. Defaults to ``10``.
+    :type tick_fontsize: int, optional
+    :param gridlines: Whether to display grid lines on plots. Defaults to ``True``.
+    :type gridlines: bool, optional
+    :param group_category: Categorical array to group ROC curves. Cannot be used with ``grid=True`` or ``overlay=True``.
+    :type group_category: array-like, optional
+
+    :returns: None. Displays or saves ROC curve plots for classification models.
+    :rtype: None
+
+    :raises ValueError:
+        - If ``grid=True`` and ``overlay=True`` are both set.
+        - If ``group_category`` is used with ``grid`` or ``overlay``.
+        - If ``overlay=True`` is used with only one model.
+
+.. admonition:: Notes
+
+    - **Flexible Inputs:**
+        - ``models`` and ``model_titles`` can be individual items or lists. Strings passed in ``models`` are treated as placeholder names.
+        - Titles can be automatically inferred or explicitly passed using ``model_titles``.
+
+    - **Group-Wise ROC:**
+        - If ``group_category`` is passed, separate ROC curves are plotted for each unique group.
+        - The legend will include group-specific AUC and class distribution (e.g., ``AUC = 0.87, Count: 500, Pos: 120, Neg: 380``).
+
+    - **Plot Modes:**
+        - ``overlay=True`` overlays all models in one figure.
+        - ``grid=True`` arranges individual ROC plots in a subplot layout.
+        - If neither is set, separate full-size plots are shown for each model.
+
+    - **Legend and Styling:**
+        - A random guess reference line (diagonal) is plotted by default.
+        - Customize ROC curves with ``curve_kwgs`` and the diagonal line with ``linestyle_kwgs``.
+        - Titles can be disabled with ``title=""``.
+
+    - **Saving Plots:**
+        - If ``save_plot=True``, plots are saved using the base filename format ``<model_name>_roc_auc`` or ``overlay_roc_auc_plot``.
+
+The ``show_roc_curve`` function provides flexible and highly customizable plotting of ROC curves for binary classification models. It supports overlays, grid layouts, and subgroup visualizations, while also allowing export options and styling hooks for publication-ready output.
+
+
 ROC AUC Example 1 (Original)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1616,7 +1710,7 @@ add a grid, and save the plot for reporting purposes.
 
    <div class="no-click">
 
-.. image:: ../assets/grid_roc_auc.svg
+.. image:: ../assets/grid_roc_auc_plot.svg
    :alt: ROC AUC Example 1
    :align: center
    :width: 900px
@@ -1625,7 +1719,7 @@ add a grid, and save the plot for reporting purposes.
 
     <div style="height: 40px;"></div>
 
-ROC AUC Example 2 (Overlayed)
+ROC AUC Example 2 (Overlay)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this second ROC AUC evaluation example, we focus on overlaying the results of 
@@ -1637,16 +1731,36 @@ displayed together, with Logistic Regression in blue and Random Forest in black,
 both with a ``linewidth=2``. A red dashed line serves as the random guessing 
 baseline, and the plot includes a custom title for clarity.
 
+
+.. code-block:: python
+
+    from model_metrics import show_roc_curve
+
+    show_roc_curve(
+        models=[model1, model2],
+        X=X_test,
+        y=y_test,
+        model_titles=model_titles,
+        decimal_places=2,
+        curve_kwgs={
+            "Logistic Regression": {"color": "blue", "linewidth": 2},
+            "Random Forest": {"color": "black", "linewidth": 2},
+        },
+        linestyle_kwgs={"color": "red", "linestyle": "--"},
+        title="ROC Curves: Logistic Regression and Random Forest",
+        overlay=True,
+    )
+
 **Output**
 
 .. raw:: html
 
    <div class="no-click">
 
-.. image:: ../assets/roc_auc_overlay.svg
+.. image:: ../assets/overlay_roc_auc.svg
    :alt: ROC AUC Example 2
    :align: center
-   :width: 900px
+   :width: 850px
 
 .. raw:: html
 
@@ -1655,32 +1769,23 @@ baseline, and the plot includes a custom title for clarity.
 ROC AUC Example 3 (by Category)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In this third ROC AUC evaluation example, we utilize the well-known Adult Income 
-dataset [2]_, a practical benchmark for binary classification tasks. This dataset 
-contains a rich set of categorical and numerical features that make it particularly 
+In this third ROC AUC evaluation example, we utilize the well-known 
+*Adult Income* dataset [2]_, a widely used benchmark for binary classification 
+tasks. Its rich mix of categorical and numerical features makes it particularly 
 suitable for analyzing model performance across different subgroups.
 
-To build and evaluate our model, we make use of the ``model_tuner`` library [3]_. 
+To build and evaluate our models, we use the ``model_tuner`` library [3]_. 
 :ref:`Click here to view the corresponding codebase for this workflow. <Adult_Income_Training>`
 
-In this scenario, our objective is to assess ROC AUC scores **not just overall**, 
-but **for each individual category within a selected feature**—such as *occupation, 
-education,* or *marital-status*. This enables a deeper examination of how model 
-performance may vary across groups, which is especially important in contexts 
-involving fairness, bias detection, or subgroup-level interpretability.
+The objective here is to assess ROC AUC scores not just overall, but 
+**across each category of a selected feature**—such as *occupation*, 
+*education*, *marital-status*, or *race*. This approach enables deeper insight into how 
+performance varies by subgroup, which is particularly important for fairness, 
+bias detection, and subgroup-level interpretability.
 
-Using the ``show_roc_curve`` function, we compute and plot the ROC AUC scores 
-for a model (e.g., Random Forest) across all unique values in the selected feature. 
-For example, when analyzing the *occupation* column, the plot shows the ROC AUC for 
-each job category, helping us understand whether the classifier performs consistently 
-across different employment types.
-
-The resulting visualization displays all ROC curves on a shared axis, enabling 
-direct comparison across categories. Customization options include curve color, 
-line style, plot size, and title, giving users flexibility to tailor the output 
-to their analytical needs. This subgroup-level visualization provides a powerful 
-lens for identifying discrepancies in model behavior—especially in scenarios 
-where transparency, fairness, and accountability are key.
+The ``show_roc_curve`` function supports this analysis through the 
+``group_category`` parameter. For example, by passing ``group_category=X_test_2["race"]``, 
+you can generate a separate ROC curve for each unique racial group in the dataset:
 
 
 .. code-block:: python
@@ -1703,9 +1808,9 @@ where transparency, fairness, and accountability are key.
    <div class="no-click">
 
 
-.. image:: ../assets/decision_tree_classifier_roc_auc_race.svg
+.. image:: ../assets/decision_tree_classifier_race_roc_auc.svg
     :alt: Decision Tree ROC AUC
-    :width: 900px
+    :width: 850px
     :align: center
 
 .. raw:: html
