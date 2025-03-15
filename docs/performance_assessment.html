@@ -75,11 +75,16 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="#roc-auc-evaluation">ROC AUC Evaluation</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="#roc-auc-curves">ROC AUC Curves</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#show_roc_curve"><code class="docutils literal notranslate"><span class="pre">show_roc_curve()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#roc-auc-example-1-original">ROC AUC Example 1 (Original)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#roc-auc-example-2-overlay">ROC AUC Example 2 (Overlay)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#roc-auc-example-3-by-category">ROC AUC Example 3 (by Category)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#precision-recall-curves">Precision-Recall Curves</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#show_pr_curve"><code class="docutils literal notranslate"><span class="pre">show_pr_curve()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#precision-recall-example-1-original">Precision-Recall Example 1 (Original)</a></li>
 </ul>
 </li>
 </ul>
@@ -1581,8 +1586,8 @@ Root Mean Squared Error (RMSE), Explained Variance, and R² Score.</p>
 </div><div style="height: 40px;"></div></section>
 </section>
 </section>
-<section id="roc-auc-evaluation">
-<h1>ROC AUC Evaluation<a class="headerlink" href="#roc-auc-evaluation" title="Permalink to this heading"></a></h1>
+<section id="roc-auc-curves">
+<h1>ROC AUC Curves<a class="headerlink" href="#roc-auc-curves" title="Permalink to this heading"></a></h1>
 <p>This section demonstrates how to evaluate the performance of binary classification
 models using ROC AUC curves, a key metric for assessing the trade-off between
 true positive and false positive rates. Using the Logistic Regression and
@@ -1642,10 +1647,10 @@ is a practical tool for model evaluation and stakeholder communication.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>None. Displays or saves ROC curve plots for classification models.</p>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">None.</span></code> Displays or saves ROC curve plots for classification models.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>None</p>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – <ul class="simple">
@@ -1704,7 +1709,10 @@ is a practical tool for model evaluation and stakeholder communication.</p>
 </li>
 </ul>
 </div>
-<p>The <code class="docutils literal notranslate"><span class="pre">show_roc_curve</span></code> function provides flexible and highly customizable plotting of ROC curves for binary classification models. It supports overlays, grid layouts, and subgroup visualizations, while also allowing export options and styling hooks for publication-ready output.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">show_roc_curve</span></code> function provides flexible and highly customizable
+plotting of ROC curves for binary classification models. It supports overlays,
+grid layouts, and subgroup visualizations, while also allowing export options
+and styling hooks for publication-ready output.</p>
 <section id="roc-auc-example-1-original">
 <h2>ROC AUC Example 1 (Original)<a class="headerlink" href="#roc-auc-example-1-original" title="Permalink to this heading"></a></h2>
 <p>In this first ROC AUC evaluation example, we plot the ROC curves for two
@@ -1799,7 +1807,170 @@ you can generate a separate ROC curve for each unique racial group in the datase
 </div>
 <p><strong>Output</strong></p>
 <div class="no-click"><a class="reference internal image-reference" href="_images/decision_tree_classifier_race_roc_auc.svg"><img alt="Decision Tree ROC AUC" class="align-center" src="_images/decision_tree_classifier_race_roc_auc.svg" width="850px" /></a>
-<div style="height: 40px;"></div><aside class="footnote-list brackets">
+<div style="height: 40px;"></div></section>
+</section>
+<section id="precision-recall-curves">
+<h1>Precision-Recall Curves<a class="headerlink" href="#precision-recall-curves" title="Permalink to this heading"></a></h1>
+<p>This section demonstrates how to evaluate the performance of binary classification
+models using Precision-Recall (PR) curves, a critical visualization for understanding
+model behavior in the presence of class imbalance. Using the Logistic Regression
+and Random Forest Classifier models trained on the
+<a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the previous (Binary Classification Models) section</span></a>,
+we generate PR curves to examine how well each model identifies true positives while limiting false positives.</p>
+<p>Precision-Recall curves focus on the trade-off between <strong>precision</strong>
+(positive predictive value) and <strong>recall</strong> (sensitivity) across different
+classification thresholds. This is particularly important when the positive
+class is rare—as is common in fraud detection, disease diagnosis, or adverse
+event prediction—because ROC AUC can overstate performance under imbalance.
+Unlike the ROC curve, the PR curve is sensitive to the proportion of positive
+examples and gives a clearer picture of how well a model performs where it
+matters most: in identifying the positive class.</p>
+<p>The <strong>area under the Precision-Recall curve</strong>, also known as Average Precision
+(AP), summarizes model performance across thresholds. A model that maintains high
+precision as recall increases is generally more desirable, especially in settings
+where false positives have a high cost. This makes the PR curve a complementary
+and sometimes more informative tool than ROC AUC in skewed classification scenarios.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="show_pr_curve">
+<span class="sig-name descname"><span class="pre">show_pr_curve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">models</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xlabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Recall'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Precision'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_titles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decimal_places</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">curve_kwgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gridlines</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_category</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#show_pr_curve" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>models</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>]</em>) – A trained model, a string placeholder, or a list containing models or strings to evaluate.</p></li>
+<li><p><strong>X</strong> (<em>pd.DataFrame</em><em> or </em><em>np.ndarray</em>) – Feature matrix used for prediction.</p></li>
+<li><p><strong>y</strong> (<em>pd.Series</em><em> or </em><em>np.ndarray</em>) – True binary labels for evaluation.</p></li>
+<li><p><strong>xlabel</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Label for the x-axis. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;Recall&quot;</span></code>.</p></li>
+<li><p><strong>ylabel</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Label for the y-axis. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;Precision&quot;</span></code>.</p></li>
+<li><p><strong>model_titles</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – Custom titles for the models. Can be a string or list of strings. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, defaults to <code class="docutils literal notranslate"><span class="pre">&quot;Model</span> <span class="pre">1&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Model</span> <span class="pre">2&quot;</span></code>, etc.</p></li>
+<li><p><strong>decimal_places</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Number of decimal places for Average Precision (AP) values. Defaults to <code class="docutils literal notranslate"><span class="pre">2</span></code>.</p></li>
+<li><p><strong>overlay</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to overlay multiple models on a single plot. Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Title for the plot (used in overlay mode or as global title). If <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code>, disables the title. Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>save_plot</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to save the plot(s) to file. Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>image_path_png</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – File path to save the plot(s) as PNG.</p></li>
+<li><p><strong>image_path_svg</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – File path to save the plot(s) as SVG.</p></li>
+<li><p><strong>text_wrap</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Maximum character width before wrapping plot titles. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, no wrapping is applied.</p></li>
+<li><p><strong>curve_kwgs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>] or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>]</em><em>, </em><em>optional</em>) – Plot styling for PR curves. Accepts a list of dictionaries or a nested dictionary keyed by model_titles.</p></li>
+<li><p><strong>grid</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to organize the PR plots in a subplot grid layout. Cannot be used with <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code> or <code class="docutils literal notranslate"><span class="pre">group_category</span></code>.</p></li>
+<li><p><strong>n_rows</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Number of rows in the grid layout. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, calculated automatically based on number of models and columns.</p></li>
+<li><p><strong>n_cols</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Number of columns in the grid layout. Defaults to <code class="docutils literal notranslate"><span class="pre">2</span></code>.</p></li>
+<li><p><strong>figsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><em>tuple</em></a><em>, </em><em>optional</em>) – Size of the plot or grid of plots, in inches. Defaults to <code class="docutils literal notranslate"><span class="pre">(8,</span> <span class="pre">6)</span></code>.</p></li>
+<li><p><strong>label_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for axis labels and titles. Defaults to <code class="docutils literal notranslate"><span class="pre">12</span></code>.</p></li>
+<li><p><strong>tick_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for ticks and legend text. Defaults to <code class="docutils literal notranslate"><span class="pre">10</span></code>.</p></li>
+<li><p><strong>gridlines</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to display grid lines on plots. Defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>group_category</strong> (<em>array-like</em><em>, </em><em>optional</em>) – Categorical array to group PR curves. Cannot be used with <code class="docutils literal notranslate"><span class="pre">grid=True</span></code> or <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">None.</span></code> Displays or saves Precision-Recall curve plots for classification models.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – <ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">grid=True</span></code> and <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code> are both set.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">group_category</span></code> is used with <code class="docutils literal notranslate"><span class="pre">grid</span></code> or <code class="docutils literal notranslate"><span class="pre">overlay</span></code>.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code> is used with only one model.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>Flexible Inputs:</strong></dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">models</span></code> and <code class="docutils literal notranslate"><span class="pre">model_titles</span></code> can be individual items or lists. Strings passed in <code class="docutils literal notranslate"><span class="pre">models</span></code> are treated as placeholder names.</p></li>
+<li><p>Titles can be automatically inferred or explicitly passed using <code class="docutils literal notranslate"><span class="pre">model_titles</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Group-Wise PR:</strong></dt><dd><ul>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">group_category</span></code> is passed, separate PR curves are plotted for each unique group.</p></li>
+<li><p>The legend will include group-specific Average Precision and class distribution (e.g., <code class="docutils literal notranslate"><span class="pre">AP</span> <span class="pre">=</span> <span class="pre">0.78,</span> <span class="pre">Count:</span> <span class="pre">500,</span> <span class="pre">Pos:</span> <span class="pre">120,</span> <span class="pre">Neg:</span> <span class="pre">380</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Plot Modes:</strong></dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">overlay=True</span></code> overlays all models in one figure.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">grid=True</span></code> arranges individual PR plots in a subplot layout.</p></li>
+<li><p>If neither is set, separate full-size plots are shown for each model.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Legend and Styling:</strong></dt><dd><ul>
+<li><p>A random classifier baseline (constant precision) is plotted by default.</p></li>
+<li><p>Customize PR curves with <code class="docutils literal notranslate"><span class="pre">curve_kwgs</span></code>.</p></li>
+<li><p>Titles can be disabled with <code class="docutils literal notranslate"><span class="pre">title=&quot;&quot;</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Saving Plots:</strong></dt><dd><ul>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">save_plot=True</span></code>, plots are saved using the base filename format <code class="docutils literal notranslate"><span class="pre">&lt;model_name&gt;_precision_recall</span></code> or <code class="docutils literal notranslate"><span class="pre">overlay_pr_plot</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">show_pr_curve</span></code> function provides flexible and highly customizable plotting
+of Precision-Recall curves for binary classification models. It supports overlays,
+grid layouts, and subgroup visualizations, while also allowing export options and
+styling hooks for publication-ready output.</p>
+<section id="precision-recall-example-1-original">
+<h2>Precision-Recall Example 1 (Original)<a class="headerlink" href="#precision-recall-example-1-original" title="Permalink to this heading"></a></h2>
+<p>In this first Precision-Recall evaluation example, we plot the PR curves for two
+models: Logistic Regression and Random Forest Classifier, both trained on the
+<a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a>.
+The curves are arranged side by side using a grid layout (<code class="docutils literal notranslate"><span class="pre">n_cols=2,</span> <span class="pre">n_rows=1</span></code>),
+with the Logistic Regression curve rendered in blue and the Random Forest curve
+in green to distinguish between models. A gray dashed line indicates the baseline
+precision, equal to the prevalence of the positive class in the dataset.</p>
+<p>This example illustrates how the <code class="docutils literal notranslate"><span class="pre">show_pr_curve</span></code> function makes it easy to
+visualize and compare model performance when dealing with class imbalance. It
+also demonstrates layout flexibility and customization options, including gridlines,
+label styling, and export functionality—making it suitable for both exploratory
+analysis and final reporting.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_pr_curve</span>
+
+<span class="n">show_pr_curve</span><span class="p">(</span>
+    <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="n">logistic_model</span><span class="p">,</span> <span class="n">rf_model</span><span class="p">],</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
+    <span class="n">model_titles</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Logistic Regression&quot;</span><span class="p">,</span> <span class="s2">&quot;Random Forest&quot;</span><span class="p">],</span>
+    <span class="n">decimal_places</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">grid</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">n_rows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">n_cols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">curve_kwgs</span><span class="o">=</span><span class="p">[</span>
+        <span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;blue&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;green&quot;</span><span class="p">}</span>
+    <span class="p">],</span>
+    <span class="n">gridlines</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Output</strong></p>
+<div class="no-click"><a class="reference internal image-reference" href="_images/grid_pr_plot.svg"><img alt="Precision-Recall Curve Example 1" class="align-center" src="_images/grid_pr_plot.svg" width="900px" /></a>
+<div style="height: 40px;"></div><p>The <code class="docutils literal notranslate"><span class="pre">show_pr_curve</span></code> function simplifies this evaluation process, offering a
+flexible and intuitive way to visualize PR curves for one or more models. It
+supports overlaying multiple models on a single axis or plotting them in a grid
+layout, and it also includes support for subgroup analysis via the <code class="docutils literal notranslate"><span class="pre">group_category</span></code>
+parameter. This makes it especially powerful for fairness audits, model diagnostics,
+and interpretability studies.</p>
+<p>For example, to compare model performance across racial subgroups using the
+<em>Adult Income</em> dataset, you can pass a group column like so:</p>
+<aside class="footnote-list brackets">
 <aside class="footnote brackets" id="id4" role="note">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
 <p>Efron, B., Hastie, T., Johnstone, I., &amp; Tibshirani, R. (2004). <em>Diabetes Dataset</em>. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. <a class="reference external" href="https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset">https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset</a>.</p>

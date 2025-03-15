@@ -1552,7 +1552,7 @@ Root Mean Squared Error (RMSE), Explained Variance, and R² Score.
     <div style="height: 40px;"></div>
 
 
-ROC AUC Evaluation
+ROC AUC Curves
 --------------------
 
 This section demonstrates how to evaluate the performance of binary classification 
@@ -1635,8 +1635,8 @@ is a practical tool for model evaluation and stakeholder communication.
     :param group_category: Categorical array to group ROC curves. Cannot be used with ``grid=True`` or ``overlay=True``.
     :type group_category: array-like, optional
 
-    :returns: None. Displays or saves ROC curve plots for classification models.
-    :rtype: None
+    :returns: ``None.`` Displays or saves ROC curve plots for classification models.
+    :rtype: ``None``
 
     :raises ValueError:
         - If ``grid=True`` and ``overlay=True`` are both set.
@@ -1666,7 +1666,10 @@ is a practical tool for model evaluation and stakeholder communication.
     - **Saving Plots:**
         - If ``save_plot=True``, plots are saved using the base filename format ``<model_name>_roc_auc`` or ``overlay_roc_auc_plot``.
 
-The ``show_roc_curve`` function provides flexible and highly customizable plotting of ROC curves for binary classification models. It supports overlays, grid layouts, and subgroup visualizations, while also allowing export options and styling hooks for publication-ready output.
+The ``show_roc_curve`` function provides flexible and highly customizable 
+plotting of ROC curves for binary classification models. It supports overlays, 
+grid layouts, and subgroup visualizations, while also allowing export options 
+and styling hooks for publication-ready output.
 
 
 ROC AUC Example 1 (Original)
@@ -1816,6 +1819,186 @@ you can generate a separate ROC curve for each unique racial group in the datase
 .. raw:: html
 
     <div style="height: 40px;"></div>
+
+
+Precision-Recall Curves
+------------------------
+
+This section demonstrates how to evaluate the performance of binary classification 
+models using Precision-Recall (PR) curves, a critical visualization for understanding 
+model behavior in the presence of class imbalance. Using the Logistic Regression 
+and Random Forest Classifier models trained on the 
+:ref:`synthetic dataset from the previous (Binary Classification Models) section <Binary_Classification>`, 
+we generate PR curves to examine how well each model identifies true positives while limiting false positives.
+
+Precision-Recall curves focus on the trade-off between **precision** 
+(positive predictive value) and **recall** (sensitivity) across different 
+classification thresholds. This is particularly important when the positive 
+class is rare—as is common in fraud detection, disease diagnosis, or adverse 
+event prediction—because ROC AUC can overstate performance under imbalance. 
+Unlike the ROC curve, the PR curve is sensitive to the proportion of positive 
+examples and gives a clearer picture of how well a model performs where it 
+matters most: in identifying the positive class.
+
+The **area under the Precision-Recall curve**, also known as Average Precision 
+(AP), summarizes model performance across thresholds. A model that maintains high 
+precision as recall increases is generally more desirable, especially in settings 
+where false positives have a high cost. This makes the PR curve a complementary 
+and sometimes more informative tool than ROC AUC in skewed classification scenarios.
+
+
+.. function:: show_pr_curve(models, X, y, xlabel="Recall", ylabel="Precision", model_titles=None, decimal_places=2, overlay=False, title=None, save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, curve_kwgs=None, grid=False, n_rows=None, n_cols=2, figsize=(8, 6), label_fontsize=12, tick_fontsize=10, gridlines=True, group_category=None)
+
+    :param models: A trained model, a string placeholder, or a list containing models or strings to evaluate.
+    :type models: object or str or list[object or str]
+    :param X: Feature matrix used for prediction.
+    :type X: pd.DataFrame or np.ndarray
+    :param y: True binary labels for evaluation.
+    :type y: pd.Series or np.ndarray
+    :param xlabel: Label for the x-axis. Defaults to ``"Recall"``.
+    :type xlabel: str, optional
+    :param ylabel: Label for the y-axis. Defaults to ``"Precision"``.
+    :type ylabel: str, optional
+    :param model_titles: Custom titles for the models. Can be a string or list of strings. If ``None``, defaults to ``"Model 1"``, ``"Model 2"``, etc.
+    :type model_titles: str or list[str], optional
+    :param decimal_places: Number of decimal places for Average Precision (AP) values. Defaults to ``2``.
+    :type decimal_places: int, optional
+    :param overlay: Whether to overlay multiple models on a single plot. Defaults to ``False``.
+    :type overlay: bool, optional
+    :param title: Title for the plot (used in overlay mode or as global title). If ``""``, disables the title. Defaults to ``None``.
+    :type title: str, optional
+    :param save_plot: Whether to save the plot(s) to file. Defaults to ``False``.
+    :type save_plot: bool, optional
+    :param image_path_png: File path to save the plot(s) as PNG.
+    :type image_path_png: str, optional
+    :param image_path_svg: File path to save the plot(s) as SVG.
+    :type image_path_svg: str, optional
+    :param text_wrap: Maximum character width before wrapping plot titles. If ``None``, no wrapping is applied.
+    :type text_wrap: int, optional
+    :param curve_kwgs: Plot styling for PR curves. Accepts a list of dictionaries or a nested dictionary keyed by model_titles.
+    :type curve_kwgs: list[dict] or dict[str, dict], optional
+    :param grid: Whether to organize the PR plots in a subplot grid layout. Cannot be used with ``overlay=True`` or ``group_category``.
+    :type grid: bool, optional
+    :param n_rows: Number of rows in the grid layout. If ``None``, calculated automatically based on number of models and columns.
+    :type n_rows: int, optional
+    :param n_cols: Number of columns in the grid layout. Defaults to ``2``.
+    :type n_cols: int, optional
+    :param figsize: Size of the plot or grid of plots, in inches. Defaults to ``(8, 6)``.
+    :type figsize: tuple, optional
+    :param label_fontsize: Font size for axis labels and titles. Defaults to ``12``.
+    :type label_fontsize: int, optional
+    :param tick_fontsize: Font size for ticks and legend text. Defaults to ``10``.
+    :type tick_fontsize: int, optional
+    :param gridlines: Whether to display grid lines on plots. Defaults to ``True``.
+    :type gridlines: bool, optional
+    :param group_category: Categorical array to group PR curves. Cannot be used with ``grid=True`` or ``overlay=True``.
+    :type group_category: array-like, optional
+
+    :returns: ``None.`` Displays or saves Precision-Recall curve plots for classification models.
+    :rtype: ``None``
+
+    :raises ValueError:
+        - If ``grid=True`` and ``overlay=True`` are both set.
+        - If ``group_category`` is used with ``grid`` or ``overlay``.
+        - If ``overlay=True`` is used with only one model.
+
+.. admonition:: Notes
+
+    - **Flexible Inputs:**
+        - ``models`` and ``model_titles`` can be individual items or lists. Strings passed in ``models`` are treated as placeholder names.
+        - Titles can be automatically inferred or explicitly passed using ``model_titles``.
+
+    - **Group-Wise PR:**
+        - If ``group_category`` is passed, separate PR curves are plotted for each unique group.
+        - The legend will include group-specific Average Precision and class distribution (e.g., ``AP = 0.78, Count: 500, Pos: 120, Neg: 380``).
+
+    - **Plot Modes:**
+        - ``overlay=True`` overlays all models in one figure.
+        - ``grid=True`` arranges individual PR plots in a subplot layout.
+        - If neither is set, separate full-size plots are shown for each model.
+
+    - **Legend and Styling:**
+        - A random classifier baseline (constant precision) is plotted by default.
+        - Customize PR curves with ``curve_kwgs``.
+        - Titles can be disabled with ``title=""``.
+
+    - **Saving Plots:**
+        - If ``save_plot=True``, plots are saved using the base filename format ``<model_name>_precision_recall`` or ``overlay_pr_plot``.
+
+The ``show_pr_curve`` function provides flexible and highly customizable plotting 
+of Precision-Recall curves for binary classification models. It supports overlays, 
+grid layouts, and subgroup visualizations, while also allowing export options and 
+styling hooks for publication-ready output.
+
+
+Precision-Recall Example 1 (Original)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this first Precision-Recall evaluation example, we plot the PR curves for two 
+models: Logistic Regression and Random Forest Classifier, both trained on the 
+:ref:`synthetic dataset from the Binary Classification Models section <Binary_Classification>`. 
+The curves are arranged side by side using a grid layout (``n_cols=2, n_rows=1``), 
+with the Logistic Regression curve rendered in blue and the Random Forest curve 
+in green to distinguish between models. A gray dashed line indicates the baseline 
+precision, equal to the prevalence of the positive class in the dataset.
+
+This example illustrates how the ``show_pr_curve`` function makes it easy to 
+visualize and compare model performance when dealing with class imbalance. It 
+also demonstrates layout flexibility and customization options, including gridlines, 
+label styling, and export functionality—making it suitable for both exploratory 
+analysis and final reporting.
+
+.. code-block:: python
+
+    from model_metrics import show_pr_curve
+
+    show_pr_curve(
+        models=[logistic_model, rf_model],
+        X=X_test,
+        y=y_test,
+        model_titles=["Logistic Regression", "Random Forest"],
+        decimal_places=2,
+        grid=True,
+        n_rows=1,
+        n_cols=2,
+        curve_kwgs=[
+            {"color": "blue"},
+            {"color": "green"}
+        ],
+        gridlines=True
+    )
+
+**Output**
+
+.. raw:: html
+
+   <div class="no-click">
+
+
+.. image:: ../assets/grid_pr_plot.svg
+    :alt: Precision-Recall Curve Example 1
+    :width: 900px
+    :align: center
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+
+
+
+The ``show_pr_curve`` function simplifies this evaluation process, offering a 
+flexible and intuitive way to visualize PR curves for one or more models. It 
+supports overlaying multiple models on a single axis or plotting them in a grid 
+layout, and it also includes support for subgroup analysis via the ``group_category`` 
+parameter. This makes it especially powerful for fairness audits, model diagnostics, 
+and interpretability studies.
+
+
+
+For example, to compare model performance across racial subgroups using the 
+*Adult Income* dataset, you can pass a group column like so:
+
 
 
 
