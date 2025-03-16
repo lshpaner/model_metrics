@@ -85,7 +85,8 @@
 <li class="toctree-l1"><a class="reference internal" href="#precision-recall-curves">Precision-Recall Curves</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#show_pr_curve"><code class="docutils literal notranslate"><span class="pre">show_pr_curve()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#precision-recall-example-1-original">Precision-Recall Example 1 (Original)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#precision-recall-curve-example-2-overlay">Precision-Recall Curve Example 2 (Overlay)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#precision-recall-example-2-overlay">Precision-Recall Example 2 (Overlay)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#precision-recall-example-3-categorical">Precision-Recall Example 3 (Categorical)</a></li>
 </ul>
 </li>
 </ul>
@@ -468,7 +469,7 @@ positive (1) at the expense of precision.</p>
 </section>
 <section id="regression-models">
 <h2>Regression Models<a class="headerlink" href="#regression-models" title="Permalink to this heading"></a></h2>
-<p>In this section, we load the <cite>diabetes dataset</cite> <a class="footnote-reference brackets" href="#id4" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> from <code class="docutils literal notranslate"><span class="pre">scikit-learn</span></code>, which includes
+<p>In this section, we load the <cite>diabetes dataset</cite> <a class="footnote-reference brackets" href="#id6" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> from <code class="docutils literal notranslate"><span class="pre">scikit-learn</span></code>, which includes
 features like age and BMI, along with a target variable representing disease
 progression. The data is then split with <code class="docutils literal notranslate"><span class="pre">train_test_split</span></code> into training and
 testing sets using an 80/20 ratio to facilitate model assessment. We train a
@@ -1781,10 +1782,10 @@ baseline, and the plot includes a custom title for clarity.</p>
 <section id="roc-auc-example-3-by-category">
 <h2>ROC AUC Example 3 (by Category)<a class="headerlink" href="#roc-auc-example-3-by-category" title="Permalink to this heading"></a></h2>
 <p>In this third ROC AUC evaluation example, we utilize the well-known
-<em>Adult Income</em> dataset <a class="footnote-reference brackets" href="#id5" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, a widely used benchmark for binary classification
+<em>Adult Income</em> dataset <a class="footnote-reference brackets" href="#id7" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, a widely used benchmark for binary classification
 tasks. Its rich mix of categorical and numerical features makes it particularly
 suitable for analyzing model performance across different subgroups.</p>
-<p>To build and evaluate our models, we use the <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id6" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.
+<p>To build and evaluate our models, we use the <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id8" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.
 <a class="reference internal" href="model_training.html#adult-income-training"><span class="std std-ref">Click here to view the corresponding codebase for this workflow.</span></a></p>
 <p>The objective here is to assess ROC AUC scores not just overall, but
 <strong>across each category of a selected feature</strong>—such as <em>occupation</em>,
@@ -1792,15 +1793,16 @@ suitable for analyzing model performance across different subgroups.</p>
 performance varies by subgroup, which is particularly important for fairness,
 bias detection, and subgroup-level interpretability.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">show_roc_curve</span></code> function supports this analysis through the
-<code class="docutils literal notranslate"><span class="pre">group_category</span></code> parameter. For example, by passing <code class="docutils literal notranslate"><span class="pre">group_category=X_test_2[&quot;race&quot;]</span></code>,
+<code class="docutils literal notranslate"><span class="pre">group_category</span></code> parameter.</p>
+<p>For example, by passing <code class="docutils literal notranslate"><span class="pre">group_category=X_test_2[&quot;race&quot;]</span></code>,
 you can generate a separate ROC curve for each unique racial group in the dataset:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_roc_curve</span>
 
 <span class="n">show_roc_curve</span><span class="p">(</span>
-    <span class="n">models</span><span class="o">=</span><span class="n">pipelines_or_models</span><span class="p">,</span>
+    <span class="n">models</span><span class="o">=</span><span class="n">model_dt</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">estimator</span><span class="p">,</span>
     <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
     <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
-    <span class="n">model_titles</span><span class="o">=</span><span class="n">model_titles</span><span class="p">,</span>
+    <span class="n">model_titles</span><span class="o">=</span><span class="s2">&quot;Decision Tree Classifier,</span>
     <span class="n">decimal_places</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
     <span class="n">group_category</span><span class="o">=</span><span class="n">X_test_2</span><span class="p">[</span><span class="s2">&quot;race&quot;</span><span class="p">],</span>
 <span class="p">)</span>
@@ -1859,6 +1861,7 @@ and sometimes more informative tool than ROC AUC in skewed classification scenar
 <li><p><strong>tick_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for ticks and legend text. Defaults to <code class="docutils literal notranslate"><span class="pre">10</span></code>.</p></li>
 <li><p><strong>gridlines</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to display grid lines on plots. Defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
 <li><p><strong>group_category</strong> (<em>array-like</em><em>, </em><em>optional</em>) – Categorical array to group PR curves. Cannot be used with <code class="docutils literal notranslate"><span class="pre">grid=True</span></code> or <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code>.</p></li>
+<li><p><strong>legend_metric</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Metric to display in the legend. Either <code class="docutils literal notranslate"><span class="pre">&quot;ap&quot;</span></code> (Average Precision) or <code class="docutils literal notranslate"><span class="pre">&quot;aucpr&quot;</span></code> (area under the PR curve). Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;ap&quot;</span></code>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -1868,12 +1871,19 @@ and sometimes more informative tool than ROC AUC in skewed classification scenar
 <dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – <ul class="simple">
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – <ul>
 <li><p>If <code class="docutils literal notranslate"><span class="pre">grid=True</span></code> and <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code> are both set.</p></li>
-<li><p>If <code class="docutils literal notranslate"><span class="pre">group_category</span></code> is used with <code class="docutils literal notranslate"><span class="pre">grid</span></code> or <code class="docutils literal notranslate"><span class="pre">overlay</span></code>.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">group_category</span></code> is used with <code class="docutils literal notranslate"><span class="pre">grid=True</span></code> or <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code>.</p></li>
 <li><p>If <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code> is used with only one model.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">legend_metric</span></code> is not one of <code class="docutils literal notranslate"><span class="pre">&quot;ap&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;aucpr&quot;</span></code>.</p></li>
 </ul>
-</p>
+</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.13)"><strong>TypeError</strong></a> – <ul>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">model_titles</span></code> is not a string, list of strings, or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+</ul>
+</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -1893,6 +1903,14 @@ and sometimes more informative tool than ROC AUC in skewed classification scenar
 <dt><strong>Group-Wise PR:</strong></dt><dd><ul>
 <li><p>If <code class="docutils literal notranslate"><span class="pre">group_category</span></code> is passed, separate PR curves are plotted for each unique group.</p></li>
 <li><p>The legend will include group-specific Average Precision and class distribution (e.g., <code class="docutils literal notranslate"><span class="pre">AP</span> <span class="pre">=</span> <span class="pre">0.78,</span> <span class="pre">Count:</span> <span class="pre">500,</span> <span class="pre">Pos:</span> <span class="pre">120,</span> <span class="pre">Neg:</span> <span class="pre">380</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Average Precision vs. AUCPR:</strong></dt><dd><ul>
+<li><p>By default, the legend shows <strong>Average Precision (AP)</strong>, which summarizes the PR curve with greater emphasis on the performance at higher precision levels.</p></li>
+<li><p>If the user passes <code class="docutils literal notranslate"><span class="pre">legend_metric=&quot;aucpr&quot;</span></code>, the legend will instead display <strong>AUCPR</strong> (Area Under the Precision-Recall Curve), which gives equal weight to all parts of the curve.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1964,8 +1982,8 @@ analysis and final reporting.</p>
 <p><strong>Output</strong></p>
 <div class="no-click"><a class="reference internal image-reference" href="_images/grid_pr_plot.svg"><img alt="Precision-Recall Curve Example 1" class="align-center" src="_images/grid_pr_plot.svg" width="900px" /></a>
 <div style="height: 40px;"></div></section>
-<section id="precision-recall-curve-example-2-overlay">
-<h2>Precision-Recall Curve Example 2 (Overlay)<a class="headerlink" href="#precision-recall-curve-example-2-overlay" title="Permalink to this heading"></a></h2>
+<section id="precision-recall-example-2-overlay">
+<h2>Precision-Recall Example 2 (Overlay)<a class="headerlink" href="#precision-recall-example-2-overlay" title="Permalink to this heading"></a></h2>
 <p>In this second Precision-Recall evaluation example, we focus on overlaying the
 results of two models—Logistic Regression and Random Forest Classifier—trained
 on the <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a> onto a single plot. Using the <code class="docutils literal notranslate"><span class="pre">show_pr_curve</span></code>
@@ -1980,7 +1998,6 @@ for clarity.</p>
     <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
     <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
     <span class="n">model_titles</span><span class="o">=</span><span class="n">model_titles</span><span class="p">,</span>
-    <span class="n">decimal_places</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
     <span class="n">curve_kwgs</span><span class="o">=</span><span class="p">{</span>
         <span class="s2">&quot;Logistic Regression&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="s2">&quot;linewidth&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span>
         <span class="s2">&quot;Random Forest&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="s2">&quot;linewidth&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span>
@@ -1991,26 +2008,52 @@ for clarity.</p>
 </pre></div>
 </div>
 <p><strong>Output</strong></p>
-<div class="no-click"><a class="reference internal image-reference" href="_images/overlay_pr_plot.svg"><img alt="Precision-Recall Curve Example 1" class="align-center" src="_images/overlay_pr_plot.svg" width="900px" /></a>
-<div style="height: 40px;"></div><p>The <code class="docutils literal notranslate"><span class="pre">show_pr_curve</span></code> function simplifies this evaluation process, offering a
-flexible and intuitive way to visualize PR curves for one or more models. It
-supports overlaying multiple models on a single axis or plotting them in a grid
-layout, and it also includes support for subgroup analysis via the <code class="docutils literal notranslate"><span class="pre">group_category</span></code>
-parameter. This makes it especially powerful for fairness audits, model diagnostics,
-and interpretability studies.</p>
-<p>For example, to compare model performance across racial subgroups using the
-<em>Adult Income</em> dataset, you can pass a group column like so:</p>
-<aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id4" role="note">
+<div class="no-click"><a class="reference internal image-reference" href="_images/overlay_pr_plot.svg"><img alt="Precision-Recall Curve Example 2" class="align-center" src="_images/overlay_pr_plot.svg" width="900px" /></a>
+<div style="height: 40px;"></div></section>
+<section id="precision-recall-example-3-categorical">
+<h2>Precision-Recall Example 3 (Categorical)<a class="headerlink" href="#precision-recall-example-3-categorical" title="Permalink to this heading"></a></h2>
+<p>In this third ROC AUC evaluation example, we utilize the well-known
+<em>Adult Income</em> dataset <a class="footnote-reference brackets" href="#id7" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, a widely used benchmark for binary classification
+tasks. Its rich mix of categorical and numerical features makes it particularly
+suitable for analyzing model performance across different subgroups.</p>
+<p>To build and evaluate our models, we use the <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id8" id="id5" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.
+<a class="reference internal" href="model_training.html#adult-income-training"><span class="std std-ref">Click here to view the corresponding codebase for this workflow.</span></a></p>
+<p>The objective here is to assess ROC AUC scores not just overall, but
+<strong>across each category of a selected feature</strong>—such as <em>occupation</em>,
+<em>education</em>, <em>marital-status</em>, or <em>race</em>. This approach enables deeper insight into how
+performance varies by subgroup, which is particularly important for fairness,
+bias detection, and subgroup-level interpretability.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">show_pr_curve</span></code> function supports this analysis through the
+<code class="docutils literal notranslate"><span class="pre">group_category</span></code> parameter.</p>
+<p>For example, by passing <code class="docutils literal notranslate"><span class="pre">group_category=X_test_2[&quot;race&quot;]</span></code>,
+you can generate a separate ROC curve for each unique racial group in the dataset:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_pr_curve</span>
+
+<span class="n">show_pr_curve</span><span class="p">(</span>
+    <span class="n">models</span><span class="o">=</span><span class="n">model_dt</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">estimator</span><span class="p">,</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
+    <span class="n">model_titles</span><span class="o">=</span><span class="s2">&quot;Decision Tree Classifier,</span>
+    <span class="n">group_category</span><span class="o">=</span><span class="n">X_test_2</span><span class="p">[</span><span class="s2">&quot;race&quot;</span><span class="p">],</span>
+    <span class="n">legend_metric</span><span class="o">=</span><span class="s2">&quot;aucpr&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Output</strong></p>
+<div class="no-click"><a class="reference internal image-reference" href="_images/decision_tree_classifier_precision_recall_race.svg"><img alt="Decision Tree Precision-Recall Example 3" class="align-center" src="_images/decision_tree_classifier_precision_recall_race.svg" width="950px" /></a>
+<div style="height: 40px;"></div><aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id6" role="note">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
 <p>Efron, B., Hastie, T., Johnstone, I., &amp; Tibshirani, R. (2004). <em>Diabetes Dataset</em>. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. <a class="reference external" href="https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset">https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset</a>.</p>
 </aside>
-<aside class="footnote brackets" id="id5" role="note">
-<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
+<aside class="footnote brackets" id="id7" role="note">
+<span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id2">1</a>,<a role="doc-backlink" href="#id4">2</a>)</span>
 <p>Kohavi, R. (1996). <em>Census Income</em>. UCI Machine Learning Repository. <a class="reference external" href="https://doi.org/10.24432/C5GP7S">https://doi.org/10.24432/C5GP7S</a>.</p>
 </aside>
-<aside class="footnote brackets" id="id6" role="note">
-<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">3</a><span class="fn-bracket">]</span></span>
+<aside class="footnote brackets" id="id8" role="note">
+<span class="label"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id3">1</a>,<a role="doc-backlink" href="#id5">2</a>)</span>
 <p>Funnell, A., Shpaner, L., &amp; Petousis, P. (2024). <em>Model Tuner</em> (Version 0.0.28b) [Software]. Zenodo. <a class="reference external" href="https://doi.org/10.5281/zenodo.12727322">https://doi.org/10.5281/zenodo.12727322</a>.</p>
 </aside>
 </aside>

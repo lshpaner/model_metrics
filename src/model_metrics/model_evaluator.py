@@ -18,6 +18,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import (
+    auc,
     precision_score,
     average_precision_score,
     recall_score,
@@ -1377,6 +1378,7 @@ def show_pr_curve(
     tick_fontsize=10,
     gridlines=True,
     group_category=None,
+    legend_metric="ap",
 ):
     """
     Plot Precision-Recall (PR) curves for models or pipelines with optional
@@ -1451,12 +1453,16 @@ def show_pr_curve(
         by unique values. Cannot be used with `grid=True` or `overlay=True`.
         If provided, separate ROC curves are plotted for each group, with AUC
         and class counts (Total, Pos, Neg) shown in the legend.
-
+    - legend_metric: str, optional
+        Metric to display in the legend: "ap" for Average Precision (default) or
+        "aucpr" for Area Under the Precision-Recall Curve.
 
     Raises:
     - ValueError: If `grid=True` and `overlay=True` are both set, if
-        `grid=True` and `group_category` is provided, or if `overlay=True` and
-        `group_category` is provided.
+        `grid=True` and `group_category` is provided, if `overlay=True` and
+        `group_category` is provided, or if `legend_metric` is not one of
+        "ap" or "aucpr".
+    - TypeError: If `model_titles` is not a string, a list of strings, or None.
 
     Notes:
     - When `group_category` is provided, the legend includes Average Precision
@@ -1468,6 +1474,13 @@ def show_pr_curve(
     - Titles can be customized, disabled with `title=""`, or default to "PR
       Curve: Model Name" or "PR Curves: Overlay" if not specified.
     """
+
+    # Validate legend_metric
+    valid_metrics = ["ap", "aucpr"]
+    if legend_metric not in valid_metrics:
+        raise ValueError(
+            f"`legend_metric` must be one of {valid_metrics}, got {legend_metric}"
+        )
 
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
@@ -1526,7 +1539,8 @@ def show_pr_curve(
         if group_category is not None:
             precision = {}
             recall = {}
-            ap_str = {}  # Use ap_str for Average Precision
+            ap_str = {}
+            aucpr_str = {}
             for gr in group_category.unique():
                 idx = group_category.values == gr
                 counts[gr] = [
@@ -1538,22 +1552,33 @@ def show_pr_curve(
                     y_true[idx], y_prob[idx]
                 )
                 avg_precision = average_precision_score(y_true[idx], y_prob[idx])
+                auc_val = auc(recall[gr], precision[gr])
                 # Format Average Precision with decimal_places for print and legend
                 ap_str[gr] = f"{avg_precision:.{decimal_places}f}"
+                aucpr_str[gr] = f"{auc_val:.{decimal_places}f}"
 
         else:
             precision, recall, _ = precision_recall_curve(y_true, y_prob)
             avg_precision = average_precision_score(y_true, y_prob)
+            auc_val = auc(recall, precision)
             # Format Average Precision with decimal_places for print and legend
             ap_str = f"{avg_precision:.{decimal_places}f}"
+            aucpr_str = f"{auc_val:.{decimal_places}f}"
 
-        print(f"Average Precision for {name}: {avg_precision:.{decimal_places}f}")
+        if legend_metric == "aucpr":
+            print(f"AUCPR for {name}: {auc_val:.{decimal_places}f}")
+        else:
+            print(f"Average Precision for {name}: {avg_precision:.{decimal_places}f}")
+
+        # Determine the metric label and value based on legend_metric
+        metric_label = "AP" if legend_metric == "ap" else "AUCPR"
+        metric_str = ap_str if legend_metric == "ap" else aucpr_str
 
         if overlay:
             plt.plot(
                 recall,
                 precision,
-                label=f"{name} (AP = {avg_precision:.{decimal_places}f})",
+                label=f"{name} ({metric_label} = {metric_str})",
                 **curve_style,
             )
         elif grid:
@@ -1563,7 +1588,7 @@ def show_pr_curve(
                     ax.plot(
                         recall[gr],
                         precision[gr],
-                        label=f"AP for {gr} = {ap_str[gr]}, "
+                        label=f"{metric_label} for {gr} = {metric_str[gr]}, "
                         f"Count: {counts[gr][0]:,}, "
                         f"Pos: {counts[gr][1]:,}, Neg: {counts[gr][2]:,}",
                         **curve_style,
@@ -1572,7 +1597,7 @@ def show_pr_curve(
                 ax.plot(
                     recall,
                     precision,
-                    label=f"Average Precision = {ap_str}",
+                    label=f"{metric_label} = {metric_str}",
                     **curve_style,
                 )
 
@@ -1612,7 +1637,7 @@ def show_pr_curve(
                     plt.plot(
                         recall[gr],
                         precision[gr],
-                        label=f"AP for {gr} = {ap_str[gr]}, "
+                        label=f"{metric_label} for {gr} = {metric_str[gr]}, "
                         f"Count: {counts[gr][0]:,}, "
                         f"Pos: {counts[gr][1]:,}, Neg: {counts[gr][2]:,}",
                         **curve_style,
@@ -1621,7 +1646,7 @@ def show_pr_curve(
                 plt.plot(
                     recall,
                     precision,
-                    label=f"Average Precision = {ap_str}",
+                    label=f"{metric_label} = {metric_str}",
                     **curve_style,
                 )
 

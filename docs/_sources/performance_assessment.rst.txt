@@ -1787,7 +1787,9 @@ performance varies by subgroup, which is particularly important for fairness,
 bias detection, and subgroup-level interpretability.
 
 The ``show_roc_curve`` function supports this analysis through the 
-``group_category`` parameter. For example, by passing ``group_category=X_test_2["race"]``, 
+``group_category`` parameter. 
+
+For example, by passing ``group_category=X_test_2["race"]``, 
 you can generate a separate ROC curve for each unique racial group in the dataset:
 
 
@@ -1796,10 +1798,10 @@ you can generate a separate ROC curve for each unique racial group in the datase
     from model_metrics import show_roc_curve
     
     show_roc_curve(
-        models=pipelines_or_models,
+        models=model_dt["model"].estimator,
         X=X_test,
         y=y_test,
-        model_titles=model_titles,
+        model_titles="Decision Tree Classifier,
         decimal_places=2,
         group_category=X_test_2["race"],
     )
@@ -1893,14 +1895,19 @@ and sometimes more informative tool than ROC AUC in skewed classification scenar
     :type gridlines: bool, optional
     :param group_category: Categorical array to group PR curves. Cannot be used with ``grid=True`` or ``overlay=True``.
     :type group_category: array-like, optional
+    :param legend_metric: Metric to display in the legend. Either ``"ap"`` (Average Precision) or ``"aucpr"`` (area under the PR curve). Defaults to ``"ap"``.
+    :type legend_metric: str, optional
 
     :returns: ``None.`` Displays or saves Precision-Recall curve plots for classification models.
     :rtype: ``None``
 
     :raises ValueError:
         - If ``grid=True`` and ``overlay=True`` are both set.
-        - If ``group_category`` is used with ``grid`` or ``overlay``.
+        - If ``group_category`` is used with ``grid=True`` or ``overlay=True``.
         - If ``overlay=True`` is used with only one model.
+        - If ``legend_metric`` is not one of ``"ap"`` or ``"aucpr"``.
+    :raises TypeError:
+        - If ``model_titles`` is not a string, list of strings, or ``None``.
 
 .. admonition:: Notes
 
@@ -1912,6 +1919,10 @@ and sometimes more informative tool than ROC AUC in skewed classification scenar
         - If ``group_category`` is passed, separate PR curves are plotted for each unique group.
         - The legend will include group-specific Average Precision and class distribution (e.g., ``AP = 0.78, Count: 500, Pos: 120, Neg: 380``).
 
+    - **Average Precision vs. AUCPR:**
+        - By default, the legend shows **Average Precision (AP)**, which summarizes the PR curve with greater emphasis on the performance at higher precision levels.
+        - If the user passes ``legend_metric="aucpr"``, the legend will instead display **AUCPR** (Area Under the Precision-Recall Curve), which gives equal weight to all parts of the curve.
+  
     - **Plot Modes:**
         - ``overlay=True`` overlays all models in one figure.
         - ``grid=True`` arranges individual PR plots in a subplot layout.
@@ -1984,7 +1995,7 @@ analysis and final reporting.
 
     <div style="height: 40px;"></div>
 
-Precision-Recall Curve Example 2 (Overlay)
+Precision-Recall Example 2 (Overlay)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this second Precision-Recall evaluation example, we focus on overlaying the 
@@ -2006,7 +2017,6 @@ for clarity.
         X=X_test,
         y=y_test,
         model_titles=model_titles,
-        decimal_places=2,
         curve_kwgs={
             "Logistic Regression": {"color": "blue", "linewidth": 2},
             "Random Forest": {"color": "black", "linewidth": 2},
@@ -2023,8 +2033,63 @@ for clarity.
 
 
 .. image:: ../assets/overlay_pr_plot.svg
-    :alt: Precision-Recall Curve Example 1
+    :alt: Precision-Recall Curve Example 2
     :width: 900px
+    :align: center
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+
+
+Precision-Recall Example 3 (Categorical)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this third ROC AUC evaluation example, we utilize the well-known 
+*Adult Income* dataset [2]_, a widely used benchmark for binary classification 
+tasks. Its rich mix of categorical and numerical features makes it particularly 
+suitable for analyzing model performance across different subgroups.
+
+To build and evaluate our models, we use the ``model_tuner`` library [3]_. 
+:ref:`Click here to view the corresponding codebase for this workflow. <Adult_Income_Training>`
+
+The objective here is to assess ROC AUC scores not just overall, but 
+**across each category of a selected feature**—such as *occupation*, 
+*education*, *marital-status*, or *race*. This approach enables deeper insight into how 
+performance varies by subgroup, which is particularly important for fairness, 
+bias detection, and subgroup-level interpretability.
+
+The ``show_pr_curve`` function supports this analysis through the 
+``group_category`` parameter. 
+
+For example, by passing ``group_category=X_test_2["race"]``, 
+you can generate a separate ROC curve for each unique racial group in the dataset:
+
+
+.. code-block:: python
+
+    from model_metrics import show_pr_curve
+    
+    show_pr_curve(
+        models=model_dt["model"].estimator,
+        X=X_test,
+        y=y_test,
+        model_titles="Decision Tree Classifier,
+        group_category=X_test_2["race"],
+        legend_metric="aucpr",
+    )
+
+**Output**
+
+.. raw:: html
+
+   <div class="no-click">
+
+
+.. image:: ../assets/decision_tree_classifier_precision_recall_race.svg
+    :alt: Decision Tree Precision-Recall Example 3
+    :width: 950px
     :align: center
 
 .. raw:: html
@@ -2036,21 +2101,6 @@ for clarity.
 
 
 
-
-
-
-
-The ``show_pr_curve`` function simplifies this evaluation process, offering a 
-flexible and intuitive way to visualize PR curves for one or more models. It 
-supports overlaying multiple models on a single axis or plotting them in a grid 
-layout, and it also includes support for subgroup analysis via the ``group_category`` 
-parameter. This makes it especially powerful for fairness audits, model diagnostics, 
-and interpretability studies.
-
-
-
-For example, to compare model performance across racial subgroups using the 
-*Adult Income* dataset, you can pass a group column like so:
 
 
 
