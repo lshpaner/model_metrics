@@ -381,9 +381,7 @@ class ModelCalculator:
             print(f"Error initializing SHAP explainer with default method: {e}")
             # Fallback to KernelExplainer
             try:
-                explainer = shap.KernelExplainer(
-                    final_model.predict_proba, X_transformed
-                )
+                explainer = shap.KernelExplainer(final_model, X_transformed)
                 print("Using KernelExplainer as a fallback.")
             except Exception as kernel_error:
                 raise ValueError(
