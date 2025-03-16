@@ -89,6 +89,11 @@
 <li class="toctree-l2"><a class="reference internal" href="#precision-recall-example-3-categorical">Precision-Recall Example 3 (Categorical)</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="#confusion-matrix-evaluation">Confusion Matrix Evaluation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#show_confusion_matrix"><code class="docutils literal notranslate"><span class="pre">show_confusion_matrix()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#confusion-matrix-example-1">Confusion Matrix Example 1</a></li>
+</ul>
+</li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">About Model Metrics</span></p>
 <ul>
@@ -2041,7 +2046,123 @@ you can generate a separate ROC curve for each unique racial group in the datase
 </div>
 <p><strong>Output</strong></p>
 <div class="no-click"><a class="reference internal image-reference" href="_images/decision_tree_classifier_precision_recall_race.svg"><img alt="Decision Tree Precision-Recall Example 3" class="align-center" src="_images/decision_tree_classifier_precision_recall_race.svg" width="950px" /></a>
-<div style="height: 40px;"></div><aside class="footnote-list brackets">
+<div style="height: 40px;"></div></section>
+</section>
+<section id="confusion-matrix-evaluation">
+<h1>Confusion Matrix Evaluation<a class="headerlink" href="#confusion-matrix-evaluation" title="Permalink to this heading"></a></h1>
+<p>This section introduces the <code class="docutils literal notranslate"><span class="pre">show_confusion_matrix</span></code> function, which provides a
+flexible, styled interface for generating and visualizing confusion matrices
+across one or more classification models. It supports advanced features like
+threshold overrides, subgroup labeling, classification report display, and fully
+customizable plot aesthetics including grid layouts.</p>
+<p>The confusion matrix is a fundamental diagnostic tool for classification models,
+displaying the counts of true positives, true negatives, false positives, and
+false negatives. This function goes beyond standard implementations by allowing
+for custom thresholds (globally or per model), label annotation (e.g., TP, FP, etc.),
+plot exporting, colorbar toggling, and grid visualization.</p>
+<p>This is especially useful when comparing multiple models side-by-side or needing
+publication-ready confusion matrices for stakeholders.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="show_confusion_matrix">
+<span class="sig-name descname"><span class="pre">show_confusion_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_titles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">class_labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Blues'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inner_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">class_report</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#show_confusion_matrix" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>]</em>) – A single model (object or string), or a list of models or string placeholders.</p></li>
+<li><p><strong>X</strong> (<em>pd.DataFrame</em><em> or </em><em>np.ndarray</em>) – Feature matrix used for prediction.</p></li>
+<li><p><strong>y</strong> (<em>pd.Series</em><em> or </em><em>np.ndarray</em>) – True target labels.</p></li>
+<li><p><strong>model_titles</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – Custom titles for each model. Can be a string or list of strings. If None, defaults to <code class="docutils literal notranslate"><span class="pre">&quot;Model</span> <span class="pre">1&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Model</span> <span class="pre">2&quot;</span></code>, etc.</p></li>
+<li><p><strong>title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Title for each plot. If <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code>, no title is displayed. If None, a default title is shown.</p></li>
+<li><p><strong>model_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>, </em><em>optional</em>) – Dictionary of thresholds keyed by model title. Used if <code class="docutils literal notranslate"><span class="pre">custom_threshold</span></code> is not set.</p></li>
+<li><p><strong>custom_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Global override threshold to apply across all models.</p></li>
+<li><p><strong>class_labels</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – Custom labels for the classes in the matrix.</p></li>
+<li><p><strong>cmap</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Colormap to use for the heatmap. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;Blues&quot;</span></code>.</p></li>
+<li><p><strong>save_plot</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to save the generated plot(s).</p></li>
+<li><p><strong>image_path_png</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Path to save the PNG version of the image.</p></li>
+<li><p><strong>image_path_svg</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Path to save the SVG version of the image.</p></li>
+<li><p><strong>text_wrap</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Maximum width of plot titles before wrapping.</p></li>
+<li><p><strong>figsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><em>tuple</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>]</em><em>, </em><em>optional</em>) – Figure size in inches. Defaults to <code class="docutils literal notranslate"><span class="pre">(8,</span> <span class="pre">6)</span></code>.</p></li>
+<li><p><strong>labels</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to annotate matrix cells with <code class="docutils literal notranslate"><span class="pre">TP</span></code>, <code class="docutils literal notranslate"><span class="pre">FP</span></code>, <code class="docutils literal notranslate"><span class="pre">FN</span></code>, <code class="docutils literal notranslate"><span class="pre">TN</span></code>.</p></li>
+<li><p><strong>label_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for axis labels and titles.</p></li>
+<li><p><strong>tick_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for axis ticks.</p></li>
+<li><p><strong>inner_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for numbers and labels inside cells.</p></li>
+<li><p><strong>grid</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to display multiple models in a grid layout.</p></li>
+<li><p><strong>score</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Scoring metric to use when optimizing threshold (if applicable).</p></li>
+<li><p><strong>class_report</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, prints a classification report below each matrix.</p></li>
+<li><p><strong>kwargs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>, </em><em>optional</em>) – Additional keyword arguments for customization (e.g., show_colorbar, <code class="docutils literal notranslate"><span class="pre">n_cols</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None. Displays confusion matrix plots (and optionally saves them).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.13)"><strong>TypeError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">model_titles</span></code> is not a string, a list of strings, or None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>Model Support:</strong></dt><dd><ul>
+<li><p>Supports single or multiple classification models.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">model_titles</span></code> may be inferred automatically or provided explicitly.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Threshold Handling:</strong></dt><dd><ul>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">model_threshold</span></code> to specify per-model thresholds.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">custom_threshold</span></code> overrides all other thresholds.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Plotting Modes:</strong></dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">grid=True</span></code> arranges plots in subplots.</p></li>
+<li><p>Otherwise, plots are displayed one at a time.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Labeling:</strong></dt><dd><ul>
+<li><p>Set <code class="docutils literal notranslate"><span class="pre">labels=True</span></code> to annotate cells with TP, FP, FN, TN.</p></li>
+<li><p>Always shows raw numeric values inside cells.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Colorbar &amp; Styling:</strong></dt><dd><ul>
+<li><p>Toggle colorbar via <code class="docutils literal notranslate"><span class="pre">show_colorbar</span></code> (passed via <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>).</p></li>
+<li><p>Colormap and font sizes are fully configurable.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Exporting Plots:</strong></dt><dd><ul>
+<li><p>Plots can be saved as both PNG and SVG using the respective paths.</p></li>
+<li><p>Saved filenames follow the pattern <code class="docutils literal notranslate"><span class="pre">Confusion_Matrix_&lt;model_name&gt;</span></code> or <code class="docutils literal notranslate"><span class="pre">Grid_Confusion_Matrix</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<section id="confusion-matrix-example-1">
+<h2>Confusion Matrix Example 1<a class="headerlink" href="#confusion-matrix-example-1" title="Permalink to this heading"></a></h2>
+<p>In this first confusion matrix evaluation example, we focus on showing the
+results of two models—Logistic Regression and Random Forest Classifier—trained
+on the <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a> onto a single plot.</p>
+<aside class="footnote-list brackets">
 <aside class="footnote brackets" id="id6" role="note">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
 <p>Efron, B., Hastie, T., Johnstone, I., &amp; Tibshirani, R. (2004). <em>Diabetes Dataset</em>. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. <a class="reference external" href="https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset">https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset</a>.</p>

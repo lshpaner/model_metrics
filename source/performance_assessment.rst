@@ -2098,10 +2098,126 @@ you can generate a separate ROC curve for each unique racial group in the datase
 
 
 
+Confusion Matrix Evaluation
+-----------------------------
+
+This section introduces the ``show_confusion_matrix`` function, which provides a 
+flexible, styled interface for generating and visualizing confusion matrices 
+across one or more classification models. It supports advanced features like 
+threshold overrides, subgroup labeling, classification report display, and fully 
+customizable plot aesthetics including grid layouts.
+
+The confusion matrix is a fundamental diagnostic tool for classification models, 
+displaying the counts of true positives, true negatives, false positives, and 
+false negatives. This function goes beyond standard implementations by allowing 
+for custom thresholds (globally or per model), label annotation (e.g., TP, FP, etc.), 
+plot exporting, colorbar toggling, and grid visualization.
+
+This is especially useful when comparing multiple models side-by-side or needing 
+publication-ready confusion matrices for stakeholders.
+
+.. function:: show_confusion_matrix(model, X, y, model_titles=None, title=None, model_threshold=None, custom_threshold=None, class_labels=None, cmap="Blues", save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, figsize=(8, 6), labels=True, label_fontsize=12, tick_fontsize=10, inner_fontsize=10, grid=False, score=None, class_report=False, **kwargs)
+
+    :param model: A single model (object or string), or a list of models or string placeholders.
+    :type model: object or str or list[object or str]
+    :param X: Feature matrix used for prediction.
+    :type X: pd.DataFrame or np.ndarray
+    :param y: True target labels.
+    :type y: pd.Series or np.ndarray
+    :param model_titles: Custom titles for each model. Can be a string or list of strings. If None, defaults to ``"Model 1"``, ``"Model 2"``, etc.
+    :type model_titles: str or list[str], optional
+    :param title: Title for each plot. If ``""``, no title is displayed. If None, a default title is shown.
+    :type title: str, optional
+    :param model_threshold: Dictionary of thresholds keyed by model title. Used if ``custom_threshold`` is not set.
+    :type model_threshold: dict, optional
+    :param custom_threshold: Global override threshold to apply across all models.
+    :type custom_threshold: float, optional
+    :param class_labels: Custom labels for the classes in the matrix.
+    :type class_labels: list[str], optional
+    :param cmap: Colormap to use for the heatmap. Defaults to ``"Blues"``.
+    :type cmap: str, optional
+    :param save_plot: Whether to save the generated plot(s).
+    :type save_plot: bool, optional
+    :param image_path_png: Path to save the PNG version of the image.
+    :type image_path_png: str, optional
+    :param image_path_svg: Path to save the SVG version of the image.
+    :type image_path_svg: str, optional
+    :param text_wrap: Maximum width of plot titles before wrapping.
+    :type text_wrap: int, optional
+    :param figsize: Figure size in inches. Defaults to ``(8, 6)``.
+    :type figsize: tuple[int, int], optional
+    :param labels: Whether to annotate matrix cells with ``TP``, ``FP``, ``FN``, ``TN``.
+    :type labels: bool, optional
+    :param label_fontsize: Font size for axis labels and titles.
+    :type label_fontsize: int, optional
+    :param tick_fontsize: Font size for axis ticks.
+    :type tick_fontsize: int, optional
+    :param inner_fontsize: Font size for numbers and labels inside cells.
+    :type inner_fontsize: int, optional
+    :param grid: Whether to display multiple models in a grid layout.
+    :type grid: bool, optional
+    :param score: Scoring metric to use when optimizing threshold (if applicable).
+    :type score: str, optional
+    :param class_report: If True, prints a classification report below each matrix.
+    :type class_report: bool, optional
+    :param kwargs: Additional keyword arguments for customization (e.g., show_colorbar, ``n_cols``).
+    :type kwargs: dict, optional
+
+    :returns: None. Displays confusion matrix plots (and optionally saves them).
+    :rtype: None
+
+    :raises TypeError: If ``model_titles`` is not a string, a list of strings, or None.
+
+.. admonition:: Notes
+
+    - **Model Support:**
+        - Supports single or multiple classification models.
+        - ``model_titles`` may be inferred automatically or provided explicitly.
+
+    - **Threshold Handling:**
+        - Use ``model_threshold`` to specify per-model thresholds.
+        - ``custom_threshold`` overrides all other thresholds.
+
+    - **Plotting Modes:**
+        - ``grid=True`` arranges plots in subplots.
+        - Otherwise, plots are displayed one at a time.
+
+    - **Labeling:**
+        - Set ``labels=True`` to annotate cells with TP, FP, FN, TN.
+        - Always shows raw numeric values inside cells.
+
+    - **Colorbar & Styling:**
+        - Toggle colorbar via ``show_colorbar`` (passed via ``kwargs``).
+        - Colormap and font sizes are fully configurable.
+
+    - **Exporting Plots:**
+        - Plots can be saved as both PNG and SVG using the respective paths.
+        - Saved filenames follow the pattern ``Confusion_Matrix_<model_name>`` or ``Grid_Confusion_Matrix``.
 
 
+Confusion Matrix Example 1
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this first confusion matrix evaluation example, we focus on showing the 
+results of two models—Logistic Regression and Random Forest Classifier—trained 
+on the :ref:`synthetic dataset from the Binary Classification Models section 
+<Binary_Classification>` onto a single plot.
+
+**Output**
+
+.. raw:: html
+
+   <div class="no-click">
 
 
+.. image:: ../assets/decision_tree_classifier_precision_recall_race.svg
+    :alt: Decision Tree Precision-Recall Example 3
+    :width: 950px
+    :align: center
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
 
 
 
