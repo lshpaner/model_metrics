@@ -2046,7 +2046,7 @@ for clarity.
 Precision-Recall Example 3 (Categorical)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In this third ROC AUC evaluation example, we utilize the well-known 
+In this third Precision-Recall evaluation example, we utilize the well-known 
 *Adult Income* dataset [2]_, a widely used benchmark for binary classification 
 tasks. Its rich mix of categorical and numerical features makes it particularly 
 suitable for analyzing model performance across different subgroups.
