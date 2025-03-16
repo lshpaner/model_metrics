@@ -21,7 +21,6 @@ from model_metrics.model_evaluator import (
     show_pr_curve,
     show_calibration_curve,
     get_predictions,
-    get_model_probabilities,
     extract_model_titles,
     extract_model_name,
     show_lift_chart,
@@ -660,17 +659,6 @@ def test_summarize_model_performance_print_output(mock_print, regression_model):
     mock_print.assert_called()
 
     print("Print output test passed.")
-
-
-def test_get_model_probabilities(trained_model, sample_data):
-    """Test extracting model probabilities."""
-    X, _ = sample_data
-    probs = get_model_probabilities(trained_model, X, "TestModel")
-
-    assert len(probs) == len(X)
-    assert np.all(0 <= probs) and np.all(
-        probs <= 1
-    )  # Probabilities should be between 0 and 1
 
 
 def test_extract_model_titles(trained_model):
@@ -1876,67 +1864,6 @@ def test_show_calibration_curve_custom_titles(trained_model, sample_data):
         pytest.fail(f"show_calibration_curve failed with custom titles: {e}")
 
 
-def test_get_model_probabilities_predict_proba(trained_model, sample_data):
-    """Test direct model with `predict_proba()`."""
-    X, _ = sample_data
-    probabilities = get_model_probabilities(trained_model, X, "Logistic Model")
-    assert probabilities.shape == (X.shape[0],)  # Should return 1D array
-    assert np.all(
-        (probabilities >= 0) & (probabilities <= 1)
-    )  # Valid probability range
-
-
-def test_get_model_probabilities_pipeline(sample_data):
-    """Test pipeline where final step has `predict_proba()`."""
-    X, y = sample_data
-    pipeline = Pipeline(
-        [
-            ("scaler", StandardScaler()),
-            ("classifier", LogisticRegression()),  # Has predict_proba()
-        ]
-    )
-    pipeline.fit(X, y)
-
-    probabilities = get_model_probabilities(pipeline, X, "Pipeline Model")
-    assert probabilities.shape == (X.shape[0],)
-    assert np.all(
-        (probabilities >= 0) & (probabilities <= 1)
-    )  # Valid probability range
-
-
-def test_get_model_probabilities_decision_function(sample_data):
-    """Test standalone model that has only `decision_function()`."""
-    X, y = sample_data
-    # No predict_proba(), only decision_function()
-    model = SVC(probability=False)
-    model.fit(X, y)
-
-    probabilities = get_model_probabilities(model, X, "SVM Model")
-    assert probabilities.shape == (X.shape[0],)
-    assert np.all(
-        (probabilities >= 0) & (probabilities <= 1)
-    )  # Probability conversion check
-
-
-def test_get_model_probabilities_invalid_model():
-    """Test model that does not support probability-based predictions."""
-
-    class DummyModel:
-        def fit(self, X, y):
-            pass
-
-        def predict(self, X):
-            return np.ones(len(X))
-
-    model = DummyModel()
-    X = np.random.rand(5, 3)
-
-    with pytest.raises(
-        ValueError, match="does not support probability-based prediction"
-    ):
-        get_model_probabilities(model, X, "Dummy Model")
-
-
 @patch("matplotlib.pyplot.show")
 def test_show_ks_curve_single_model(
     mock_show,
@@ -2268,25 +2195,6 @@ def test_plot_threshold_metrics_custom_styles(
     )
 
     assert mock_show.called, "plt.show() was not called."
-
-
-def test_get_model_probabilities_pipeline_decision_function(sample_data):
-    """
-    Test pipeline with final estimator that has decision_function but not
-    predict_proba.
-    """
-    X, y = sample_data
-    pipeline = Pipeline(
-        [
-            ("scaler", StandardScaler()),
-            ("svc", SVC(probability=False)),  # No predict_proba
-        ]
-    )
-    pipeline.fit(X, y)
-
-    probabilities = get_model_probabilities(pipeline, X, "SVC Pipeline")
-    assert probabilities.shape == (X.shape[0],)
-    assert np.all((probabilities >= 0) & (probabilities <= 1))
 
 
 def test_extract_model_titles_nested_pipeline():
