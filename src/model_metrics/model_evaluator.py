@@ -944,7 +944,7 @@ def show_confusion_matrix(
 
         if not grid:
             save_plot_images(
-                f"Confusion_Matrix_{name}",
+                f"confusion_matrix_{name}",
                 save_plot,
                 image_path_png,
                 image_path_svg,
@@ -956,7 +956,7 @@ def show_confusion_matrix(
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(
-            "Grid_Confusion_Matrix", save_plot, image_path_png, image_path_svg
+            "grid_confusion_matrix", save_plot, image_path_png, image_path_svg
         )
         plt.show()
 
