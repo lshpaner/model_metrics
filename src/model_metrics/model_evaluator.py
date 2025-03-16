@@ -1382,8 +1382,8 @@ def show_pr_curve(
 ):
     """
     Plot Precision-Recall (PR) curves for models or pipelines with optional
-    styling, grid layout, and grouping by categories, including class counts in
-    the legend.
+    styling, grid layout, and grouping by categories, including class counts
+    and selected legend metrics.
 
     Parameters:
     - models: list
@@ -1395,84 +1395,70 @@ def show_pr_curve(
     - group_category: array-like, optional
         Categorical data (e.g., pandas Series or NumPy array) to group PR curves
         by unique values. If provided, plots separate PR curves for each group
-        with Average Precision (AP) and class counts (Total, Pos, Neg) in the
-        legend.
+        with metric values and class counts (Total, Pos, Neg) in the legend.
     - model_titles: str or list of str, optional
         Title or list of titles for the models. If a single string is provided,
         it is automatically converted to a one-element list. If None, defaults to
         "Model 1", "Model 2", etc. Required when using a nested dictionary for
         `curve_kwgs`.
     - xlabel: str, optional
-        Label for the x-axis (default: "Recall").
+        Label for the x-axis. Defaults to "Recall".
     - ylabel: str, optional
-        Label for the y-axis (default: "Precision").
+        Label for the y-axis. Defaults to "Precision".
     - decimal_places: int, optional
-        Number of decimal places to round Average Precision (AP) values in the
-        legend and print output (default: 3).
+        Number of decimal places to display in the legend. Defaults to 3.
     - overlay: bool, optional
-        Whether to overlay multiple models on a single plot (default: False).
+        Whether to overlay multiple models on a single plot. Defaults to False.
     - title: str, optional
-        Custom title for the plot when `overlay=True` or per-model title when
-        `grid=True`. If None, uses a default title; if "", disables the title.
+        Custom title for the plot. If None, a default title is used.
+        If "", the title is omitted.
     - save_plot: bool, optional
-        Whether to save the plot to the specified paths (default: False).
+        Whether to save the plot(s) to file. Defaults to False.
     - image_path_png: str, optional
-        Path to save the plot as a PNG image.
+        File path to save the plot(s) as PNG.
     - image_path_svg: str, optional
-        Path to save the plot as an SVG image.
+        File path to save the plot(s) as SVG.
     - text_wrap: int, optional
-        Maximum width for wrapping titles if they are too long (default: None).
-    - curve_styles: list or dict, optional
-        Styling for individual model curves. If `model_titles` is specified as a
-        list, `curve_styles` must be a nested dictionary with model titles as
-        keys and their respective style dictionaries (e.g., {'color': 'red',
-        'linestyle': '--'}) as values. Otherwise, `curve_styles` must be a list
-        of style dictionaries corresponding to the models.
-    - linestyle_kwgs: dict, optional
-        Styling for the random classifier baseline line (default: {'color':
-        'gray', 'linestyle': '--', 'linewidth': 2}).
+        Maximum width (in characters) to wrap long titles. If None, no wrapping.
+    - curve_kwgs: list or dict, optional
+        Styling for PR curves. Can be a list of dicts or a nested dict
+        keyed by model title.
     - grid: bool, optional
-        Whether to organize plots in a grid layout (default: False). Cannot be
-        True if `overlay=True`.
+        Whether to organize the PR plots in a subplot grid layout. Cannot be
+        used with `overlay=True` or `group_category`.
     - n_rows: int, optional
         Number of rows in the grid layout. If not specified, calculated
-        automatically based on the number of models and `n_cols`.
+        automatically.
     - n_cols: int, optional
-        Number of columns in the grid layout (default: 2).
+        Number of columns in the grid layout. Defaults to 2.
     - figsize: tuple, optional
-        Custom figure size (width, height) for the plot(s) (default: None, uses
-        (8, 6) for overlay or calculated size for grid).
+        Figure size in inches (width, height). Defaults to (8, 6).
     - label_fontsize: int, optional
-        Font size for titles and axis labels (default: 12).
+        Font size for axis labels and titles. Defaults to 12.
     - tick_fontsize: int, optional
-        Font size for tick labels and legend (default: 10).
+        Font size for tick labels and legend text. Defaults to 10.
     - gridlines: bool, optional
-        Whether to display grid lines on the plot (default: True).
-    - group_category: array-like, optional
-        Categorical data (e.g., pandas Series or NumPy array) to group ROC curves
-        by unique values. Cannot be used with `grid=True` or `overlay=True`.
-        If provided, separate ROC curves are plotted for each group, with AUC
-        and class counts (Total, Pos, Neg) shown in the legend.
+        Whether to display grid lines on plots. Defaults to True.
     - legend_metric: str, optional
-        Metric to display in the legend: "ap" for Average Precision (default) or
-        "aucpr" for Area Under the Precision-Recall Curve.
+        Metric to show in the legend: either "ap" (Average Precision, default)
+        or "aucpr" (area under the PR curve).
 
     Raises:
-    - ValueError: If `grid=True` and `overlay=True` are both set, if
-        `grid=True` and `group_category` is provided, if `overlay=True` and
-        `group_category` is provided, or if `legend_metric` is not one of
-        "ap" or "aucpr".
-    - TypeError: If `model_titles` is not a string, a list of strings, or None.
+    - ValueError:
+        - If `grid=True` and `overlay=True` are both set.
+        - If `group_category` is used with `grid=True` or `overlay=True`.
+        - If `legend_metric` is not one of {"ap", "aucpr"}.
+    - TypeError:
+        - If `model_titles` is not a string, list of strings, or None.
 
     Notes:
-    - When `group_category` is provided, the legend includes Average Precision
-      (AP), total count, and positive/negative class counts for each group
-      (e.g., "Average Precision for Male = 0.___, Count: Total: X, Pos: Y,
-      Neg: Z").
-    - The random classifier baseline (precision = fraction of positive samples)
-      is plotted for reference.
-    - Titles can be customized, disabled with `title=""`, or default to "PR
-      Curve: Model Name" or "PR Curves: Overlay" if not specified.
+    - When `group_category` is provided, separate PR curves are drawn per group.
+      The legend includes the selected precision metric (AP or AUCPR),
+      total count, and positive/negative class distribution.
+    - A reference baseline is drawn (constant precision equal to the positive
+      class ratio).
+    - Titles can be fully customized or disabled by passing an empty string "".
+    - Output plots can be exported to PNG and/or SVG if `save_plot=True`.
     """
 
     # Validate legend_metric
