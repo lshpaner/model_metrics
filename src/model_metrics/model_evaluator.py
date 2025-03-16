@@ -2,19 +2,15 @@ import pandas as pd
 import numpy as np
 import math
 import itertools
-import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colorbar as mcolorbar
 import seaborn as sns
-import sys
 import os
-import re
 from tqdm import tqdm
 import textwrap
 
 import statsmodels.api as sm
 from scipy.stats import ks_2samp
-from sklearn.preprocessing import LabelEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import (
@@ -144,26 +140,6 @@ def get_predictions(model, X, y, model_threshold, custom_threshold, score):
             aggregated_y_pred = (aggregated_y_prob > threshold).astype(int)
 
     return aggregated_y_true, aggregated_y_prob, aggregated_y_pred, threshold
-
-
-def get_model_probabilities(model, X, name):
-    """
-    Extract probabilities for the positive class from the model.
-    """
-    if hasattr(model, "predict_proba"):  # Direct model with predict_proba
-        return model.predict_proba(X)[:, 1]
-    elif hasattr(model, "named_steps"):  # Pipeline
-        final_model = list(model.named_steps.values())[-1]
-        if hasattr(final_model, "predict_proba"):
-            return model.predict_proba(X)[:, 1]
-        elif hasattr(final_model, "decision_function"):
-            y_scores = final_model.decision_function(X)
-            return 1 / (1 + np.exp(-y_scores))  # Convert to probabilities
-    elif hasattr(model, "decision_function"):  # Standalone model with decision_function
-        y_scores = model.decision_function(X)
-        return 1 / (1 + np.exp(-y_scores))  # Convert to probabilities
-    else:
-        raise ValueError(f"Model {name} does not support probability-based prediction.")
 
 
 # Helper function
