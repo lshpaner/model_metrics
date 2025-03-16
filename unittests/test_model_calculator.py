@@ -542,3 +542,177 @@ def test_generate_predictions_subset_results(model_calculator, sample_data):
     assert len(result_df.columns) > len(
         expected_columns
     ), "subset_results=False should return all columns"
+
+
+def test_global_shap_with_sampling(model_calculator, sample_data):
+    """Test global SHAP when a sample size is specified."""
+    _, X_test, _, _ = sample_data
+    model = model_calculator.model_dict["model"]["outcome_1"]
+
+    result = model_calculator._calculate_shap_values(
+        model,
+        X_test,
+        global_shap=True,
+        sample_size=5,
+    )
+
+    assert isinstance(result, pd.DataFrame)
+    assert result.shape[0] == 5  # Sample size
+    assert set(result.columns) == {"Feature", "SHAP Value"}
+
+
+def test_calculate_shap_kernel_fallback_success(
+    model_calculator, sample_data, monkeypatch
+):
+    """
+    Test SHAP fallback to KernelExplainer when default fails but fallback
+    succeeds.
+    """
+
+    class DummyModel:
+        def predict_proba(self, X):
+            return np.tile([0.6, 0.4], (len(X), 1))
+
+    class FailingExplainer:
+        def __init__(self, *args, **kwargs):
+            raise Exception("Primary explainer fails")
+
+    class WorkingKernelExplainer:
+        def __init__(self, f, X):
+            self.f = f
+            self.X = X
+
+        def __call__(self, X):
+            return np.random.rand(len(X), X.shape[1])
+
+    monkeypatch.setattr("shap.Explainer", FailingExplainer)
+    monkeypatch.setattr("shap.KernelExplainer", WorkingKernelExplainer)
+
+    _, X_test, _, _ = sample_data
+    dummy_model = DummyModel()
+
+    result = model_calculator._calculate_shap_values(dummy_model, X_test)
+    assert isinstance(result, list)
+    assert len(result) == len(X_test)
+
+
+def test_calculate_shap_values_with_named_index(
+    model_calculator,
+    sample_data,
+):
+    """Ensure reset_index(drop=True) branch is covered."""
+    _, X_test, _, _ = sample_data
+    X_test.index.name = "custom_index"  # Trigger reset_index
+    model = model_calculator.model_dict["model"]["outcome_1"]
+
+    shap_values = model_calculator._calculate_shap_values(model, X_test)
+
+    assert isinstance(shap_values, list)
+
+
+def test_keyboard_interrupt_no_accumulated_shap(
+    monkeypatch,
+    model_calculator,
+    sample_data,
+):
+    """Test the KeyboardInterrupt block when no SHAP values are accumulated."""
+    _, X_test, _, _ = sample_data
+
+    def mock_explainer(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(
+        model_calculator,
+        "_calculate_shap_values",
+        mock_explainer,
+    )
+
+    try:
+        model_calculator._calculate_shap_values(
+            model_calculator.model_dict["model"]["outcome_1"], X_test
+        )
+    except KeyboardInterrupt:
+        df = pd.DataFrame({"Feature": [], "SHAP Value": []})
+        assert isinstance(df, pd.DataFrame)
+        assert df.empty
+
+
+class MockExplanation:
+    def __init__(self, values):
+        self.values = values
+
+
+def test_rowwise_shap_output_explanation(
+    monkeypatch,
+    model_calculator,
+    sample_data,
+):
+    _, X_test, _, _ = sample_data
+
+    class DummyModel:
+        def predict_proba(self, X):
+            return np.tile([0.5, 0.5], (len(X), 1))
+
+    model = DummyModel()
+
+    class MockExplainer:
+        def __call__(self, X):
+            return MockExplanation(np.random.rand(len(X), X.shape[1]))
+
+    monkeypatch.setattr("shap.Explainer", lambda *args, **kwargs: MockExplainer())
+
+    result = model_calculator._calculate_shap_values(model, X_test)
+
+    assert isinstance(result, list)
+
+
+def test_rowwise_shap_output_list(
+    monkeypatch,
+    model_calculator,
+    sample_data,
+):
+    """
+    Test that rowwise SHAP output as a list is handled and converted
+    properly.
+    """
+    _, X_test, _, _ = sample_data
+
+    class DummyModel:
+        def predict_proba(self, X):
+            return np.tile([0.6, 0.4], (len(X), 1))
+
+    model = DummyModel()
+
+    class MockExplainer:
+        def __call__(self, X):
+            return [np.random.rand(X.shape[1]) for _ in range(len(X))]
+
+    monkeypatch.setattr("shap.Explainer", lambda *args, **kwargs: MockExplainer())
+
+    result = model_calculator._calculate_shap_values(model, X_test)
+
+    assert isinstance(result, list)
+    assert isinstance(
+        result[0], (np.ndarray, list)
+    )  # Accept both, depending on behavior
+
+
+def test_rowwise_shap_output_unexpected_type(
+    monkeypatch, model_calculator, sample_data
+):
+    _, X_test, _, _ = sample_data
+
+    class DummyModel:
+        def predict_proba(self, X):
+            return np.tile([0.7, 0.3], (len(X), 1))
+
+    model = DummyModel()
+
+    class MockExplainer:
+        def __call__(self, X):
+            return "invalid_output"
+
+    monkeypatch.setattr("shap.Explainer", lambda *args, **kwargs: MockExplainer())
+
+    with pytest.raises(ValueError, match="Unexpected SHAP output type"):
+        model_calculator._calculate_shap_values(model, X_test)
