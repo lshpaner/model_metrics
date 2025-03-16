@@ -2097,6 +2097,7 @@ you can generate a separate ROC curve for each unique racial group in the datase
     <div style="height: 40px;"></div>
 
 
+.. _confusion_matrix_evaluation:
 
 Confusion Matrix Evaluation
 -----------------------------
@@ -2183,7 +2184,7 @@ publication-ready confusion matrices for stakeholders.
         - Otherwise, plots are displayed one at a time.
 
     - **Labeling:**
-        - Set ``labels=True`` to annotate cells with TP, FP, FN, TN.
+        - Set ``labels=False`` to disable annotating cells with ``TP``, ``FP``, ``FN``, ``TN``.
         - Always shows raw numeric values inside cells.
 
     - **Colorbar & Styling:**
@@ -2194,14 +2195,32 @@ publication-ready confusion matrices for stakeholders.
         - Plots can be saved as both PNG and SVG using the respective paths.
         - Saved filenames follow the pattern ``Confusion_Matrix_<model_name>`` or ``Grid_Confusion_Matrix``.
 
+.. _confusion_matrix_example_1:
 
-Confusion Matrix Example 1
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Confusion Matrix Example 1 (Threshold=0.5)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this first confusion matrix evaluation example, we focus on showing the 
 results of two models—Logistic Regression and Random Forest Classifier—trained 
 on the :ref:`synthetic dataset from the Binary Classification Models section 
 <Binary_Classification>` onto a single plot.
+
+.. code-block:: python
+
+    from model_metrics import show_confusion_matrix
+
+    show_confusion_matrix(
+        model=[model1, model2],
+        X=X_test,
+        y=y_test,
+        model_titles=model_titles,
+        cmap="Blues",
+        text_wrap=20,
+        grid=True,
+        n_cols=2,
+        n_rows=1,
+        figsize=(6, 6),
+    )
 
 **Output**
 
@@ -2210,15 +2229,147 @@ on the :ref:`synthetic dataset from the Binary Classification Models section
    <div class="no-click">
 
 
-.. image:: ../assets/decision_tree_classifier_precision_recall_race.svg
-    :alt: Decision Tree Precision-Recall Example 3
-    :width: 950px
+.. image:: ../assets/conf_matrix_1.svg
+    :alt: Confusion Matrix Example 1
+    :width: 900px
     :align: center
 
 .. raw:: html
 
     <div style="height: 40px;"></div>
 
+Confusion Matrix Example 2 (Classification Report)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This second confusion matrix evaluation example is nearly identical to the :ref:`first <confusion_matrix_example_1>`, 
+but uses a different color map (``cmap="viridis"``) and sets ``class_report=True`` 
+to print classification reports for each model in addition to the visual output.
+
+.. code-block:: python
+
+    from model_metrics import show_confusion_matrix
+
+    show_confusion_matrix(
+        model=[model1, model2],
+        X=X_test,
+        y=y_test,
+        model_titles=model_titles,
+        cmap="viridis",
+        text_wrap=20,
+        grid=True,
+        n_cols=2,
+        n_rows=1,
+        figsize=(6, 6),
+        class_report=True
+    )
+
+**Output**
+
+.. code-block:: text
+
+    Confusion Matrix for Logistic Regression: 
+
+              Predicted 0  Predicted 1
+    Actual 0           76           18
+    Actual 1           13           93
+
+    Classification Report for Logistic Regression: 
+
+                  precision    recall  f1-score   support
+
+               0       0.85      0.81      0.83        94
+               1       0.84      0.88      0.86       106
+
+        accuracy                           0.84       200
+       macro avg       0.85      0.84      0.84       200
+    weighted avg       0.85      0.84      0.84       200
+
+    Confusion Matrix for Random Forest: 
+
+               Predicted 0  Predicted 1
+    Actual 0            84           10
+    Actual 1             3          103
+
+    Classification Report for Random Forest: 
+
+                  precision    recall  f1-score   support
+
+               0       0.97      0.89      0.93        94
+               1       0.91      0.97      0.94       106
+
+        accuracy                           0.94       200
+       macro avg       0.94      0.93      0.93       200
+    weighted avg       0.94      0.94      0.93       200
+
+
+.. raw:: html
+
+   <div class="no-click">
+
+
+.. image:: ../assets/conf_matrix_2.svg
+    :alt: Confusion Matrix Example 2
+    :align: center
+
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+
+
+Confusion Matrix Example 3 (Threshold = 0.37)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this third confusion matrix evaluation example using the :ref:`synthetic dataset 
+from the Binary Classification Models section <Binary_Classification>`, we apply 
+a custom classification threshold of 0.37 using the ``custom_threshold`` parameter. 
+This overrides the default threshold of 0.5 and enables us to inspect how the 
+confusion matrices shift when a more lenient decision boundary is applied. Refer 
+to the section on :ref:`threshold selection logic <threshold_selection_logic>` 
+for caveats on choosing the right threshold.
+
+This is especially useful in imbalanced classification problems or cost-sensitive 
+environments where the trade-off between precision and recall must be adjusted. 
+By lowering the threshold, we typically increase the number of positive predictions, 
+which can improve recall but may come at the cost of more false positives.
+
+The output matrices for both models—Logistic Regression and Random Forest—are shown 
+side by side in a grid layout for easy visual comparison.
+
+.. code-block:: python
+
+    from model_metrics import show_confusion_matrix
+
+    show_confusion_matrix(
+        model=[model1, model2],
+        X=X_test,
+        y=y_test,
+        model_titles=model_titles,
+        text_wrap=20,
+        grid=True,
+        n_cols=2,
+        n_rows=1,
+        figsize=(6, 6),
+        custom_threshold=0.37,
+    )
+
+
+**Output**
+
+.. raw:: html
+
+   <div class="no-click">
+
+
+.. image:: ../assets/conf_matrix_3.svg
+    :alt: Confusion Matrix Example 3
+    :align: center
+
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
 
 
 .. [1] Efron, B., Hastie, T., Johnstone, I., & Tibshirani, R. (2004). *Diabetes Dataset*. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. `https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset <https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset>`_.

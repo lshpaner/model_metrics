@@ -45,6 +45,12 @@ Table of Contents
 
 .. toctree::
    :maxdepth: 4
+   :caption: Caveats
+
+   caveats  
+
+.. toctree::
+   :maxdepth: 4
    :caption: About Model Metrics
 
    acknowledgements

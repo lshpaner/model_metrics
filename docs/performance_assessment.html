@@ -27,7 +27,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Acknowledgements" href="acknowledgements.html" />
+    <link rel="next" title="Caveats" href="caveats.html" />
     <link rel="prev" title="Adult Income Dataset" href="model_training.html" /> 
 </head>
 
@@ -91,9 +91,15 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#confusion-matrix-evaluation">Confusion Matrix Evaluation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#show_confusion_matrix"><code class="docutils literal notranslate"><span class="pre">show_confusion_matrix()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#confusion-matrix-example-1">Confusion Matrix Example 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#confusion-matrix-example-1-threshold-0-5">Confusion Matrix Example 1 (Threshold=0.5)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#confusion-matrix-example-2-classification-report">Confusion Matrix Example 2 (Classification Report)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#confusion-matrix-example-3-threshold-0-37">Confusion Matrix Example 3 (Threshold = 0.37)</a></li>
 </ul>
 </li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Caveats</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="caveats.html">Caveats</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">About Model Metrics</span></p>
 <ul>
@@ -474,7 +480,7 @@ positive (1) at the expense of precision.</p>
 </section>
 <section id="regression-models">
 <h2>Regression Models<a class="headerlink" href="#regression-models" title="Permalink to this heading"></a></h2>
-<p>In this section, we load the <cite>diabetes dataset</cite> <a class="footnote-reference brackets" href="#id6" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> from <code class="docutils literal notranslate"><span class="pre">scikit-learn</span></code>, which includes
+<p>In this section, we load the <cite>diabetes dataset</cite> <a class="footnote-reference brackets" href="#id7" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> from <code class="docutils literal notranslate"><span class="pre">scikit-learn</span></code>, which includes
 features like age and BMI, along with a target variable representing disease
 progression. The data is then split with <code class="docutils literal notranslate"><span class="pre">train_test_split</span></code> into training and
 testing sets using an 80/20 ratio to facilitate model assessment. We train a
@@ -1787,11 +1793,11 @@ baseline, and the plot includes a custom title for clarity.</p>
 <section id="roc-auc-example-3-by-category">
 <h2>ROC AUC Example 3 (by Category)<a class="headerlink" href="#roc-auc-example-3-by-category" title="Permalink to this heading"></a></h2>
 <p>In this third ROC AUC evaluation example, we utilize the well-known
-<em>Adult Income</em> dataset <a class="footnote-reference brackets" href="#id7" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, a widely used benchmark for binary classification
+<em>Adult Income</em> dataset <a class="footnote-reference brackets" href="#id8" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, a widely used benchmark for binary classification
 tasks. Its rich mix of categorical and numerical features makes it particularly
 suitable for analyzing model performance across different subgroups.</p>
-<p>To build and evaluate our models, we use the <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id8" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.
-<a class="reference internal" href="model_training.html#adult-income-training"><span class="std std-ref">Click here to view the corresponding codebase for this workflow.</span></a></p>
+<p>To build and evaluate our models, we use the <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id9" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.
+<span class="xref std std-ref">Click here to view the corresponding codebase for this workflow.</span></p>
 <p>The objective here is to assess ROC AUC scores not just overall, but
 <strong>across each category of a selected feature</strong>—such as <em>occupation</em>,
 <em>education</em>, <em>marital-status</em>, or <em>race</em>. This approach enables deeper insight into how
@@ -2018,11 +2024,11 @@ for clarity.</p>
 <section id="precision-recall-example-3-categorical">
 <h2>Precision-Recall Example 3 (Categorical)<a class="headerlink" href="#precision-recall-example-3-categorical" title="Permalink to this heading"></a></h2>
 <p>In this third Precision-Recall evaluation example, we utilize the well-known
-<em>Adult Income</em> dataset <a class="footnote-reference brackets" href="#id7" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, a widely used benchmark for binary classification
+<em>Adult Income</em> dataset <a class="footnote-reference brackets" href="#id8" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, a widely used benchmark for binary classification
 tasks. Its rich mix of categorical and numerical features makes it particularly
 suitable for analyzing model performance across different subgroups.</p>
-<p>To build and evaluate our models, we use the <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id8" id="id5" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.
-<a class="reference internal" href="model_training.html#adult-income-training"><span class="std std-ref">Click here to view the corresponding codebase for this workflow.</span></a></p>
+<p>To build and evaluate our models, we use the <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id9" id="id5" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.
+<span class="xref std std-ref">Click here to view the corresponding codebase for this workflow.</span></p>
 <p>The objective here is to assess ROC AUC scores not just overall, but
 <strong>across each category of a selected feature</strong>—such as <em>occupation</em>,
 <em>education</em>, <em>marital-status</em>, or <em>race</em>. This approach enables deeper insight into how
@@ -2049,7 +2055,7 @@ you can generate a separate ROC curve for each unique racial group in the datase
 <div style="height: 40px;"></div></section>
 </section>
 <section id="confusion-matrix-evaluation">
-<h1>Confusion Matrix Evaluation<a class="headerlink" href="#confusion-matrix-evaluation" title="Permalink to this heading"></a></h1>
+<span id="id6"></span><h1>Confusion Matrix Evaluation<a class="headerlink" href="#confusion-matrix-evaluation" title="Permalink to this heading"></a></h1>
 <p>This section introduces the <code class="docutils literal notranslate"><span class="pre">show_confusion_matrix</span></code> function, which provides a
 flexible, styled interface for generating and visualizing confusion matrices
 across one or more classification models. It supports advanced features like
@@ -2133,7 +2139,7 @@ publication-ready confusion matrices for stakeholders.</p>
 </li>
 <li><dl class="simple">
 <dt><strong>Labeling:</strong></dt><dd><ul>
-<li><p>Set <code class="docutils literal notranslate"><span class="pre">labels=True</span></code> to annotate cells with TP, FP, FN, TN.</p></li>
+<li><p>Set <code class="docutils literal notranslate"><span class="pre">labels=False</span></code> to disable annotating cells with <code class="docutils literal notranslate"><span class="pre">TP</span></code>, <code class="docutils literal notranslate"><span class="pre">FP</span></code>, <code class="docutils literal notranslate"><span class="pre">FN</span></code>, <code class="docutils literal notranslate"><span class="pre">TN</span></code>.</p></li>
 <li><p>Always shows raw numeric values inside cells.</p></li>
 </ul>
 </dd>
@@ -2157,22 +2163,132 @@ publication-ready confusion matrices for stakeholders.</p>
 </li>
 </ul>
 </div>
-<section id="confusion-matrix-example-1">
-<h2>Confusion Matrix Example 1<a class="headerlink" href="#confusion-matrix-example-1" title="Permalink to this heading"></a></h2>
+<section id="confusion-matrix-example-1-threshold-0-5">
+<span id="confusion-matrix-example-1"></span><h2>Confusion Matrix Example 1 (Threshold=0.5)<a class="headerlink" href="#confusion-matrix-example-1-threshold-0-5" title="Permalink to this heading"></a></h2>
 <p>In this first confusion matrix evaluation example, we focus on showing the
 results of two models—Logistic Regression and Random Forest Classifier—trained
 on the <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a> onto a single plot.</p>
-<aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id6" role="note">
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_confusion_matrix</span>
+
+<span class="n">show_confusion_matrix</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
+    <span class="n">model_titles</span><span class="o">=</span><span class="n">model_titles</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;Blues&quot;</span><span class="p">,</span>
+    <span class="n">text_wrap</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="n">grid</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">n_cols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">n_rows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Output</strong></p>
+<div class="no-click"><a class="reference internal image-reference" href="_images/conf_matrix_1.svg"><img alt="Confusion Matrix Example 1" class="align-center" src="_images/conf_matrix_1.svg" width="900px" /></a>
+<div style="height: 40px;"></div></section>
+<section id="confusion-matrix-example-2-classification-report">
+<h2>Confusion Matrix Example 2 (Classification Report)<a class="headerlink" href="#confusion-matrix-example-2-classification-report" title="Permalink to this heading"></a></h2>
+<p>This second confusion matrix evaluation example is nearly identical to the <a class="reference internal" href="#confusion-matrix-example-1"><span class="std std-ref">first</span></a>,
+but uses a different color map (<code class="docutils literal notranslate"><span class="pre">cmap=&quot;viridis&quot;</span></code>) and sets <code class="docutils literal notranslate"><span class="pre">class_report=True</span></code>
+to print classification reports for each model in addition to the visual output.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_confusion_matrix</span>
+
+<span class="n">show_confusion_matrix</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
+    <span class="n">model_titles</span><span class="o">=</span><span class="n">model_titles</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">text_wrap</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="n">grid</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">n_cols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">n_rows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
+    <span class="n">class_report</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Output</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Confusion Matrix for Logistic Regression:
+
+          Predicted 0  Predicted 1
+Actual 0           76           18
+Actual 1           13           93
+
+Classification Report for Logistic Regression:
+
+              precision    recall  f1-score   support
+
+           0       0.85      0.81      0.83        94
+           1       0.84      0.88      0.86       106
+
+    accuracy                           0.84       200
+   macro avg       0.85      0.84      0.84       200
+weighted avg       0.85      0.84      0.84       200
+
+Confusion Matrix for Random Forest:
+
+           Predicted 0  Predicted 1
+Actual 0            84           10
+Actual 1             3          103
+
+Classification Report for Random Forest:
+
+              precision    recall  f1-score   support
+
+           0       0.97      0.89      0.93        94
+           1       0.91      0.97      0.94       106
+
+    accuracy                           0.94       200
+   macro avg       0.94      0.93      0.93       200
+weighted avg       0.94      0.94      0.93       200
+</pre></div>
+</div>
+<div class="no-click"><img alt="Confusion Matrix Example 2" class="align-center" src="_images/conf_matrix_2.svg" /><div style="height: 40px;"></div></section>
+<section id="confusion-matrix-example-3-threshold-0-37">
+<h2>Confusion Matrix Example 3 (Threshold = 0.37)<a class="headerlink" href="#confusion-matrix-example-3-threshold-0-37" title="Permalink to this heading"></a></h2>
+<p>In this third confusion matrix evaluation example using the <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset
+from the Binary Classification Models section</span></a>, we apply
+a custom classification threshold of 0.37 using the <code class="docutils literal notranslate"><span class="pre">custom_threshold</span></code> parameter.
+This overrides the default threshold of 0.5 and enables us to inspect how the
+confusion matrices shift when a more lenient decision boundary is applied. Refer
+to the section on <a class="reference internal" href="caveats.html#threshold-selection-logic"><span class="std std-ref">threshold selection logic</span></a>
+for caveats on choosing the right threshold.</p>
+<p>This is especially useful in imbalanced classification problems or cost-sensitive
+environments where the trade-off between precision and recall must be adjusted.
+By lowering the threshold, we typically increase the number of positive predictions,
+which can improve recall but may come at the cost of more false positives.</p>
+<p>The output matrices for both models—Logistic Regression and Random Forest—are shown
+side by side in a grid layout for easy visual comparison.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_confusion_matrix</span>
+
+<span class="n">show_confusion_matrix</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
+    <span class="n">model_titles</span><span class="o">=</span><span class="n">model_titles</span><span class="p">,</span>
+    <span class="n">text_wrap</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="n">grid</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">n_cols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">n_rows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
+    <span class="n">custom_threshold</span><span class="o">=</span><span class="mf">0.37</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Output</strong></p>
+<div class="no-click"><img alt="Confusion Matrix Example 3" class="align-center" src="_images/conf_matrix_3.svg" /><div style="height: 40px;"></div><aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id7" role="note">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
 <p>Efron, B., Hastie, T., Johnstone, I., &amp; Tibshirani, R. (2004). <em>Diabetes Dataset</em>. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. <a class="reference external" href="https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset">https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset</a>.</p>
 </aside>
-<aside class="footnote brackets" id="id7" role="note">
+<aside class="footnote brackets" id="id8" role="note">
 <span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
 <span class="backrefs">(<a role="doc-backlink" href="#id2">1</a>,<a role="doc-backlink" href="#id4">2</a>)</span>
 <p>Kohavi, R. (1996). <em>Census Income</em>. UCI Machine Learning Repository. <a class="reference external" href="https://doi.org/10.24432/C5GP7S">https://doi.org/10.24432/C5GP7S</a>.</p>
 </aside>
-<aside class="footnote brackets" id="id8" role="note">
+<aside class="footnote brackets" id="id9" role="note">
 <span class="label"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></span>
 <span class="backrefs">(<a role="doc-backlink" href="#id3">1</a>,<a role="doc-backlink" href="#id5">2</a>)</span>
 <p>Funnell, A., Shpaner, L., &amp; Petousis, P. (2024). <em>Model Tuner</em> (Version 0.0.28b) [Software]. Zenodo. <a class="reference external" href="https://doi.org/10.5281/zenodo.12727322">https://doi.org/10.5281/zenodo.12727322</a>.</p>
@@ -2186,7 +2302,7 @@ on the <a class="reference internal" href="#binary-classification"><span class="
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="model_training.html" class="btn btn-neutral float-left" title="Adult Income Dataset" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="acknowledgements.html" class="btn btn-neutral float-right" title="Acknowledgements" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="caveats.html" class="btn btn-neutral float-right" title="Caveats" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
