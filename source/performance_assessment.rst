@@ -1598,7 +1598,7 @@ is a practical tool for model evaluation and stakeholder communication.
     :type xlabel: str, optional
     :param ylabel: Label for the y-axis. Defaults to ``"True Positive Rate"``.
     :type ylabel: str, optional
-    :param model_title: Custom titles for the models. Can be a string or list of strings. If ``None``, defaults to ``"Model 1"``, ``"Model 2"``, etc.
+    :param model_title: Custom title(s) for the models. Can be a string or list of strings. If ``None``, defaults to ``"Model 1"``, ``"Model 2"``, etc.
     :type model_title: str or list[str], optional
     :param decimal_places: Number of decimal places for AUC values. Defaults to ``2``.
     :type decimal_places: int, optional
@@ -1861,7 +1861,7 @@ and sometimes more informative tool than ROC AUC in skewed classification scenar
     :type xlabel: str, optional
     :param ylabel: Label for the y-axis. Defaults to ``"Precision"``.
     :type ylabel: str, optional
-    :param model_title: Custom titles for the models. Can be a string or list of strings. If ``None``, defaults to ``"Model 1"``, ``"Model 2"``, etc.
+    :param model_title: Custom title(s) for the model(s). Can be a string or list of strings. If ``None``, defaults to ``"Model 1"``, ``"Model 2"``, etc.
     :type model_title: str or list[str], optional
     :param decimal_places: Number of decimal places for Average Precision (AP) values. Defaults to ``2``.
     :type decimal_places: int, optional
@@ -2125,7 +2125,7 @@ publication-ready confusion matrices for stakeholders.
     :type X: pd.DataFrame or np.ndarray
     :param y: True target labels.
     :type y: pd.Series or np.ndarray
-    :param model_title: Custom titles for each model. Can be a string or list of strings. If None, defaults to ``"Model 1"``, ``"Model 2"``, etc.
+    :param model_title: Custom title(s) for each model. Can be a string or list of strings. If None, defaults to ``"Model 1"``, ``"Model 2"``, etc.
     :type model_title: str or list[str], optional
     :param title: Title for each plot. If ``""``, no title is displayed. If None, a default title is shown.
     :type title: str, optional
