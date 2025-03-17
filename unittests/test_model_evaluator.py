@@ -476,9 +476,9 @@ def test_summarize_model_performance_mixed_regression(
     y = y_lasso
 
     # Test full regression output (overall_only=False) with mixed models
-    models = [rf_model, lasso_model]
+    model = [rf_model, lasso_model]
     df_full = summarize_model_performance(
-        models,
+        model,
         X,
         y,
         model_type="regression",
@@ -522,7 +522,7 @@ def test_summarize_model_performance_mixed_regression(
 
     # Test overall_only=True output with mixed models
     df_overall = summarize_model_performance(
-        models,
+        model,
         X,
         y,
         model_type="regression",
@@ -701,10 +701,10 @@ def test_show_confusion_matrix_multiple_models(
     """Test if show_confusion_matrix runs correctly for multiple models."""
     X, y = sample_data
     # Using the same model twice for simplicity
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
 
     try:
-        show_confusion_matrix(models, X, y, save_plot=False)
+        show_confusion_matrix(model, X, y, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_confusion_matrix failed for multiple models: {e}")
 
@@ -813,13 +813,13 @@ def test_show_confusion_matrix_grid(
     X, y = sample_data
 
     # Pass a list of models explicitly
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
 
-    print(f"DEBUG: models type = {type(models)}")
-    print(f"DEBUG: models[0] type = {type(models[0])}")
+    print(f"DEBUG: models type = {type(model)}")
+    print(f"DEBUG: models[0] type = {type(model[0])}")
     try:
         show_confusion_matrix(
-            models,
+            model,
             X,
             y,
             save_plot=False,
@@ -880,9 +880,9 @@ def test_show_roc_curve_multiple(
 ):
     """Test if show_roc_curve runs without errors for multiple models."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     try:
-        show_roc_curve(models, X, y, save_plot=False)
+        show_roc_curve(model, X, y, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_roc_curve raised an exception: {e}")
     assert mock_show.called, "plt.show() was not called."
@@ -896,10 +896,10 @@ def test_show_roc_curve_overlay(
 ):
     """Test if show_roc_curve runs correctly with overlay enabled."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     try:
         show_roc_curve(
-            models,
+            model,
             X,
             y,
             overlay=True,
@@ -918,10 +918,10 @@ def test_show_roc_curve_grid(
 ):
     """Test if show_roc_curve runs correctly with grid enabled."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     try:
         show_roc_curve(
-            models,
+            model,
             X,
             y,
             grid=True,
@@ -943,13 +943,13 @@ def test_show_roc_curve_invalid_overlay_grid(
     Ensure ValueError is raised if both overlay and grid are set to True.
     """
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     with pytest.raises(
         ValueError,
         match="`grid` cannot be set to True when `overlay` is True.",
     ):
         show_roc_curve(
-            models,
+            model,
             X,
             y,
             overlay=True,
@@ -995,12 +995,12 @@ def test_show_roc_curve_custom_titles(
 ):
     """Test custom model_titles and title parameters."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     model_titles = ["ModelA", "ModelB"]
     custom_title = "Custom ROC Plot"
     try:
         show_roc_curve(
-            models,
+            model,
             X,
             y,
             model_titles=model_titles,
@@ -1059,7 +1059,7 @@ def test_show_roc_curve_curve_styling(
 ):
     """Test custom curve styling with curve_kwgs."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     model_titles = ["ModelA", "ModelB"]
     curve_kwgs = {
         "ModelA": {"color": "red", "linestyle": "--"},
@@ -1067,7 +1067,7 @@ def test_show_roc_curve_curve_styling(
     }
     try:
         show_roc_curve(
-            models,
+            model,
             X,
             y,
             model_titles=model_titles,
@@ -1190,10 +1190,10 @@ def test_show_roc_curve_grid_layout(
 ):
     """Test grid layout with custom rows and columns."""
     X, y = sample_data
-    models = [trained_model, trained_model, trained_model]
+    model = [trained_model, trained_model, trained_model]
     try:
         show_roc_curve(
-            models,
+            model,
             X,
             y,
             grid=True,
@@ -1234,9 +1234,9 @@ def test_show_pr_curve_multiple(
 ):
     """Test if show_pr_curve runs without errors for multiple models."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     try:
-        show_pr_curve(models, X, y, save_plot=False)
+        show_pr_curve(model, X, y, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_pr_curve raised an exception: {e}")
     assert mock_show.called, "plt.show() was not called."
@@ -1250,10 +1250,10 @@ def test_show_pr_curve_overlay(
 ):
     """Test if show_pr_curve runs correctly with overlay enabled."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     try:
         show_pr_curve(
-            models,
+            model,
             X,
             y,
             overlay=True,
@@ -1272,10 +1272,10 @@ def test_show_pr_curve_grid(
 ):
     """Test if show_pr_curve runs correctly with grid enabled."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     try:
         show_pr_curve(
-            models,
+            model,
             X,
             y,
             grid=True,
@@ -1297,12 +1297,12 @@ def test_show_pr_curve_invalid_overlay_grid(
     Ensure ValueError is raised if both overlay and grid are set to True.
     """
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     with pytest.raises(
         ValueError,
         match="`grid` cannot be set to True when `overlay` is True.",
     ):
-        show_pr_curve(models, X, y, overlay=True, grid=True, save_plot=False)
+        show_pr_curve(model, X, y, overlay=True, grid=True, save_plot=False)
 
 
 @patch("matplotlib.pyplot.show")
@@ -1341,12 +1341,12 @@ def test_show_pr_curve_custom_titles(
 ):
     """Test custom model_titles and title parameters."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     model_titles = ["ModelA", "ModelB"]
     custom_title = "Custom PR Plot"
     try:
         show_pr_curve(
-            models,
+            model,
             X,
             y,
             model_titles=model_titles,
@@ -1405,7 +1405,7 @@ def test_show_pr_curve_curve_styling(
 ):
     """Test custom curve styling with curve_kwgs."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     model_titles = ["ModelA", "ModelB"]
     curve_kwgs = {
         "ModelA": {"color": "red", "linestyle": "--"},
@@ -1413,7 +1413,7 @@ def test_show_pr_curve_curve_styling(
     }
     try:
         show_pr_curve(
-            models,
+            model,
             X,
             y,
             model_titles=model_titles,
@@ -1535,11 +1535,11 @@ def test_show_pr_curve_grid_layout(
     Test grid layout with custom rows and columns and corrected labels.
     """
     X, y = sample_data
-    models = [trained_model, trained_model, trained_model]
+    model = [trained_model, trained_model, trained_model]
     model_titles = ["ModelA", "ModelB", "ModelC"]
     try:
         show_pr_curve(
-            models,
+            model,
             X,
             y,
             model_titles=model_titles,
@@ -1575,9 +1575,9 @@ def test_show_lift_chart_multiple(
 ):
     """Test if show_lift_chart runs without errors for multiple models."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     try:
-        show_lift_chart(models, X, y, save_plot=False)
+        show_lift_chart(model, X, y, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_lift_chart raised an exception: {e}")
 
@@ -1590,10 +1590,10 @@ def test_show_lift_chart_overlay(
 ):
     """Test if show_lift_chart runs correctly with overlay enabled."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     try:
         show_lift_chart(
-            models,
+            model,
             X,
             y,
             overlay=True,
@@ -1611,10 +1611,10 @@ def test_show_lift_chart_grid(
 ):
     """Test if show_lift_chart runs correctly with grid enabled."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     try:
         show_lift_chart(
-            models,
+            model,
             X,
             y,
             grid=True,
@@ -1664,9 +1664,9 @@ def test_show_gain_chart_multiple(mock_show, trained_model, sample_data):
     Test if show_gain_chart runs without errors for multiple models.
     """
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     try:
-        show_gain_chart(models, X, y, save_plot=False)
+        show_gain_chart(model, X, y, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_gain_chart raised an exception: {e}")
 
@@ -1675,9 +1675,9 @@ def test_show_gain_chart_multiple(mock_show, trained_model, sample_data):
 def test_show_gain_chart_overlay(mock_show, trained_model, sample_data):
     """Test if show_gain_chart runs correctly with overlay enabled."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     try:
-        show_gain_chart(models, X, y, overlay=True, save_plot=False)
+        show_gain_chart(model, X, y, overlay=True, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_gain_chart raised an exception: {e}")
 
@@ -1686,9 +1686,9 @@ def test_show_gain_chart_overlay(mock_show, trained_model, sample_data):
 def test_show_gain_chart_grid(mock_show, trained_model, sample_data):
     """Test if show_gain_chart runs correctly with grid enabled."""
     X, y = sample_data
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     try:
-        show_gain_chart(models, X, y, grid=True, n_cols=2, save_plot=False)
+        show_gain_chart(model, X, y, grid=True, n_cols=2, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_gain_chart raised an exception: {e}")
 
@@ -1783,10 +1783,10 @@ def test_show_calibration_curve_basic(trained_model, sample_data):
 def test_show_calibration_curve_overlay(trained_model, sample_data):
     """Test overlaying multiple models on one calibration plot."""
     X, y = sample_data
-    models = [trained_model, trained_model]  # Use the same model twice
+    model = [trained_model, trained_model]  # Use the same model twice
     try:
         show_calibration_curve(
-            models,
+            model,
             X,
             y,
             overlay=True,
@@ -1799,9 +1799,9 @@ def test_show_calibration_curve_overlay(trained_model, sample_data):
 def test_show_calibration_curve_grid(trained_model, sample_data):
     """Test grid layout with multiple models."""
     X, y = sample_data
-    models = [trained_model, trained_model]  # Ensure it's a list
+    model = [trained_model, trained_model]  # Ensure it's a list
     try:
-        show_calibration_curve(model=models, X=X, y=y, grid=True, n_cols=2)
+        show_calibration_curve(model=model, X=X, y=y, grid=True, n_cols=2)
     except Exception as e:
         pytest.fail(f"show_calibration_curve failed on grid layout: {e}")
 
@@ -1850,11 +1850,11 @@ def test_show_calibration_curve_brier_score(trained_model, sample_data):
 def test_show_calibration_curve_custom_titles(trained_model, sample_data):
     """Test custom model titles for grid layout."""
     X, y = sample_data
-    models = [trained_model, trained_model]  # Ensure it's a list
+    model = [trained_model, trained_model]  # Ensure it's a list
     titles = ["Model 1", "Model 2"]  # Titles must match models length
     try:
         show_calibration_curve(
-            model=models,
+            model=model,
             X=X,
             y=y,
             model_titles=titles,
@@ -1887,9 +1887,9 @@ def test_show_ks_curve_multiple_models(
     """Test show_ks_curve with multiple models."""
     X, y = sample_data  # Get sample test data
     # Using the same model 2x for simplicity
-    models = [trained_model, trained_model]
+    model = [trained_model, trained_model]
     try:
-        show_ks_curve(models, X, y, save_plot=False)
+        show_ks_curve(model, X, y, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_ks_curve failed with multiple models: {e}")
 
