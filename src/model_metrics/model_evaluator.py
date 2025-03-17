@@ -2178,7 +2178,8 @@ def show_calibration_curve(
     - model_title (str or list, optional): Custom name(s) for model(s). Must
       match number of models.
     - overlay (bool, default=False): Whether to overlay models in a single plot.
-    - title (str, optional): Custom plot title; use `""` to disable.
+    - title (str, optional): Custom plot title. If `None`, a default title is
+      used; if `""`, the title is completely suppressed.
     - save_plot (bool, default=False): Whether to save the generated plot(s).
     - image_path_png (str, optional): Path to save the PNG image.
     - image_path_svg (str, optional): Path to save the SVG image.
@@ -2326,15 +2327,23 @@ def show_calibration_curve(
             # Plot formatting
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
-            title_text = f"Calibration Curve: {name}" if not title else title
-            if text_wrap:
-                title_text = "\n".join(
+            if title is None:
+                group_title = f"Calibration Curve: {name}"
+            elif title == "":
+                group_title = None
+            else:
+                group_title = title
+
+            if text_wrap and group_title:
+                group_title = "\n".join(
                     textwrap.wrap(
-                        title_text,
+                        group_title,
                         width=text_wrap,
                     )
                 )
-            plt.title(title_text, fontsize=label_fontsize)
+
+            if group_title:
+                plt.title(group_title, fontsize=label_fontsize)
             plt.legend(loc="best", fontsize=tick_fontsize)
             plt.tick_params(axis="both", labelsize=tick_fontsize)
             plt.grid(visible=gridlines)
@@ -2396,15 +2405,23 @@ def show_calibration_curve(
             )
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
-            grid_title = f"Calibration Curve: {name}" if not title else title
-            if text_wrap:
+            if title is None:
+                grid_title = f"Calibration Curve: {name}"
+            elif title == "":
+                grid_title = None
+            else:
+                grid_title = title
+
+            if text_wrap and grid_title:
                 grid_title = "\n".join(
                     textwrap.wrap(
                         grid_title,
                         width=text_wrap,
                     )
                 )
-            ax.set_title(grid_title, fontsize=label_fontsize)
+
+            if grid_title:
+                ax.set_title(grid_title, fontsize=label_fontsize)
             ax.legend(loc="best", fontsize=tick_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
             if gridlines:
@@ -2432,15 +2449,23 @@ def show_calibration_curve(
             )
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
-            plot_title = f"Calibration Curve: {name}" if not title else title
-            if text_wrap:
+            if title is None:
+                plot_title = f"Calibration Curve: {name}"
+            elif title == "":
+                plot_title = None
+            else:
+                plot_title = title
+
+            if text_wrap and plot_title:
                 plot_title = "\n".join(
                     textwrap.wrap(
                         plot_title,
                         width=text_wrap,
                     )
                 )
-            plt.title(plot_title, fontsize=label_fontsize)
+
+            if plot_title:
+                plt.title(plot_title, fontsize=label_fontsize)
             plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
@@ -2459,15 +2484,23 @@ def show_calibration_curve(
         plt.plot([0, 1], [0, 1], label="Perfectly Calibrated", **linestyle_kwgs)
         plt.xlabel(xlabel, fontsize=label_fontsize)
         plt.ylabel(ylabel, fontsize=label_fontsize)
-        overlay_title = "Calibration Curves: Overlay" if not title else title
-        if text_wrap:
+        if title is None:
+            overlay_title = "Calibration Curves: Overlay"
+        elif title == "":
+            overlay_title = None
+        else:
+            overlay_title = title
+
+        if text_wrap and overlay_title:
             overlay_title = "\n".join(
                 textwrap.wrap(
                     overlay_title,
                     width=text_wrap,
                 )
             )
-        plt.title(overlay_title, fontsize=label_fontsize)
+
+        if overlay_title:
+            plt.title(overlay_title, fontsize=label_fontsize)
         plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
