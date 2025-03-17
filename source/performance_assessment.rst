@@ -29,7 +29,7 @@ Model Performance Summaries
 
 **Summarizes model performance metrics for classification and regression models.**
 
-.. function:: summarize_model_performance(model, X, y, model_type="classification", model_threshold=None, model_titles=None, custom_threshold=None, score=None, return_df=False, overall_only=False, decimal_places=3)
+.. function:: summarize_model_performance(model, X, y, model_type="classification", model_threshold=None, model_title=None, custom_threshold=None, score=None, return_df=False, overall_only=False, decimal_places=3)
 
     :param model: A trained model or a list of trained models.
     :type model: object or list
@@ -41,8 +41,8 @@ Model Performance Summaries
     :type model_type: str, optional
     :param model_threshold: Threshold values for classification models. If provided, this dictionary specifies thresholds per model. Defaults to ``None``.
     :type model_threshold: dict, optional
-    :param model_titles: Custom model names for display. If ``None``, names are inferred from the models. Defaults to ``None``.
-    :type model_titles: str or list, optional
+    :param model_title: Custom model names for display. If ``None``, names are inferred from the models. Defaults to ``None``.
+    :type model_title: str or list, optional
     :param custom_threshold: A fixed threshold for classification, overriding ``model_threshold``. If set, the `"Model Threshold"` row is excluded. Defaults to ``None``.
     :type custom_threshold: float, optional
     :param score: A custom scoring metric for classification models. Defaults to ``None``.
@@ -121,7 +121,7 @@ otherwise.
     model1 = LogisticRegression().fit(X_train, y_train)
     model2 = RandomForestClassifier().fit(X_train, y_train)
 
-    model_titles = ["Logistic Regression", "Random Forest"]
+    model_title = ["Logistic Regression", "Random Forest"]
 
 
 
@@ -134,7 +134,7 @@ Binary Classification Example 1
 
     model_performance = summarize_model_performance(
         model=[model1, model2],
-        model_titles=model_titles,
+        model_title=model_title,
         X=X_test,
         y=y_test,
         model_type="classification",
@@ -268,7 +268,7 @@ positive (1) at the expense of precision.
 
     model_performance = summarize_model_performance(
         model=[model1, model2],
-        model_titles=model_titles,
+        model_title=model_title,
         X=X_test,
         y=y_test,
         model_type="classification",
@@ -463,7 +463,7 @@ Regression Example 1
 
     regression_metrics = summarize_model_performance(
         model=[linear_model, ridge_model],
-        model_titles=["Linear Regression", "Ridge Regression"],
+        model_title=["Linear Regression", "Ridge Regression"],
         X=X_test,
         y=y_test,
         model_type="regression",
@@ -870,7 +870,7 @@ the coefficient-based results of the other models, as shown in the subsequent ta
 
     regression_metrics = summarize_model_performance(
         model=[linear_model, ridge_model, rf_model],
-        model_titles=["Linear Regression", "Ridge Regression", "Random Forest"],
+        model_title=["Linear Regression", "Ridge Regression", "Random Forest"],
         X=X_test,
         y=y_test,
         model_type="regression",
@@ -1435,7 +1435,7 @@ Root Mean Squared Error (RMSE), Explained Variance, and R² Score.
 
     regression_metrics = summarize_model_performance(
         model=[linear_model, ridge_model, rf_model],
-        model_titles=["Linear Regression", "Ridge Regression", "Random Forest"],
+        model_title=["Linear Regression", "Ridge Regression", "Random Forest"],
         X=X_test,
         y=y_test,
         model_type="regression",
@@ -1586,7 +1586,7 @@ Designed to be both user-friendly and highly configurable, ``show_roc_curve``
 is a practical tool for model evaluation and stakeholder communication.
 
 
-.. function:: show_roc_curve(model, X, y, xlabel="False Positive Rate", ylabel="True Positive Rate", model_titles=None, decimal_places=2, overlay=False, title=None, save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, curve_kwgs=None, linestyle_kwgs=None, grid=False, n_rows=None, n_cols=2, figsize=(8, 6), label_fontsize=12, tick_fontsize=10, gridlines=True, group_category=None)
+.. function:: show_roc_curve(model, X, y, xlabel="False Positive Rate", ylabel="True Positive Rate", model_title=None, decimal_places=2, overlay=False, title=None, save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, curve_kwgs=None, linestyle_kwgs=None, grid=False, n_rows=None, n_cols=2, figsize=(8, 6), label_fontsize=12, tick_fontsize=10, gridlines=True, group_category=None)
 
     :param model: A trained model, a string placeholder, or a list containing models or strings to evaluate.
     :type model: object or str or list[object or str]
@@ -1598,8 +1598,8 @@ is a practical tool for model evaluation and stakeholder communication.
     :type xlabel: str, optional
     :param ylabel: Label for the y-axis. Defaults to ``"True Positive Rate"``.
     :type ylabel: str, optional
-    :param model_titles: Custom titles for the models. Can be a string or list of strings. If ``None``, defaults to ``"Model 1"``, ``"Model 2"``, etc.
-    :type model_titles: str or list[str], optional
+    :param model_title: Custom titles for the models. Can be a string or list of strings. If ``None``, defaults to ``"Model 1"``, ``"Model 2"``, etc.
+    :type model_title: str or list[str], optional
     :param decimal_places: Number of decimal places for AUC values. Defaults to ``2``.
     :type decimal_places: int, optional
     :param overlay: Whether to overlay multiple models on a single plot. Defaults to ``False``.
@@ -1614,7 +1614,7 @@ is a practical tool for model evaluation and stakeholder communication.
     :type image_path_svg: str, optional
     :param text_wrap: Maximum character width before wrapping plot titles. If ``None``, no wrapping is applied.
     :type text_wrap: int, optional
-    :param curve_kwgs: Plot styling for ROC curves. Accepts a list of dictionaries or a nested dictionary keyed by model_titles.
+    :param curve_kwgs: Plot styling for ROC curves. Accepts a list of dictionaries or a nested dictionary keyed by model_title.
     :type curve_kwgs: list[dict] or dict[str, dict], optional
     :param linestyle_kwgs: Style for the random guess (diagonal) line. Defaults to ``{"color": "gray", "linestyle": "--", "linewidth": 2}``.
     :type linestyle_kwgs: dict, optional
@@ -1646,8 +1646,8 @@ is a practical tool for model evaluation and stakeholder communication.
 .. admonition:: Notes
 
     - **Flexible Inputs:**
-        - ``model`` and ``model_titles`` can be individual items or lists. Strings passed in ``model`` are treated as placeholder names.
-        - Titles can be automatically inferred or explicitly passed using ``model_titles``.
+        - ``model`` and ``model_title`` can be individual items or lists. Strings passed in ``model`` are treated as placeholder names.
+        - Titles can be automatically inferred or explicitly passed using ``model_title``.
 
     - **Group-Wise ROC:**
         - If ``group_category`` is passed, separate ROC curves are plotted for each unique group.
@@ -1694,7 +1694,7 @@ add a grid, and save the plot for reporting purposes.
         model=[model1, model2],
         X=X_test,
         y=y_test,
-        model_titles=model_titles,
+        model_title=model_title,
         decimal_places=2,
         n_cols=2,
         n_rows=1,
@@ -1743,7 +1743,7 @@ baseline, and the plot includes a custom title for clarity.
         model=[model1, model2],
         X=X_test,
         y=y_test,
-        model_titles=model_titles,
+        model_title=model_title,
         decimal_places=2,
         curve_kwgs={
             "Logistic Regression": {"color": "blue", "linewidth": 2},
@@ -1801,7 +1801,7 @@ you can generate a separate ROC curve for each unique racial group in the datase
         model=model_dt["model"].estimator,
         X=X_test,
         y=y_test,
-        model_titles="Decision Tree Classifier,
+        model_title="Decision Tree Classifier,
         decimal_places=2,
         group_category=X_test_2["race"],
     )
@@ -1849,7 +1849,7 @@ where false positives have a high cost. This makes the PR curve a complementary
 and sometimes more informative tool than ROC AUC in skewed classification scenarios.
 
 
-.. function:: show_pr_curve(model, X, y, xlabel="Recall", ylabel="Precision", model_titles=None, decimal_places=2, overlay=False, title=None, save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, curve_kwgs=None, grid=False, n_rows=None, n_cols=2, figsize=(8, 6), label_fontsize=12, tick_fontsize=10, gridlines=True, group_category=None)
+.. function:: show_pr_curve(model, X, y, xlabel="Recall", ylabel="Precision", model_title=None, decimal_places=2, overlay=False, title=None, save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, curve_kwgs=None, grid=False, n_rows=None, n_cols=2, figsize=(8, 6), label_fontsize=12, tick_fontsize=10, gridlines=True, group_category=None)
 
     :param model: A trained model, a string placeholder, or a list containing models or strings to evaluate.
     :type model: object or str or list[object or str]
@@ -1861,8 +1861,8 @@ and sometimes more informative tool than ROC AUC in skewed classification scenar
     :type xlabel: str, optional
     :param ylabel: Label for the y-axis. Defaults to ``"Precision"``.
     :type ylabel: str, optional
-    :param model_titles: Custom titles for the models. Can be a string or list of strings. If ``None``, defaults to ``"Model 1"``, ``"Model 2"``, etc.
-    :type model_titles: str or list[str], optional
+    :param model_title: Custom titles for the models. Can be a string or list of strings. If ``None``, defaults to ``"Model 1"``, ``"Model 2"``, etc.
+    :type model_title: str or list[str], optional
     :param decimal_places: Number of decimal places for Average Precision (AP) values. Defaults to ``2``.
     :type decimal_places: int, optional
     :param overlay: Whether to overlay multiple models on a single plot. Defaults to ``False``.
@@ -1877,7 +1877,7 @@ and sometimes more informative tool than ROC AUC in skewed classification scenar
     :type image_path_svg: str, optional
     :param text_wrap: Maximum character width before wrapping plot titles. If ``None``, no wrapping is applied.
     :type text_wrap: int, optional
-    :param curve_kwgs: Plot styling for PR curves. Accepts a list of dictionaries or a nested dictionary keyed by model_titles.
+    :param curve_kwgs: Plot styling for PR curves. Accepts a list of dictionaries or a nested dictionary keyed by model_title.
     :type curve_kwgs: list[dict] or dict[str, dict], optional
     :param grid: Whether to organize the PR plots in a subplot grid layout. Cannot be used with ``overlay=True`` or ``group_category``.
     :type grid: bool, optional
@@ -1907,13 +1907,13 @@ and sometimes more informative tool than ROC AUC in skewed classification scenar
         - If ``overlay=True`` is used with only one model.
         - If ``legend_metric`` is not one of ``"ap"`` or ``"aucpr"``.
     :raises TypeError:
-        - If ``model_titles`` is not a string, list of strings, or ``None``.
+        - If ``model_title`` is not a string, list of strings, or ``None``.
 
 .. admonition:: Notes
 
     - **Flexible Inputs:**
-        - ``model`` and ``model_titles`` can be individual items or lists. Strings passed in ``model`` are treated as placeholder names.
-        - Titles can be automatically inferred or explicitly passed using ``model_titles``.
+        - ``model`` and ``model_title`` can be individual items or lists. Strings passed in ``model`` are treated as placeholder names.
+        - Titles can be automatically inferred or explicitly passed using ``model_title``.
 
     - **Group-Wise PR:**
         - If ``group_category`` is passed, separate PR curves are plotted for each unique group.
@@ -1967,7 +1967,7 @@ analysis and final reporting.
         model=[logistic_model, rf_model],
         X=X_test,
         y=y_test,
-        model_titles=["Logistic Regression", "Random Forest"],
+        model_title=["Logistic Regression", "Random Forest"],
         decimal_places=2,
         grid=True,
         n_cols=2,
@@ -2016,7 +2016,7 @@ for clarity.
         model=[model1, model2],
         X=X_test,
         y=y_test,
-        model_titles=model_titles,
+        model_title=model_title,
         curve_kwgs={
             "Logistic Regression": {"color": "blue", "linewidth": 2},
             "Random Forest": {"color": "black", "linewidth": 2},
@@ -2075,7 +2075,7 @@ you can generate a separate ROC curve for each unique racial group in the datase
         model=model_dt["model"].estimator,
         X=X_test,
         y=y_test,
-        model_titles="Decision Tree Classifier,
+        model_title="Decision Tree Classifier,
         group_category=X_test_2["race"],
         legend_metric="aucpr",
     )
@@ -2117,7 +2117,7 @@ plot exporting, colorbar toggling, and grid visualization.
 This is especially useful when comparing multiple models side-by-side or needing 
 publication-ready confusion matrices for stakeholders.
 
-.. function:: show_confusion_matrix(model, X, y, model_titles=None, title=None, model_threshold=None, custom_threshold=None, class_labels=None, cmap="Blues", save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, figsize=(8, 6), labels=True, label_fontsize=12, tick_fontsize=10, inner_fontsize=10, grid=False, score=None, class_report=False, **kwargs)
+.. function:: show_confusion_matrix(model, X, y, model_title=None, title=None, model_threshold=None, custom_threshold=None, class_labels=None, cmap="Blues", save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, figsize=(8, 6), labels=True, label_fontsize=12, tick_fontsize=10, inner_fontsize=10, grid=False, score=None, class_report=False, **kwargs)
 
     :param model: A single model (object or string), or a list of models or string placeholders.
     :type model: object or str or list[object or str]
@@ -2125,8 +2125,8 @@ publication-ready confusion matrices for stakeholders.
     :type X: pd.DataFrame or np.ndarray
     :param y: True target labels.
     :type y: pd.Series or np.ndarray
-    :param model_titles: Custom titles for each model. Can be a string or list of strings. If None, defaults to ``"Model 1"``, ``"Model 2"``, etc.
-    :type model_titles: str or list[str], optional
+    :param model_title: Custom titles for each model. Can be a string or list of strings. If None, defaults to ``"Model 1"``, ``"Model 2"``, etc.
+    :type model_title: str or list[str], optional
     :param title: Title for each plot. If ``""``, no title is displayed. If None, a default title is shown.
     :type title: str, optional
     :param model_threshold: Dictionary of thresholds keyed by model title. Used if ``custom_threshold`` is not set.
@@ -2167,13 +2167,13 @@ publication-ready confusion matrices for stakeholders.
     :returns: None. Displays confusion matrix plots (and optionally saves them).
     :rtype: None
 
-    :raises TypeError: If ``model_titles`` is not a string, a list of strings, or None.
+    :raises TypeError: If ``model_title`` is not a string, a list of strings, or None.
 
 .. admonition:: Notes
 
     - **Model Support:**
         - Supports single or multiple classification models.
-        - ``model_titles`` may be inferred automatically or provided explicitly.
+        - ``model_title`` may be inferred automatically or provided explicitly.
 
     - **Threshold Handling:**
         - Use ``model_threshold`` to specify per-model thresholds.
@@ -2213,7 +2213,7 @@ on the :ref:`synthetic dataset from the Binary Classification Models section
         model=[model1, model2],
         X=X_test,
         y=y_test,
-        model_titles=model_titles,
+        model_title=model_title,
         cmap="Blues",
         text_wrap=20,
         grid=True,
@@ -2253,7 +2253,7 @@ to print classification reports for each model in addition to the visual output.
         model=[model1, model2],
         X=X_test,
         y=y_test,
-        model_titles=model_titles,
+        model_title=model_title,
         cmap="viridis",
         text_wrap=20,
         grid=True,
@@ -2345,7 +2345,7 @@ side by side in a grid layout for easy visual comparison.
         model=[model1, model2],
         X=X_test,
         y=y_test,
-        model_titles=model_titles,
+        model_title=model_title,
         text_wrap=20,
         grid=True,
         n_cols=2,
