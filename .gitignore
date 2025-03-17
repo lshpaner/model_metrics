@@ -3,6 +3,12 @@
 metrics_venv/
 *venv*/
 
+##Images
+
+model_files/images/png_images/
+model_files/images/svg_images/
+
+
 # Distribution / packaging
 .Python
 *_build/
