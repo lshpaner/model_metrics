@@ -1855,6 +1855,78 @@ def test_show_calibration_curve_custom_titles(trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
+def test_show_calibration_curve_group_category_multiple_models(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """
+    Test show_calibration_curve with group_category and multiple models.
+    Ensures each model's group plot renders individually.
+    """
+    import pandas as pd
+
+    X, y = sample_data
+    group_category = pd.Series(
+        np.random.choice(
+            ["Group A", "Group B"],
+            size=len(y),
+        )
+    )
+
+    # Using same model twice for simplicity
+    models = [trained_model, trained_model]
+    model_titles = ["Model 1", "Model 2"]
+
+    show_calibration_curve(
+        model=models,
+        X=X,
+        y=y,
+        model_title=model_titles,
+        group_category=group_category,
+        save_plot=False,
+    )
+
+    # Should call plt.show once per model when group_category is used
+    assert mock_show.call_count == len(
+        models
+    ), "Expected one plot per model for group_category"
+
+
+def test_show_calibration_curve_invalid_combination_with_group_category(
+    trained_model,
+    sample_data,
+):
+    """
+    Ensure ValueError is raised if group_category is used with overlay or grid.
+    """
+    X, y = sample_data
+    group = pd.Series(np.random.choice(["A", "B"], size=len(y)))
+
+    with pytest.raises(
+        ValueError, match="`group_category` requires `overlay=False` and `grid=False`."
+    ):
+        show_calibration_curve(
+            [trained_model],
+            X,
+            y,
+            group_category=group,
+            overlay=True,
+        )
+
+    with pytest.raises(
+        ValueError, match="`group_category` requires `overlay=False` and `grid=False`."
+    ):
+        show_calibration_curve(
+            [trained_model],
+            X,
+            y,
+            group_category=group,
+            grid=True,
+        )
+
+
+@patch("matplotlib.pyplot.show")
 def test_show_ks_curve_single_model(
     mock_show,
     trained_model,
