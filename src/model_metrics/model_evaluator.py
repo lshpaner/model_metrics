@@ -944,7 +944,7 @@ def show_confusion_matrix(
 
         if not grid:
             save_plot_images(
-                f"confusion_matrix_{name}",
+                f"Confusion_Matrix_{name}",
                 save_plot,
                 image_path_png,
                 image_path_svg,
@@ -956,7 +956,7 @@ def show_confusion_matrix(
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(
-            "grid_confusion_matrix", save_plot, image_path_png, image_path_svg
+            "Grid_Confusion_Matrix", save_plot, image_path_png, image_path_svg
         )
         plt.show()
 
@@ -2168,6 +2168,7 @@ def show_calibration_curve(
     curve_kwgs=None,
     grid=False,  # Grid layout option
     n_cols=2,  # Number of columns for the grid
+    n_rows=None,
     figsize=None,  # User-defined figure size
     label_fontsize=12,
     tick_fontsize=10,
@@ -2255,20 +2256,20 @@ def show_calibration_curve(
         plt.figure(figsize=figsize or (8, 6))
 
     if grid and not overlay:
-        import math
-
-        n_rows = math.ceil(len(model) / n_cols)
-        fig, axes = plt.subplots(
+        if n_rows is None:
+            n_rows = math.ceil(len(model) / n_cols)
+        _, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
+        linestyle_kwgs = linestyle_kwgs or {}
+        linestyle_kwgs.setdefault("color", "gray")
+        linestyle_kwgs.setdefault("linestyle", "--")
 
-    for idx, (model, name, curve_style) in enumerate(
+    for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_titles, curve_styles)
     ):
-        y_true, y_prob, y_pred, threshold = get_predictions(
-            model, X, y, None, None, None
-        )
+        y_true, y_prob, _, _ = get_predictions(mod, X, y, None, None, None)
         prob_true, prob_pred = calibration_curve(y_true, y_prob, n_bins=bins)
 
         # Calculate Brier score if enabled
@@ -2297,9 +2298,6 @@ def show_calibration_curve(
                 **curve_style,
                 **kwargs,
             )
-            linestyle_kwgs = linestyle_kwgs or {}
-            linestyle_kwgs.setdefault("color", "gray")
-            linestyle_kwgs.setdefault("linestyle", "--")
             ax.plot(
                 [0, 1],
                 [0, 1],
@@ -2325,7 +2323,9 @@ def show_calibration_curve(
 
             ax.legend(loc="best", fontsize=tick_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
-            ax.grid(visible=gridlines)
+            if gridlines:
+                ax.grid(True, which="both", axis="both")
+
         else:
             plt.figure(figsize=figsize or (8, 6))
             plt.plot(
