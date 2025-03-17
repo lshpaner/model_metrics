@@ -2372,6 +2372,169 @@ side by side in a grid layout for easy visual comparison.
     <div style="height: 40px;"></div>
 
 
+Calibration Curves
+----------------------
+
+This section focuses on calibration curves, a diagnostic tool that compares 
+predicted probabilities to actual outcomes, helping evaluate how well a model's 
+predicted confidence aligns with observed frequencies. Using models like Logistic 
+Regression or Random Forest on the :ref:`synthetic dataset from the previous 
+(Binary Classification Models) section <Binary_Classification>`, we generate 
+calibration curves to assess the reliability of model probabilities.
+
+Calibration is especially important in domains where probability outputs inform 
+downstream decisions, such as healthcare, finance, and risk management. A 
+well-calibrated model not only predicts the correct class but also outputs 
+meaningful probabilities—for example, when a model predicts a 0.7 probability, 
+we expect roughly 70% of such predictions to be correct.
+
+The ``show_calibration_curve`` function simplifies this process by allowing users to 
+visualize calibration performance across models or subgroups. The plots show the 
+mean predicted probabilities against the actual observed fractions of positive 
+cases, with an optional reference line representing perfect calibration. 
+Additional features include support for overlay or grid layouts, subgroup 
+analysis by categorical features, and optional Brier score display—a scalar 
+measure of calibration quality.
+
+The function offers full control over styling, figure layout, axis labels, and 
+output format, making it easy to generate both exploratory and publication-ready 
+plots.
+
+.. function:: show_calibration_curve(model, X, y, xlabel="Mean Predicted Probability", ylabel="Fraction of Positives", model_title=None, overlay=False, title=None, save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, curve_kwgs=None, grid=False, n_cols=2, n_rows=None, figsize=None, label_fontsize=12, tick_fontsize=10, bins=10, marker="o", show_brier_score=True, gridlines=True, linestyle_kwgs=None, group_category=None, **kwargs)
+
+    :param model: A trained classifier or a list of classifiers to evaluate.
+    :type model: estimator or list
+    :param X: Feature matrix used for predictions.
+    :type X: pd.DataFrame or np.ndarray
+    :param y: True binary target values.
+    :type y: pd.Series or np.ndarray
+    :param xlabel: X-axis label. Defaults to ``"Mean Predicted Probability"``.
+    :type xlabel: str, optional
+    :param ylabel: Y-axis label. Defaults to ``"Fraction of Positives"``.
+    :type ylabel: str, optional
+    :param model_title: Custom title(s) for the models.
+    :type model_title: str or list[str], optional
+    :param overlay: If ``True``, overlays multiple models on one plot.
+    :type overlay: bool, optional
+    :param title: Title for the plot. Use ``""`` to suppress.
+    :type title: str, optional
+    :param save_plot: Whether to save the plot(s).
+    :type save_plot: bool, optional
+    :param image_path_png: Directory path for PNG export.
+    :type image_path_png: str, optional
+    :param image_path_svg: Directory path for SVG export.
+    :type image_path_svg: str, optional
+    :param text_wrap: Max characters before title text wraps.
+    :type text_wrap: int, optional
+    :param curve_kwgs: Styling options for the calibration curves.
+    :type curve_kwgs: list[dict] or dict[str, dict], optional
+    :param grid: Whether to arrange models in a subplot grid.
+    :type grid: bool, optional
+    :param n_cols: Number of columns in the grid layout. Defaults to ``2``.
+    :type n_cols: int, optional
+    :param n_rows: Number of rows in the grid layout. Auto-calculated if ``None``.
+    :type n_rows: int, optional
+    :param figsize: Figure size in inches (width, height).
+    :type figsize: tuple, optional
+    :param label_fontsize: Font size for axis labels and titles.
+    :type label_fontsize: int, optional
+    :param tick_fontsize: Font size for ticks and legend entries.
+    :type tick_fontsize: int, optional
+    :param bins: Number of bins used to compute calibration.
+    :type bins: int, optional
+    :param marker: Marker style for calibration points.
+    :type marker: str, optional
+    :param show_brier_score: Whether to display Brier score in the legend.
+    :type show_brier_score: bool, optional
+    :param gridlines: Whether to show gridlines on plots.
+    :type gridlines: bool, optional
+    :param linestyle_kwgs: Styling for the "perfectly calibrated" reference line.
+    :type linestyle_kwgs: dict, optional
+    :param group_category: Categorical variable used to create subgroup calibration plots.
+    :type group_category: array-like, optional
+
+    :returns: ``None.`` Displays or saves calibration plots for classification models.
+    :rtype: ``None``
+
+    :raises ValueError:
+        - If ``overlay=True`` and ``grid=True`` are both set.
+        - If ``group_category`` is used with ``overlay`` or ``grid``.
+        - If ``curve_kwgs`` list does not match number of models.
+
+.. admonition:: Notes
+
+    - **Calibration vs Discrimination:**
+        - Calibration evaluates how well predicted probabilities reflect observed outcomes, while ROC AUC measures a model's ability to rank predictions.
+
+    - **Flexible Plotting Modes:**
+        - ``overlay=True`` plots multiple models on one figure.
+        - ``grid=True`` arranges plots in a grid layout.
+        - If neither is set, individual full-size plots are created.
+
+    - **Group-Wise Analysis:**
+        - Passing ``group_category`` plots separate calibration curves by subgroup (e.g., age, race).
+        - Each subgroup’s Brier score is shown when ``show_brier_score=True``.
+
+    - **Customization:**
+        - Use ``curve_kwgs`` and ``linestyle_kwgs`` to control styling.
+        - Add markers, gridlines, and custom titles to suit report or presentation needs.
+
+    - **Saving Outputs:**
+        - Set ``save_plot=True`` and specify ``image_path_png`` or ``image_path_svg`` to export figures.
+        - Filenames are auto-generated based on model name and plot type.
+
+Calibration Curve Example 1 (Grid-like)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This example presents calibration curves for two classification models displayed 
+side by side in a grid layout. Each subplot shows how well the predicted 
+probabilities from a model align with the actual observed outcomes. A diagonal 
+dashed line representing perfect calibration is included in both plots, and Brier 
+scores are shown in the legend to quantify each model's calibration accuracy.
+
+By setting ``grid=True``, the function automatically arranges the individual plots 
+based on the number of models and specified columns. This layout is ideal for 
+visually comparing calibration behavior across models without overlapping lines.
+
+.. code-block:: python
+
+    from model_metrics import show_calibration_curve
+
+    # Plot calibration curves in grid layout for two models
+    show_calibration_curve(
+        model=pipelines_or_models[:2],
+        X=X_test,
+        y=y_test,
+        model_title=model_titles[:2],
+        text_wrap=50,
+        figsize=(12, 6),
+        label_fontsize=16,
+        tick_fontsize=13,
+        bins=10,
+        show_brier_score=True,
+        grid=True,
+        linestyle_kwgs={"color": "black"},
+        title="",
+    )
+
+
+**Output**
+
+.. raw:: html
+
+   <div class="no-click">
+
+
+.. image:: ../assets/grid_calibration.svg
+    :alt: Calibration Curves Example 1
+    :align: center
+
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+
 .. [1] Efron, B., Hastie, T., Johnstone, I., & Tibshirani, R. (2004). *Diabetes Dataset*. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. `https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset <https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset>`_.
 .. [2] Kohavi, R. (1996). *Census Income*. UCI Machine Learning Repository. `https://doi.org/10.24432/C5GP7S <https://doi.org/10.24432/C5GP7S>`_.
 .. [3] Funnell, A., Shpaner, L., & Petousis, P. (2024). *Model Tuner* (Version 0.0.28b) [Software]. Zenodo. `https://doi.org/10.5281/zenodo.12727322 <https://doi.org/10.5281/zenodo.12727322>`_.

@@ -95,6 +95,11 @@
 <li class="toctree-l2"><a class="reference internal" href="#confusion-matrix-example-3-threshold-0-37">Confusion Matrix Example 3 (Threshold = 0.37)</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="#calibration-curves">Calibration Curves</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#show_calibration_curve"><code class="docutils literal notranslate"><span class="pre">show_calibration_curve()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#calibration-curve-example-1-grid-like">Calibration Curve Example 1 (Grid-like)</a></li>
+</ul>
+</li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Caveats</span></p>
 <ul>
@@ -2287,6 +2292,158 @@ side by side in a grid layout for easy visual comparison.</p>
 </div>
 <p><strong>Output</strong></p>
 <div class="no-click"><img alt="Confusion Matrix Example 3" class="align-center" src="_images/conf_matrix_3.svg" />
+<div style="height: 40px;"></div></section>
+</section>
+<section id="calibration-curves">
+<h1>Calibration Curves<a class="headerlink" href="#calibration-curves" title="Link to this heading"></a></h1>
+<p>This section focuses on calibration curves, a diagnostic tool that compares
+predicted probabilities to actual outcomes, helping evaluate how well a model’s
+predicted confidence aligns with observed frequencies. Using models like Logistic
+Regression or Random Forest on the <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the previous
+(Binary Classification Models) section</span></a>, we generate
+calibration curves to assess the reliability of model probabilities.</p>
+<p>Calibration is especially important in domains where probability outputs inform
+downstream decisions, such as healthcare, finance, and risk management. A
+well-calibrated model not only predicts the correct class but also outputs
+meaningful probabilities—for example, when a model predicts a 0.7 probability,
+we expect roughly 70% of such predictions to be correct.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">show_calibration_curve</span></code> function simplifies this process by allowing users to
+visualize calibration performance across models or subgroups. The plots show the
+mean predicted probabilities against the actual observed fractions of positive
+cases, with an optional reference line representing perfect calibration.
+Additional features include support for overlay or grid layouts, subgroup
+analysis by categorical features, and optional Brier score display—a scalar
+measure of calibration quality.</p>
+<p>The function offers full control over styling, figure layout, axis labels, and
+output format, making it easy to generate both exploratory and publication-ready
+plots.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="show_calibration_curve">
+<span class="sig-name descname"><span class="pre">show_calibration_curve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xlabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Mean</span> <span class="pre">Predicted</span> <span class="pre">Probability'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Fraction</span> <span class="pre">of</span> <span class="pre">Positives'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">curve_kwgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marker</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'o'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_brier_score</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gridlines</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linestyle_kwgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_category</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#show_calibration_curve" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>estimator</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a>) – A trained classifier or a list of classifiers to evaluate.</p></li>
+<li><p><strong>X</strong> (<em>pd.DataFrame</em><em> or </em><em>np.ndarray</em>) – Feature matrix used for predictions.</p></li>
+<li><p><strong>y</strong> (<em>pd.Series</em><em> or </em><em>np.ndarray</em>) – True binary target values.</p></li>
+<li><p><strong>xlabel</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – X-axis label. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;Mean</span> <span class="pre">Predicted</span> <span class="pre">Probability&quot;</span></code>.</p></li>
+<li><p><strong>ylabel</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Y-axis label. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;Fraction</span> <span class="pre">of</span> <span class="pre">Positives&quot;</span></code>.</p></li>
+<li><p><strong>model_title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – Custom title(s) for the models.</p></li>
+<li><p><strong>overlay</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, overlays multiple models on one plot.</p></li>
+<li><p><strong>title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Title for the plot. Use <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code> to suppress.</p></li>
+<li><p><strong>save_plot</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to save the plot(s).</p></li>
+<li><p><strong>image_path_png</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Directory path for PNG export.</p></li>
+<li><p><strong>image_path_svg</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Directory path for SVG export.</p></li>
+<li><p><strong>text_wrap</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Max characters before title text wraps.</p></li>
+<li><p><strong>curve_kwgs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>] or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>]</em><em>, </em><em>optional</em>) – Styling options for the calibration curves.</p></li>
+<li><p><strong>grid</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to arrange models in a subplot grid.</p></li>
+<li><p><strong>n_cols</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Number of columns in the grid layout. Defaults to <code class="docutils literal notranslate"><span class="pre">2</span></code>.</p></li>
+<li><p><strong>n_rows</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Number of rows in the grid layout. Auto-calculated if <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>figsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><em>tuple</em></a><em>, </em><em>optional</em>) – Figure size in inches (width, height).</p></li>
+<li><p><strong>label_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for axis labels and titles.</p></li>
+<li><p><strong>tick_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for ticks and legend entries.</p></li>
+<li><p><strong>bins</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Number of bins used to compute calibration.</p></li>
+<li><p><strong>marker</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Marker style for calibration points.</p></li>
+<li><p><strong>show_brier_score</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to display Brier score in the legend.</p></li>
+<li><p><strong>gridlines</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to show gridlines on plots.</p></li>
+<li><p><strong>linestyle_kwgs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>, </em><em>optional</em>) – Styling for the “perfectly calibrated” reference line.</p></li>
+<li><p><strong>group_category</strong> (<em>array-like</em><em>, </em><em>optional</em>) – Categorical variable used to create subgroup calibration plots.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">None.</span></code> Displays or saves calibration plots for classification models.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – <ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code> and <code class="docutils literal notranslate"><span class="pre">grid=True</span></code> are both set.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">group_category</span></code> is used with <code class="docutils literal notranslate"><span class="pre">overlay</span></code> or <code class="docutils literal notranslate"><span class="pre">grid</span></code>.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">curve_kwgs</span></code> list does not match number of models.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>Calibration vs Discrimination:</strong></dt><dd><ul>
+<li><p>Calibration evaluates how well predicted probabilities reflect observed outcomes, while ROC AUC measures a model’s ability to rank predictions.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Flexible Plotting Modes:</strong></dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">overlay=True</span></code> plots multiple models on one figure.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">grid=True</span></code> arranges plots in a grid layout.</p></li>
+<li><p>If neither is set, individual full-size plots are created.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Group-Wise Analysis:</strong></dt><dd><ul>
+<li><p>Passing <code class="docutils literal notranslate"><span class="pre">group_category</span></code> plots separate calibration curves by subgroup (e.g., age, race).</p></li>
+<li><p>Each subgroup’s Brier score is shown when <code class="docutils literal notranslate"><span class="pre">show_brier_score=True</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Customization:</strong></dt><dd><ul>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">curve_kwgs</span></code> and <code class="docutils literal notranslate"><span class="pre">linestyle_kwgs</span></code> to control styling.</p></li>
+<li><p>Add markers, gridlines, and custom titles to suit report or presentation needs.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Saving Outputs:</strong></dt><dd><ul>
+<li><p>Set <code class="docutils literal notranslate"><span class="pre">save_plot=True</span></code> and specify <code class="docutils literal notranslate"><span class="pre">image_path_png</span></code> or <code class="docutils literal notranslate"><span class="pre">image_path_svg</span></code> to export figures.</p></li>
+<li><p>Filenames are auto-generated based on model name and plot type.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<section id="calibration-curve-example-1-grid-like">
+<h2>Calibration Curve Example 1 (Grid-like)<a class="headerlink" href="#calibration-curve-example-1-grid-like" title="Link to this heading"></a></h2>
+<p>This example presents calibration curves for two classification models displayed
+side by side in a grid layout. Each subplot shows how well the predicted
+probabilities from a model align with the actual observed outcomes. A diagonal
+dashed line representing perfect calibration is included in both plots, and Brier
+scores are shown in the legend to quantify each model’s calibration accuracy.</p>
+<p>By setting <code class="docutils literal notranslate"><span class="pre">grid=True</span></code>, the function automatically arranges the individual plots
+based on the number of models and specified columns. This layout is ideal for
+visually comparing calibration behavior across models without overlapping lines.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_calibration_curve</span>
+
+<span class="c1"># Plot calibration curves in grid layout for two models</span>
+<span class="n">show_calibration_curve</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">pipelines_or_models</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
+    <span class="n">model_title</span><span class="o">=</span><span class="n">model_titles</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span>
+    <span class="n">text_wrap</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
+    <span class="n">label_fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>
+    <span class="n">tick_fontsize</span><span class="o">=</span><span class="mi">13</span><span class="p">,</span>
+    <span class="n">bins</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">show_brier_score</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">grid</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">linestyle_kwgs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;black&quot;</span><span class="p">},</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Output</strong></p>
+<div class="no-click"><img alt="Calibration Curves Example 1" class="align-center" src="_images/grid_calibration.svg" />
 <div style="height: 40px;"></div><aside class="footnote-list brackets">
 <aside class="footnote brackets" id="id7" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
