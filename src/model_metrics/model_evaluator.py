@@ -2147,82 +2147,91 @@ def show_calibration_curve(
     image_path_svg=None,
     text_wrap=None,
     curve_kwgs=None,
-    grid=False,  # Grid layout option
-    n_cols=2,  # Number of columns for the grid
+    grid=False,
+    n_cols=2,
     n_rows=None,
-    figsize=None,  # User-defined figure size
+    figsize=None,
     label_fontsize=12,
     tick_fontsize=10,
-    bins=10,  # Number of bins for calibration curve
-    marker="o",  # Marker style for the calibration points
+    bins=10,
+    marker="o",
     show_brier_score=True,
     gridlines=True,
     linestyle_kwgs=None,
+    group_category=None,
     **kwargs,
 ):
     """
-    Plot calibration curves for models or pipelines with optional styling and
-    grid layout.
+    Plot calibration curves for one or more classification models.
+
+    A calibration curve compares the predicted probabilities of a classifier
+    to the actual observed outcomes. This function supports individual, overlay,
+    and grid-based visualization modes, and optionally plots separate curves
+    per subgroup defined by a categorical variable (e.g., race, age group).
 
     Parameters:
-    - model: list
-        List of models or pipelines to plot.
-    - X: array-like
-        Features for prediction.
-    - y: array-like
-        True labels.
-    - model_title: list or str, optional
-        Titles for individual models.
-    - overlay: bool
-        Whether to overlay multiple models on a single plot.
-    - title: str, optional
-        Custom title for the plot when `overlay=True`.
-    - save_plot: bool
-        Whether to save the plot.
-    - image_path_png: str, optional
-        Path to save PNG images.
-    - image_path_svg: str, optional
-        Path to save SVG images.
-    - text_wrap: int, optional
-        Max width for wrapping titles.
-    - curve_kwgs: list or dict, optional
-        Styling for individual model curves.
-    - grid: bool, optional
-        Whether to organize plots in a grid layout (default: False).
-    - n_cols: int, optional
-        Number of columns in the grid layout (default: 2).
-    - figsize: tuple, optional
-        Custom figure size (width, height) for the plot(s).
-    - label_fontsize: int, optional
-        Font size for axis labels and title.
-    - tick_fontsize: int, optional
-        Font size for tick labels and legend.
-    - bins: int, optional
-        Number of bins for the calibration curve (default: 10).
-    - marker: str, optional
-        Marker style for calibration curve points (default: "o").
+    - model (estimator or list): One or more trained classification models.
+    - X (array-like): Feature matrix used for prediction.
+    - y (array-like): True binary target labels.
+    - xlabel (str, default="Mean Predicted Probability"): Label for the x-axis.
+    - ylabel (str, default="Fraction of Positives"): Label for the y-axis.
+    - model_title (str or list, optional): Custom name(s) for model(s). Must
+      match number of models.
+    - overlay (bool, default=False): Whether to overlay models in a single plot.
+    - title (str, optional): Custom plot title; use `""` to disable.
+    - save_plot (bool, default=False): Whether to save the generated plot(s).
+    - image_path_png (str, optional): Path to save the PNG image.
+    - image_path_svg (str, optional): Path to save the SVG image.
+    - text_wrap (int, optional): Maximum # of characters before wrapping title.
+    - curve_kwgs (dict or list, optional): Styling options for model curves.
+    - grid (bool, default=False): Display models in a grid of subplots.
+    - n_cols (int, default=2): Number of columns for the grid layout.
+    - n_rows (int, optional): Number of rows for the grid layout.
+    - figsize (tuple, optional): Custom figure size (width, height).
+    - label_fontsize (int, default=12): Font size for axis labels and title.
+    - tick_fontsize (int, default=10): Font size for tick marks and legend.
+    - bins (int, default=10): # of bins to use for computing calibration curve.
+    - marker (str, default="o"): Marker used for each calibration point.
+    - show_brier_score (bool, default=True): Whether to show Brier score in legend.
+    - gridlines (bool, default=True): Whether to display gridlines on the plot.
+    - linestyle_kwgs (dict, optional): Styling options for the diagonal
+      "perfectly calibrated" line.
+    - group_category (array-like, optional): A categorical series to plot
+      subgroup calibration curves.
 
     Raises:
-    - ValueError: If `grid=True` and `overlay=True` are both set.
+    - ValueError: If both `grid=True` and `overlay=True` are set (incompatible).
+    - ValueError: If `group_category` used w/ either `overlay=True` or `grid=True`.
+    - ValueError: If length of `curve_kwgs` does not match number of models.
+    - TypeError: If `model_title` is not a string, list, pandas Series, or None.
+
+    Returns:
+    - None
     """
+
+    # Error checks for incompatible display modes
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
 
+    if group_category is not None and (overlay or grid):
+        raise ValueError("`group_category` requires `overlay=False` and `grid=False`.")
+
+    # Ensure model is a list
     if not isinstance(model, list):
         model = [model]
 
-    # Normalize model_title input
+    # Handle model titles
     if model_title is None:
         model_title = [f"Model_{i+1}" for i in range(len(model))]
     elif isinstance(model_title, str):
         model_title = [model_title]
     elif isinstance(model_title, pd.Series):
         model_title = model_title.tolist()
-    elif not isinstance(model_title, list):
-        raise TypeError(
-            "model_title must be a string, list of strings, Series, or None."
-        )
 
+    if not isinstance(model_title, list):
+        raise TypeError("`model_title` must be str, list, Series, or None.")
+
+    # Handle style settings for each model
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_title]
     elif isinstance(curve_kwgs, list):
@@ -2231,35 +2240,130 @@ def show_calibration_curve(
         curve_styles = [{}] * len(model)
 
     if len(curve_styles) != len(model):
-        raise ValueError("The length of `curve_kwgs` must match the number of models.")
+        raise ValueError("Length of `curve_kwgs` must match the number of models.")
 
-    if overlay:
-        plt.figure(figsize=figsize or (8, 6))
-
-    if grid and not overlay:
+    # Grid layout setup if requested
+    if grid:
         if n_rows is None:
             n_rows = math.ceil(len(model) / n_cols)
-        _, axes = plt.subplots(
+        fig, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
-        linestyle_kwgs = linestyle_kwgs or {}
-        linestyle_kwgs.setdefault("color", "gray")
-        linestyle_kwgs.setdefault("linestyle", "--")
 
+    # Initialize overlay figure
+    if overlay:
+        plt.figure(figsize=figsize or (8, 6))
+
+    # Loop over each model
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
-        y_true, y_prob, _, _ = get_predictions(mod, X, y, None, None, None)
-        prob_true, prob_pred = calibration_curve(y_true, y_prob, n_bins=bins)
+        y_true, y_prob, _, _ = get_predictions(
+            mod,
+            X,
+            y,
+            None,
+            None,
+            None,
+        )
 
-        # Calculate Brier score if enabled
+        # Handle single-column (y_true) DataFrame
+        if isinstance(y_true, pd.DataFrame) and y_true.shape[1] == 1:
+            y_true = y_true.iloc[:, 0]
+
+        # GROUPED CALIBRATION BY CATEGORY
+        if group_category is not None:
+            group_series = pd.Series(group_category)
+            unique_groups = group_series.dropna().unique()
+            plt.figure(figsize=figsize or (8, 6))
+
+            for group_val in unique_groups:
+                group_idx = group_series == group_val
+                y_group = y_true[group_idx]
+                prob_group = y_prob[group_idx]
+
+                # Skip group if not enough data or only one class
+                if len(y_group) < bins or len(set(y_group)) < 2:
+                    print(
+                        f"Skipping group {group_val} (len={len(y_group)}, "
+                        f"unique={set(y_group)})"
+                    )
+                    continue
+
+                # Calibration computation
+                prob_true, prob_pred = calibration_curve(
+                    y_group, prob_group, n_bins=bins
+                )
+                brier = (
+                    brier_score_loss(y_group, prob_group) if show_brier_score else None
+                )
+                legend_label = f"{group_val}"
+                if show_brier_score:
+                    legend_label += f" (Brier: {brier:.4f})"
+
+                # Plot curve for group
+                plt.plot(
+                    prob_pred,
+                    prob_true,
+                    marker=marker,
+                    label=legend_label,
+                    **curve_style,
+                    **kwargs,
+                )
+
+            # Add diagonal reference line
+            linestyle_kwgs = linestyle_kwgs or {}
+            linestyle_kwgs.setdefault("color", "gray")
+            linestyle_kwgs.setdefault("linestyle", "--")
+            plt.plot(
+                [0, 1],
+                [0, 1],
+                label="Perfectly Calibrated",
+                **linestyle_kwgs,
+            )
+
+            # Plot formatting
+            plt.xlabel(xlabel, fontsize=label_fontsize)
+            plt.ylabel(ylabel, fontsize=label_fontsize)
+            title_text = f"Calibration Curve: {name}" if not title else title
+            if text_wrap:
+                title_text = "\n".join(
+                    textwrap.wrap(
+                        title_text,
+                        width=text_wrap,
+                    )
+                )
+            plt.title(title_text, fontsize=label_fontsize)
+            plt.legend(loc="best", fontsize=tick_fontsize)
+            plt.tick_params(axis="both", labelsize=tick_fontsize)
+            plt.grid(visible=gridlines)
+
+            # Save grouped plot
+            if save_plot:
+                filename = f"{name}_by_{group_category.name}_calibration"
+                save_plot_images(
+                    filename,
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                )
+
+            plt.show()
+            continue  # Skip standard rendering
+
+        # STANDARD CALIBRATION
+        prob_true, prob_pred = calibration_curve(
+            y_true,
+            y_prob,
+            n_bins=bins,
+        )
         brier_score = brier_score_loss(y_true, y_prob) if show_brier_score else None
-
         legend_label = f"{name}"
         if show_brier_score:
-            legend_label += f" $\Rightarrow$ (Brier score: {brier_score:.4f})"
+            legend_label += f" (Brier: {brier_score:.4f})"
 
+        # PLOT IN OVERLAY
         if overlay:
             plt.plot(
                 prob_pred,
@@ -2269,6 +2373,8 @@ def show_calibration_curve(
                 **curve_style,
                 **kwargs,
             )
+
+        # PLOT IN GRID
         elif grid:
             ax = axes[idx]
             ax.plot(
@@ -2279,6 +2385,9 @@ def show_calibration_curve(
                 **curve_style,
                 **kwargs,
             )
+            linestyle_kwgs = linestyle_kwgs or {}
+            linestyle_kwgs.setdefault("color", "gray")
+            linestyle_kwgs.setdefault("linestyle", "--")
             ax.plot(
                 [0, 1],
                 [0, 1],
@@ -2287,26 +2396,21 @@ def show_calibration_curve(
             )
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
-            if title is None:
-                grid_title = f"Calibration Curve: {name}"  # Default title
-            elif title == "":
-                grid_title = None  # Disable the title
-            else:
-                grid_title = title  # Use provided custom title
-
-            if grid_title and text_wrap:
+            grid_title = f"Calibration Curve: {name}" if not title else title
+            if text_wrap:
                 grid_title = "\n".join(
-                    textwrap.wrap(grid_title, width=text_wrap),
+                    textwrap.wrap(
+                        grid_title,
+                        width=text_wrap,
+                    )
                 )
-
-            if grid_title:  # Only set title if not explicitly disabled
-                ax.set_title(grid_title, fontsize=label_fontsize)
-
+            ax.set_title(grid_title, fontsize=label_fontsize)
             ax.legend(loc="best", fontsize=tick_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
             if gridlines:
                 ax.grid(True, which="both", axis="both")
 
+        # STANDARD SINGLE PLOT
         else:
             plt.figure(figsize=figsize or (8, 6))
             plt.plot(
@@ -2328,21 +2432,15 @@ def show_calibration_curve(
             )
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
-            if title is None:
-                plot_title = f"Calibration Curve: {name}"  # Default title
-            elif title == "":
-                plot_title = None  # Disable the title
-            else:
-                plot_title = title  # Use provided custom title
-
-            if plot_title and text_wrap:
+            plot_title = f"Calibration Curve: {name}" if not title else title
+            if text_wrap:
                 plot_title = "\n".join(
-                    textwrap.wrap(plot_title, width=text_wrap),
+                    textwrap.wrap(
+                        plot_title,
+                        width=text_wrap,
+                    )
                 )
-
-            if plot_title:  # Only set title if not explicitly disabled
-                plt.title(plot_title, fontsize=label_fontsize)
-
+            plt.title(plot_title, fontsize=label_fontsize)
             plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
@@ -2353,49 +2451,40 @@ def show_calibration_curve(
             )
             plt.show()
 
+    # Final overlay post-processing
     if overlay:
         linestyle_kwgs = linestyle_kwgs or {}
         linestyle_kwgs.setdefault("color", "gray")
         linestyle_kwgs.setdefault("linestyle", "--")
-        plt.plot(
-            [0, 1],
-            [0, 1],
-            label="Perfectly Calibrated",
-            **linestyle_kwgs,
-        )
+        plt.plot([0, 1], [0, 1], label="Perfectly Calibrated", **linestyle_kwgs)
         plt.xlabel(xlabel, fontsize=label_fontsize)
         plt.ylabel(ylabel, fontsize=label_fontsize)
-        if title is None:
-            overlay_title = "Calibration Curves: Overlay"  # Default title
-        elif title == "":
-            overlay_title = None  # Disable the title
-        else:
-            overlay_title = title  # Use provided custom title
-
-        if overlay_title and text_wrap:
+        overlay_title = "Calibration Curves: Overlay" if not title else title
+        if text_wrap:
             overlay_title = "\n".join(
-                textwrap.wrap(overlay_title, width=text_wrap),
+                textwrap.wrap(
+                    overlay_title,
+                    width=text_wrap,
+                )
             )
-
-        if overlay_title:  # Only set title if not explicitly disabled
-            plt.title(overlay_title, fontsize=label_fontsize)
-
+        plt.title(overlay_title, fontsize=label_fontsize)
         plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
-            "Overlay_Calibration",
+            "overlay_calibration",
             save_plot,
             image_path_png,
             image_path_svg,
         )
         plt.show()
+
+    # Final grid cleanup (hide unused axes)
     elif grid:
-        num_models = len(model) if isinstance(model, list) else 1
-        for ax in axes[num_models:]:
+        for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(
-            "Grid_Calibration",
+            "grid_calibration",
             save_plot,
             image_path_png,
             image_path_svg,
