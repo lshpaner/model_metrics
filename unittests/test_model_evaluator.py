@@ -21,7 +21,6 @@ from model_metrics.model_evaluator import (
     show_pr_curve,
     show_calibration_curve,
     get_predictions,
-    extract_model_titles,
     extract_model_name,
     show_lift_chart,
     show_gain_chart,
@@ -661,15 +660,6 @@ def test_summarize_model_performance_print_output(mock_print, regression_model):
     print("Print output test passed.")
 
 
-def test_extract_model_titles(trained_model):
-    """Test extracting model titles."""
-    titles = extract_model_titles(
-        [trained_model],
-        model_titles=["LogisticRegression"],
-    )
-    assert titles == ["LogisticRegression"]
-
-
 def test_extract_model_name(trained_model):
     """Test extracting model names."""
     name = extract_model_name(trained_model)
@@ -993,17 +983,17 @@ def test_show_roc_curve_custom_titles(
     trained_model,
     sample_data,
 ):
-    """Test custom model_titles and title parameters."""
+    """Test custom model_title and title parameters."""
     X, y = sample_data
     model = [trained_model, trained_model]
-    model_titles = ["ModelA", "ModelB"]
+    model_title = ["ModelA", "ModelB"]
     custom_title = "Custom ROC Plot"
     try:
         show_roc_curve(
             model,
             X,
             y,
-            model_titles=model_titles,
+            model_title=model_title,
             title=custom_title,
             overlay=True,
             save_plot=False,
@@ -1060,7 +1050,7 @@ def test_show_roc_curve_curve_styling(
     """Test custom curve styling with curve_kwgs."""
     X, y = sample_data
     model = [trained_model, trained_model]
-    model_titles = ["ModelA", "ModelB"]
+    model_title = ["ModelA", "ModelB"]
     curve_kwgs = {
         "ModelA": {"color": "red", "linestyle": "--"},
         "ModelB": {"color": "blue"},
@@ -1070,7 +1060,7 @@ def test_show_roc_curve_curve_styling(
             model,
             X,
             y,
-            model_titles=model_titles,
+            model_title=model_title,
             curve_kwgs=curve_kwgs,
             overlay=True,
             save_plot=False,
@@ -1339,17 +1329,17 @@ def test_show_pr_curve_custom_titles(
     trained_model,
     sample_data,
 ):
-    """Test custom model_titles and title parameters."""
+    """Test custom model_title and title parameters."""
     X, y = sample_data
     model = [trained_model, trained_model]
-    model_titles = ["ModelA", "ModelB"]
+    model_title = ["ModelA", "ModelB"]
     custom_title = "Custom PR Plot"
     try:
         show_pr_curve(
             model,
             X,
             y,
-            model_titles=model_titles,
+            model_title=model_title,
             title=custom_title,
             overlay=True,
             save_plot=False,
@@ -1406,7 +1396,7 @@ def test_show_pr_curve_curve_styling(
     """Test custom curve styling with curve_kwgs."""
     X, y = sample_data
     model = [trained_model, trained_model]
-    model_titles = ["ModelA", "ModelB"]
+    model_title = ["ModelA", "ModelB"]
     curve_kwgs = {
         "ModelA": {"color": "red", "linestyle": "--"},
         "ModelB": {"color": "blue"},
@@ -1416,7 +1406,7 @@ def test_show_pr_curve_curve_styling(
             model,
             X,
             y,
-            model_titles=model_titles,
+            model_title=model_title,
             curve_kwgs=curve_kwgs,
             overlay=True,
             save_plot=False,
@@ -1536,13 +1526,13 @@ def test_show_pr_curve_grid_layout(
     """
     X, y = sample_data
     model = [trained_model, trained_model, trained_model]
-    model_titles = ["ModelA", "ModelB", "ModelC"]
+    model_title = ["ModelA", "ModelB", "ModelC"]
     try:
         show_pr_curve(
             model,
             X,
             y,
-            model_titles=model_titles,
+            model_title=model_title,
             grid=True,
             n_rows=2,
             n_cols=2,
@@ -1857,7 +1847,7 @@ def test_show_calibration_curve_custom_titles(trained_model, sample_data):
             model=model,
             X=X,
             y=y,
-            model_titles=titles,
+            model_title=titles,
             grid=True,
         )
     except Exception as e:
@@ -2195,19 +2185,3 @@ def test_plot_threshold_metrics_custom_styles(
     )
 
     assert mock_show.called, "plt.show() was not called."
-
-
-def test_extract_model_titles_nested_pipeline():
-    """Test extract_model_titles with GridSearchCV wrapping a pipeline."""
-    X, y = make_classification(n_samples=100, n_features=5, random_state=42)
-    pipeline = Pipeline(
-        [
-            ("scaler", StandardScaler()),
-            ("clf", LogisticRegression()),
-        ]
-    )
-    grid = GridSearchCV(pipeline, param_grid={"clf__C": [0.1, 1.0]}, cv=2)
-    grid.fit(X, y)
-
-    titles = extract_model_titles([grid])
-    assert titles == ["LogisticRegression"]

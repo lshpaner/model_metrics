@@ -143,54 +143,6 @@ def get_predictions(model, X, y, model_threshold, custom_threshold, score):
 
 
 # Helper function
-def extract_model_titles(models_or_pipelines, model_titles=None):
-    """
-    Extract titles from models or pipelines using an optional external list of
-    model titles.
-
-    Parameters:
-    -----------
-    models_or_pipelines : list
-        A list of model or pipeline objects.
-
-    model_titles : list, optional
-        A list of human-readable model titles to map class names to.
-
-    Returns:
-    --------
-    list
-        A list of extracted or matched model titles.
-    """
-    titles = []
-    for model in models_or_pipelines:
-        try:
-            if hasattr(model, "estimator"):
-                model = model.estimator
-            if hasattr(model, "named_steps"):  # Check if it's a pipeline
-                final_model = list(model.named_steps.values())[-1]
-                class_name = final_model.__class__.__name__
-            else:
-                class_name = model.__class__.__name__
-
-            # If model_titles is provided, attempt to map class_name
-            if model_titles:
-                matched_title = next(
-                    (title for title in model_titles if class_name in title),
-                    class_name,
-                )
-            else:
-                matched_title = (
-                    class_name  # Default to class_name if no titles are provided
-                )
-
-            titles.append(matched_title)
-        except AttributeError:
-            titles.append("Unknown Model")
-
-    return titles
-
-
-# Helper function
 def extract_model_name(pipeline_or_model):
     """Extracts the final model name from a pipeline or standalone model."""
     if hasattr(pipeline_or_model, "steps"):  # It's a pipeline
@@ -216,7 +168,7 @@ def summarize_model_performance(
     y,
     model_type="classification",
     model_threshold=None,
-    model_titles=None,
+    model_title=None,
     custom_threshold=None,
     score=None,
     return_df=False,
@@ -248,7 +200,7 @@ def summarize_model_performance(
         - If provided, contains threshold values for classification models.
         - Used when custom_threshold is not set.
 
-    model_titles : str, list of str, pd.Series, or None, default=None
+    model_title : str, list of str, pd.Series, or None, default=None
         Custom model names for display.
         - If a single string is provided, it is automatically wrapped in a list.
         - If a Series is provided, it is converted to a list.
@@ -329,20 +281,20 @@ def summarize_model_performance(
 
     metrics_data = []
 
-    # Normalize model_titles input
-    if model_titles is None:
-        model_titles = [f"Model_{i+1}" for i in range(len(models))]
-    elif isinstance(model_titles, str):
-        model_titles = [model_titles]
-    elif isinstance(model_titles, pd.Series):
-        model_titles = model_titles.tolist()
-    elif not isinstance(model_titles, list):
+    # Normalize model_title input
+    if model_title is None:
+        model_title = [f"Model_{i+1}" for i in range(len(models))]
+    elif isinstance(model_title, str):
+        model_title = [model_title]
+    elif isinstance(model_title, pd.Series):
+        model_title = model_title.tolist()
+    elif not isinstance(model_title, list):
         raise TypeError(
-            "model_titles must be a string, list of strings, Series, or None."
+            "model_title must be a string, list of strings, Series, or None."
         )
 
     for i, model in enumerate(models):
-        name = model_titles[i]
+        name = model_title[i]
         if model_type == "classification":
             y_true, y_prob, y_pred, threshold = get_predictions(
                 model, X, y, model_threshold, custom_threshold, score
@@ -699,7 +651,7 @@ def show_confusion_matrix(
     model,
     X,
     y,
-    model_titles=None,
+    model_title=None,
     title=None,
     model_threshold=None,
     custom_threshold=None,
@@ -730,7 +682,7 @@ def show_confusion_matrix(
     - model (estimator): A single model (string) or a list of models/pipelines.
     - X (array-like): Feature matrix for predictions.
     - y (array-like): True labels.
-    - model_titles (list, optional): Custom titles for models.
+    - model_title (list, optional): Custom titles for models.
     - model_threshold (float, optional): Threshold for predictions.
     - custom_threshold (float, optional): User-defined threshold override.
     - class_labels (list, optional): Custom labels for the confusion matrix.
@@ -755,13 +707,13 @@ def show_confusion_matrix(
     if not isinstance(model, list):
         model = [model]
 
-    # Normalize model_titles input
-    if model_titles is None:
-        model_titles = [f"Model {i+1}" for i in range(len(model))]
-    elif isinstance(model_titles, str):
-        model_titles = [model_titles]
-    elif not isinstance(model_titles, list):
-        raise TypeError("model_titles must be a string, a list of strings, or None.")
+    # Normalize model_title input
+    if model_title is None:
+        model_title = [f"Model {i+1}" for i in range(len(model))]
+    elif isinstance(model_title, str):
+        model_title = [model_title]
+    elif not isinstance(model_title, list):
+        raise TypeError("model_title must be a string, a list of strings, or None.")
 
     # Setup grid if enabled
     if grid:
@@ -776,8 +728,8 @@ def show_confusion_matrix(
 
     for idx, (m, ax) in enumerate(zip(model, axes)):
         # Determine the model name
-        if model_titles:
-            name = model_titles[idx]
+        if model_title:
+            name = model_title[idx]
         else:
             name = extract_model_name(m)
 
@@ -977,7 +929,7 @@ def show_roc_curve(
     y,
     xlabel="False Positive Rate",
     ylabel="True Positive Rate",
-    model_titles=None,
+    model_title=None,
     decimal_places=2,
     overlay=False,
     title=None,
@@ -1010,7 +962,7 @@ def show_roc_curve(
         Feature data for prediction, typically a pandas DataFrame or NumPy array.
     - y: array-like
         True binary labels for evaluation,(e.g., a pandas Series or NumPy array).
-    - model_titles: str or list of str, optional
+    - model_title: str or list of str, optional
         Title or list of titles for the models. If a single string is provided,
         it is automatically converted to a one-element list. If None, defaults to
         "Model 1", "Model 2", etc. Required when using a nested dictionary for
@@ -1036,7 +988,7 @@ def show_roc_curve(
     - text_wrap: int, optional
         Maximum width for wrapping titles if they are too long (default: None).
     - curve_kwgs: list or dict, optional
-        Styling for individual model curves. If `model_titles` is specified as a
+        Styling for individual model curves. If `model_title` is specified as a
         list, `curve_kwgs` must be a nested dictionary with model titles as keys
         and their respective style dictionaries (e.g., {'color': 'red',
         'linestyle': '--'}) as values. Otherwise, `curve_kwgs` must be a list of
@@ -1109,16 +1061,16 @@ def show_roc_curve(
     if not isinstance(model, list):
         model = [model]
 
-    # Normalize model_titles input
-    if model_titles is None:
-        model_titles = [f"Model {i+1}" for i in range(len(model))]
-    elif isinstance(model_titles, str):
-        model_titles = [model_titles]
-    elif not isinstance(model_titles, list):
-        raise TypeError("model_titles must be a string, a list of strings, or None.")
+    # Normalize model_title input
+    if model_title is None:
+        model_title = [f"Model {i+1}" for i in range(len(model))]
+    elif isinstance(model_title, str):
+        model_title = [model_title]
+    elif not isinstance(model_title, list):
+        raise TypeError("model_title must be a string, a list of strings, or None.")
 
     if isinstance(curve_kwgs, dict):
-        curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
+        curve_styles = [curve_kwgs.get(name, {}) for name in model_title]
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
@@ -1142,7 +1094,7 @@ def show_roc_curve(
         axes = axes.flatten()
 
     for idx, (mod, name, curve_style) in enumerate(
-        zip(model, model_titles, curve_styles)
+        zip(model, model_title, curve_styles)
     ):
         y_true, y_prob, _, _ = get_predictions(
             mod,
@@ -1349,7 +1301,7 @@ def show_pr_curve(
     y,
     xlabel="Recall",
     ylabel="Precision",
-    model_titles=None,
+    model_title=None,
     decimal_places=2,
     overlay=False,
     title=None,
@@ -1386,7 +1338,7 @@ def show_pr_curve(
         Categorical data (e.g., pandas Series or NumPy array) to group PR curves
         by unique values. If provided, plots separate PR curves for each group
         with metric values and class counts (Total, Pos, Neg) in the legend.
-    - model_titles: str or list of str, optional
+    - model_title: str or list of str, optional
         Title or list of titles for the models. If a single string is provided,
         it is automatically converted to a one-element list. If None, defaults to
         "Model 1", "Model 2", etc. Required when using a nested dictionary for
@@ -1439,7 +1391,7 @@ def show_pr_curve(
         - If `group_category` is used with `grid=True` or `overlay=True`.
         - If `legend_metric` is not one of {"ap", "aucpr"}.
     - TypeError:
-        - If `model_titles` is not a string, list of strings, or None.
+        - If `model_title` is not a string, list of strings, or None.
 
     Notes:
     - When `group_category` is provided, separate PR curves are drawn per group.
@@ -1478,16 +1430,16 @@ def show_pr_curve(
     if not isinstance(model, list):
         model = [model]
 
-    # Normalize model_titles input
-    if model_titles is None:
-        model_titles = [f"Model {i+1}" for i in range(len(model))]
-    elif isinstance(model_titles, str):
-        model_titles = [model_titles]
-    elif not isinstance(model_titles, list):
-        raise TypeError("model_titles must be a string, a list of strings, or None.")
+    # Normalize model_title input
+    if model_title is None:
+        model_title = [f"Model {i+1}" for i in range(len(model))]
+    elif isinstance(model_title, str):
+        model_title = [model_title]
+    elif not isinstance(model_title, list):
+        raise TypeError("model_title must be a string, a list of strings, or None.")
 
     if isinstance(curve_kwgs, dict):
-        curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
+        curve_styles = [curve_kwgs.get(name, {}) for name in model_title]
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
@@ -1505,7 +1457,7 @@ def show_pr_curve(
         axes = axes.flatten()
 
     for idx, (mod, name, curve_style) in enumerate(
-        zip(model, model_titles, curve_styles)
+        zip(model, model_title, curve_styles)
     ):
         y_true, y_prob, _, _ = get_predictions(
             mod,
@@ -1738,7 +1690,7 @@ def show_lift_chart(
     y,
     xlabel="Percentage of Sample",
     ylabel="Lift",
-    model_titles=None,
+    model_title=None,
     overlay=False,
     title=None,
     save_plot=False,
@@ -1768,7 +1720,7 @@ def show_lift_chart(
     - y (array-like): True labels.
     - xlabel (str, default="Percentage of Sample"): Label for the x-axis.
     - ylabel (str, default="Lift"): Label for the y-axis.
-    - model_titles (list, optional): Custom titles for models.
+    - model_title (list, optional): Custom titles for models.
     - overlay (bool, default=False): Whether to overlay multiple models in one plot.
     - title (str, optional): Custom title; set to `""` to disable.
     - save_plot (bool, default=False): Whether to save the plot.
@@ -1798,11 +1750,11 @@ def show_lift_chart(
     if not isinstance(model, list):
         model = [model]
 
-    if model_titles is None:
-        model_titles = [f"Model {i+1}" for i in range(len(model))]
+    if model_title is None:
+        model_title = [f"Model {i+1}" for i in range(len(model))]
 
     if isinstance(curve_kwgs, dict):
-        curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
+        curve_styles = [curve_kwgs.get(name, {}) for name in model_title]
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
@@ -1826,7 +1778,7 @@ def show_lift_chart(
         axes = axes.flatten()
 
     for idx, (mod, name, curve_style) in enumerate(
-        zip(model, model_titles, curve_styles)
+        zip(model, model_title, curve_styles)
     ):
         y_probs = mod.predict_proba(X)[:, 1]
         sorted_indices = np.argsort(y_probs)[::-1]
@@ -1962,7 +1914,7 @@ def show_gain_chart(
     y,
     xlabel="Percentage of Sample",
     ylabel="Cumulative Gain",
-    model_titles=None,
+    model_title=None,
     overlay=False,
     title=None,
     save_plot=False,
@@ -1992,7 +1944,7 @@ def show_gain_chart(
     - y (array-like): True labels.
     - xlabel (str, default="Percentage of Sample"): Label for the x-axis.
     - ylabel (str, default="Cumulative Gain"): Label for the y-axis.
-    - model_titles (list, optional): Custom titles for models.
+    - model_title (list, optional): Custom titles for models.
     - overlay (bool, default=False): Whether to overlay multiple models in one plot.
     - title (str, optional): Custom title; set to `""` to disable.
     - save_plot (bool, default=False): Whether to save the plot.
@@ -2022,11 +1974,11 @@ def show_gain_chart(
     if not isinstance(model, list):
         model = [model]
 
-    if model_titles is None:
-        model_titles = [f"Model {i+1}" for i in range(len(model))]
+    if model_title is None:
+        model_title = [f"Model {i+1}" for i in range(len(model))]
 
     if isinstance(curve_kwgs, dict):
-        curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
+        curve_styles = [curve_kwgs.get(name, {}) for name in model_title]
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
@@ -2050,7 +2002,7 @@ def show_gain_chart(
         axes = axes.flatten()
 
     for idx, (mod, name, curve_style) in enumerate(
-        zip(model, model_titles, curve_styles)
+        zip(model, model_title, curve_styles)
     ):
         y_probs = mod.predict_proba(X)[:, 1]
         sorted_indices = np.argsort(y_probs)[::-1]
@@ -2187,7 +2139,7 @@ def show_calibration_curve(
     y,
     xlabel="Mean Predicted Probability",
     ylabel="Fraction of Positives",
-    model_titles=None,
+    model_title=None,
     overlay=False,
     title=None,
     save_plot=False,
@@ -2219,7 +2171,7 @@ def show_calibration_curve(
         Features for prediction.
     - y: array-like
         True labels.
-    - model_titles: list or str, optional
+    - model_title: list or str, optional
         Titles for individual models.
     - overlay: bool
         Whether to overlay multiple models on a single plot.
@@ -2259,20 +2211,20 @@ def show_calibration_curve(
     if not isinstance(model, list):
         model = [model]
 
-    # Normalize model_titles input
-    if model_titles is None:
-        model_titles = [f"Model_{i+1}" for i in range(len(model))]
-    elif isinstance(model_titles, str):
-        model_titles = [model_titles]
-    elif isinstance(model_titles, pd.Series):
-        model_titles = model_titles.tolist()
-    elif not isinstance(model_titles, list):
+    # Normalize model_title input
+    if model_title is None:
+        model_title = [f"Model_{i+1}" for i in range(len(model))]
+    elif isinstance(model_title, str):
+        model_title = [model_title]
+    elif isinstance(model_title, pd.Series):
+        model_title = model_title.tolist()
+    elif not isinstance(model_title, list):
         raise TypeError(
-            "model_titles must be a string, list of strings, Series, or None."
+            "model_title must be a string, list of strings, Series, or None."
         )
 
     if isinstance(curve_kwgs, dict):
-        curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
+        curve_styles = [curve_kwgs.get(name, {}) for name in model_title]
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
@@ -2296,7 +2248,7 @@ def show_calibration_curve(
         linestyle_kwgs.setdefault("linestyle", "--")
 
     for idx, (mod, name, curve_style) in enumerate(
-        zip(model, model_titles, curve_styles)
+        zip(model, model_title, curve_styles)
     ):
         y_true, y_prob, _, _ = get_predictions(mod, X, y, None, None, None)
         prob_true, prob_pred = calibration_curve(y_true, y_prob, n_bins=bins)
@@ -2462,7 +2414,7 @@ def show_ks_curve(
     y,
     xlabel="Cumulative Probability",
     ylabel="Empirical CDF",
-    model_titles=None,
+    model_title=None,
     title=None,
     decimal_places=2,
     save_plot=False,
@@ -2486,7 +2438,7 @@ def show_ks_curve(
     - model: estimator or list of estimators
     - X: Features for prediction.
     - y: True binary labels.
-    - model_titles: str or list of model names for labeling.
+    - model_title: str or list of model names for labeling.
     - xlabel, ylabel: Axis labels.
     - title: Title for the plot.
     - save_plot: Whether to save the plot.
@@ -2505,16 +2457,16 @@ def show_ks_curve(
     if not isinstance(model, list):
         model = [model]
 
-    # Normalize model_titles input
-    if model_titles is None:
-        model_titles = [f"Model_{i+1}" for i in range(len(model))]
-    elif isinstance(model_titles, str):
-        model_titles = [model_titles]
-    elif isinstance(model_titles, pd.Series):
-        model_titles = model_titles.tolist()
-    elif not isinstance(model_titles, list):
+    # Normalize model_title input
+    if model_title is None:
+        model_title = [f"Model_{i+1}" for i in range(len(model))]
+    elif isinstance(model_title, str):
+        model_title = [model_title]
+    elif isinstance(model_title, pd.Series):
+        model_title = model_title.tolist()
+    elif not isinstance(model_title, list):
         raise TypeError(
-            "model_titles must be a string, list of strings, Series, or None."
+            "model_title must be a string, list of strings, Series, or None."
         )
 
     curve_kwgs = curve_kwgs or {}
@@ -2536,7 +2488,7 @@ def show_ks_curve(
     )
     plt.figure(figsize=figsize or (8, 6))
 
-    for mod, name, color in zip(model, model_titles, colors):
+    for mod, name, color in zip(model, model_title, colors):
         print(f"Processing Model: {name}")  # Debugging statement
 
         y_true, y_prob, _, _ = get_predictions(
