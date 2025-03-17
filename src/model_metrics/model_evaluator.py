@@ -781,8 +781,13 @@ def show_confusion_matrix(
         else:
             name = extract_model_name(m)
 
-        y_true, y_prob, y_pred, threshold = get_predictions(
-            m, X, y, model_threshold, custom_threshold, score
+        y_true, _, y_pred, threshold = get_predictions(
+            m,
+            X,
+            y,
+            model_threshold,
+            custom_threshold,
+            score,
         )
 
         # Compute confusion matrix
@@ -967,7 +972,7 @@ def show_confusion_matrix(
 
 
 def show_roc_curve(
-    models,
+    model,
     X,
     y,
     xlabel="False Positive Rate",
@@ -997,8 +1002,10 @@ def show_roc_curve(
     class counts in the legend.
 
     Parameters:
-    - models: list
-        List of models or pipelines to plot ROC curves for.
+    - model: estimator or list of estimators
+        A single model or a list of models/pipelines to plot ROC curves for.
+        The model(s) must implement either `predict_proba()` or
+        `decision_function()`.
     - X: array-like
         Feature data for prediction, typically a pandas DataFrame or NumPy array.
     - y: array-like
@@ -1084,7 +1091,7 @@ def show_roc_curve(
             f"are set to `False`."
         )
 
-    if overlay and len(models) == 1:
+    if overlay and len(model) == 1:
         raise ValueError(
             f"Cannot use `overlay=True` with only one model. "
             f"Use `overlay=False` to plot a single model, or provide multiple "
@@ -1099,12 +1106,12 @@ def show_roc_curve(
         )
 
     # Ensure models is a list
-    if not isinstance(models, list):
-        models = [models]
+    if not isinstance(model, list):
+        model = [model]
 
     # Normalize model_titles input
     if model_titles is None:
-        model_titles = [f"Model {i+1}" for i in range(len(models))]
+        model_titles = [f"Model {i+1}" for i in range(len(model))]
     elif isinstance(model_titles, str):
         model_titles = [model_titles]
     elif not isinstance(model_titles, list):
@@ -1115,7 +1122,7 @@ def show_roc_curve(
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
-        curve_styles = [{}] * len(models)
+        curve_styles = [{}] * len(model)
 
     linestyle_kwgs = linestyle_kwgs or {
         "color": "gray",
@@ -1128,17 +1135,22 @@ def show_roc_curve(
 
     if grid and not overlay:
         if n_rows is None:
-            n_rows = math.ceil(len(models) / n_cols)
+            n_rows = math.ceil(len(model) / n_cols)
         fig, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
 
-    for idx, (model, name, curve_style) in enumerate(
-        zip(models, model_titles, curve_styles)
+    for idx, (mod, name, curve_style) in enumerate(
+        zip(model, model_titles, curve_styles)
     ):
-        y_true, y_prob, y_pred, threshold = get_predictions(
-            model, X, y, None, None, None
+        y_true, y_prob, _, _ = get_predictions(
+            mod,
+            X,
+            y,
+            None,
+            None,
+            None,
         )
 
         if group_category is not None:
@@ -1319,7 +1331,7 @@ def show_roc_curve(
         plt.show()
 
     elif grid:
-        for ax in axes[len(models) :]:
+        for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(
@@ -1332,7 +1344,7 @@ def show_roc_curve(
 
 
 def show_pr_curve(
-    models,
+    model,
     X,
     y,
     xlabel="Recall",
@@ -1362,8 +1374,10 @@ def show_pr_curve(
     and selected legend metrics.
 
     Parameters:
-    - models: list
-        List of models or pipelines to plot PR curves for.
+    - model: estimator or list of estimators
+        A single model or a list of models/pipelines to plot PR curves for.
+        The model(s) must implement either `predict_proba()` or
+        `decision_function()`.
     - X: array-like
         Feature data for prediction, typically a pandas DataFrame or NumPy array.
     - y: array-like
@@ -1461,12 +1475,12 @@ def show_pr_curve(
             f"`overlay` are set to `False`."
         )
 
-    if not isinstance(models, list):
-        models = [models]
+    if not isinstance(model, list):
+        model = [model]
 
     # Normalize model_titles input
     if model_titles is None:
-        model_titles = [f"Model {i+1}" for i in range(len(models))]
+        model_titles = [f"Model {i+1}" for i in range(len(model))]
     elif isinstance(model_titles, str):
         model_titles = [model_titles]
     elif not isinstance(model_titles, list):
@@ -1477,24 +1491,29 @@ def show_pr_curve(
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
-        curve_styles = [{}] * len(models)
+        curve_styles = [{}] * len(model)
 
     if overlay:
         plt.figure(figsize=figsize or (8, 6))
 
     if grid and not overlay:
         if n_rows is None:
-            n_rows = math.ceil(len(models) / n_cols)
+            n_rows = math.ceil(len(model) / n_cols)
         fig, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
 
-    for idx, (model, name, curve_style) in enumerate(
-        zip(models, model_titles, curve_styles)
+    for idx, (mod, name, curve_style) in enumerate(
+        zip(model, model_titles, curve_styles)
     ):
-        y_true, y_prob, y_pred, threshold = get_predictions(
-            model, X, y, None, None, None
+        y_true, y_prob, _, _ = get_predictions(
+            mod,
+            X,
+            y,
+            None,
+            None,
+            None,
         )
 
         counts = {}
@@ -1696,7 +1715,7 @@ def show_pr_curve(
         plt.show()
 
     elif grid:
-        for ax in axes[len(models) :]:
+        for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(
@@ -1714,7 +1733,7 @@ def show_pr_curve(
 
 
 def show_lift_chart(
-    models,
+    model,
     X,
     y,
     xlabel="Percentage of Sample",
@@ -1744,7 +1763,7 @@ def show_lift_chart(
     Supports multiple models with overlay or grid layouts and customizable styling.
 
     Parameters:
-    - models (list or estimator): One or more trained models.
+    - model (list or estimator): One or more trained models.
     - X (array-like): Feature matrix.
     - y (array-like): True labels.
     - xlabel (str, default="Percentage of Sample"): Label for the x-axis.
@@ -1776,18 +1795,18 @@ def show_lift_chart(
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
 
-    if not isinstance(models, list):
-        models = [models]
+    if not isinstance(model, list):
+        model = [model]
 
     if model_titles is None:
-        model_titles = [f"Model {i+1}" for i in range(len(models))]
+        model_titles = [f"Model {i+1}" for i in range(len(model))]
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
-        curve_styles = [{}] * len(models)
+        curve_styles = [{}] * len(model)
 
     linestyle_kwgs = linestyle_kwgs or {
         "color": "gray",
@@ -1800,16 +1819,16 @@ def show_lift_chart(
 
     if grid and not overlay:
         if n_rows is None:
-            n_rows = math.ceil(len(models) / n_cols)
+            n_rows = math.ceil(len(model) / n_cols)
         fig, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
 
-    for idx, (model, name, curve_style) in enumerate(
-        zip(models, model_titles, curve_styles)
+    for idx, (mod, name, curve_style) in enumerate(
+        zip(model, model_titles, curve_styles)
     ):
-        y_probs = model.predict_proba(X)[:, 1]
+        y_probs = mod.predict_proba(X)[:, 1]
         sorted_indices = np.argsort(y_probs)[::-1]
         y_true_sorted = np.array(y)[sorted_indices]
 
@@ -1925,15 +1944,20 @@ def show_lift_chart(
         plt.show()
 
     elif grid:
-        for ax in axes[len(models) :]:
+        for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
-        save_plot_images("Grid_Lift", save_plot, image_path_png, image_path_svg)
+        save_plot_images(
+            "Grid_Lift",
+            save_plot,
+            image_path_png,
+            image_path_svg,
+        )
         plt.show()
 
 
 def show_gain_chart(
-    models,
+    model,
     X,
     y,
     xlabel="Percentage of Sample",
@@ -1963,7 +1987,7 @@ def show_gain_chart(
     Supports multiple models with overlay or grid layouts and customizable styling.
 
     Parameters:
-    - models (list or estimator): One or more trained models.
+    - model (list or estimator): One or more trained models.
     - X (array-like): Feature matrix.
     - y (array-like): True labels.
     - xlabel (str, default="Percentage of Sample"): Label for the x-axis.
@@ -1995,18 +2019,18 @@ def show_gain_chart(
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
 
-    if not isinstance(models, list):
-        models = [models]
+    if not isinstance(model, list):
+        model = [model]
 
     if model_titles is None:
-        model_titles = [f"Model {i+1}" for i in range(len(models))]
+        model_titles = [f"Model {i+1}" for i in range(len(model))]
 
     if isinstance(curve_kwgs, dict):
         curve_styles = [curve_kwgs.get(name, {}) for name in model_titles]
     elif isinstance(curve_kwgs, list):
         curve_styles = curve_kwgs
     else:
-        curve_styles = [{}] * len(models)
+        curve_styles = [{}] * len(model)
 
     linestyle_kwgs = linestyle_kwgs or {
         "color": "gray",
@@ -2019,16 +2043,16 @@ def show_gain_chart(
 
     if grid and not overlay:
         if n_rows is None:
-            n_rows = math.ceil(len(models) / n_cols)
+            n_rows = math.ceil(len(model) / n_cols)
         fig, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
 
-    for idx, (model, name, curve_style) in enumerate(
-        zip(models, model_titles, curve_styles)
+    for idx, (mod, name, curve_style) in enumerate(
+        zip(model, model_titles, curve_styles)
     ):
-        y_probs = model.predict_proba(X)[:, 1]
+        y_probs = mod.predict_proba(X)[:, 1]
         sorted_indices = np.argsort(y_probs)[::-1]
         y_true_sorted = np.array(y)[sorted_indices]
 
@@ -2140,10 +2164,15 @@ def show_gain_chart(
         plt.show()
 
     elif grid:
-        for ax in axes[len(models) :]:
+        for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
-        save_plot_images("Grid_Gain", save_plot, image_path_png, image_path_svg)
+        save_plot_images(
+            "Grid_Gain",
+            save_plot,
+            image_path_png,
+            image_path_svg,
+        )
         plt.show()
 
 
@@ -2168,6 +2197,7 @@ def show_calibration_curve(
     curve_kwgs=None,
     grid=False,  # Grid layout option
     n_cols=2,  # Number of columns for the grid
+    n_rows=None,
     figsize=None,  # User-defined figure size
     label_fontsize=12,
     tick_fontsize=10,
@@ -2255,20 +2285,20 @@ def show_calibration_curve(
         plt.figure(figsize=figsize or (8, 6))
 
     if grid and not overlay:
-        import math
-
-        n_rows = math.ceil(len(model) / n_cols)
-        fig, axes = plt.subplots(
+        if n_rows is None:
+            n_rows = math.ceil(len(model) / n_cols)
+        _, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
+        linestyle_kwgs = linestyle_kwgs or {}
+        linestyle_kwgs.setdefault("color", "gray")
+        linestyle_kwgs.setdefault("linestyle", "--")
 
-    for idx, (model, name, curve_style) in enumerate(
+    for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_titles, curve_styles)
     ):
-        y_true, y_prob, y_pred, threshold = get_predictions(
-            model, X, y, None, None, None
-        )
+        y_true, y_prob, _, _ = get_predictions(mod, X, y, None, None, None)
         prob_true, prob_pred = calibration_curve(y_true, y_prob, n_bins=bins)
 
         # Calculate Brier score if enabled
@@ -2297,9 +2327,6 @@ def show_calibration_curve(
                 **curve_style,
                 **kwargs,
             )
-            linestyle_kwgs = linestyle_kwgs or {}
-            linestyle_kwgs.setdefault("color", "gray")
-            linestyle_kwgs.setdefault("linestyle", "--")
             ax.plot(
                 [0, 1],
                 [0, 1],
@@ -2325,7 +2352,9 @@ def show_calibration_curve(
 
             ax.legend(loc="best", fontsize=tick_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
-            ax.grid(visible=gridlines)
+            if gridlines:
+                ax.grid(True, which="both", axis="both")
+
         else:
             plt.figure(figsize=figsize or (8, 6))
             plt.plot(
@@ -2428,7 +2457,7 @@ def show_calibration_curve(
 
 
 def show_ks_curve(
-    models,
+    model,
     X,
     y,
     xlabel="Cumulative Probability",
@@ -2454,7 +2483,7 @@ def show_ks_curve(
     Plot the Kolmogorov-Smirnov (KS) statistic curve using model predictions.
 
     Parameters:
-    - models: List of trained models or a single model.
+    - model: estimator or list of estimators
     - X: Features for prediction.
     - y: True binary labels.
     - model_titles: str or list of model names for labeling.
@@ -2473,12 +2502,12 @@ def show_ks_curve(
     - score: Scoring metric used for selecting a threshold.
     """
 
-    if not isinstance(models, list):
-        models = [models]
+    if not isinstance(model, list):
+        model = [model]
 
     # Normalize model_titles input
     if model_titles is None:
-        model_titles = [f"Model_{i+1}" for i in range(len(models))]
+        model_titles = [f"Model_{i+1}" for i in range(len(model))]
     elif isinstance(model_titles, str):
         model_titles = [model_titles]
     elif isinstance(model_titles, pd.Series):
@@ -2507,11 +2536,16 @@ def show_ks_curve(
     )
     plt.figure(figsize=figsize or (8, 6))
 
-    for model, name, color in zip(models, model_titles, colors):
+    for mod, name, color in zip(model, model_titles, colors):
         print(f"Processing Model: {name}")  # Debugging statement
 
         y_true, y_prob, _, _ = get_predictions(
-            model, X, y, model_threshold, custom_threshold, score
+            mod,
+            X,
+            y,
+            model_threshold,
+            custom_threshold,
+            score,
         )
 
         y_true = np.array(y_true).flatten()
@@ -2674,7 +2708,10 @@ def plot_threshold_metrics(
     )
 
     # Calculate Precision, Recall, and F1 Score for various thresholds
-    precision, recall, thresholds = precision_recall_curve(y_test, y_pred_probs)
+    precision, recall, thresholds = precision_recall_curve(
+        y_test,
+        y_pred_probs,
+    )
     f1_scores = (
         2 * (precision * recall) / (precision + recall + 1e-9)
     )  # Avoid division by zero
