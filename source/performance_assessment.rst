@@ -1563,7 +1563,7 @@ previous (Binary Classification Models) section <Binary_Classification>`,
 we generate ROC curves to visualize their discriminatory power.
 
 ROC AUC (Receiver Operating Characteristic Area Under the Curve) provides a 
-single scalar value representing a model’s ability to distinguish between 
+single scalar value representing a model's ability to distinguish between 
 positive and negative classes, with a value of 1 indicating perfect classification 
 and 0.5 representing random guessing. The curves are plotted by varying the 
 classification threshold and calculating the true positive rate (sensitivity) 
@@ -1586,10 +1586,10 @@ Designed to be both user-friendly and highly configurable, ``show_roc_curve``
 is a practical tool for model evaluation and stakeholder communication.
 
 
-.. function:: show_roc_curve(models, X, y, xlabel="False Positive Rate", ylabel="True Positive Rate", model_titles=None, decimal_places=2, overlay=False, title=None, save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, curve_kwgs=None, linestyle_kwgs=None, grid=False, n_rows=None, n_cols=2, figsize=(8, 6), label_fontsize=12, tick_fontsize=10, gridlines=True, group_category=None)
+.. function:: show_roc_curve(model, X, y, xlabel="False Positive Rate", ylabel="True Positive Rate", model_titles=None, decimal_places=2, overlay=False, title=None, save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, curve_kwgs=None, linestyle_kwgs=None, grid=False, n_rows=None, n_cols=2, figsize=(8, 6), label_fontsize=12, tick_fontsize=10, gridlines=True, group_category=None)
 
-    :param models: A trained model, a string placeholder, or a list containing models or strings to evaluate.
-    :type models: object or str or list[object or str]
+    :param model: A trained model, a string placeholder, or a list containing models or strings to evaluate.
+    :type model: object or str or list[object or str]
     :param X: Feature matrix used for prediction.
     :type X: pd.DataFrame or np.ndarray
     :param y: True binary labels for evaluation.
@@ -1646,7 +1646,7 @@ is a practical tool for model evaluation and stakeholder communication.
 .. admonition:: Notes
 
     - **Flexible Inputs:**
-        - ``models`` and ``model_titles`` can be individual items or lists. Strings passed in ``models`` are treated as placeholder names.
+        - ``model`` and ``model_titles`` can be individual items or lists. Strings passed in ``model`` are treated as placeholder names.
         - Titles can be automatically inferred or explicitly passed using ``model_titles``.
 
     - **Group-Wise ROC:**
@@ -1691,7 +1691,7 @@ add a grid, and save the plot for reporting purposes.
     from model_metrics import show_roc_curve
 
     show_roc_curve(
-        models=[model1, model2],
+        model=[model1, model2],
         X=X_test,
         y=y_test,
         model_titles=model_titles,
@@ -1740,7 +1740,7 @@ baseline, and the plot includes a custom title for clarity.
     from model_metrics import show_roc_curve
 
     show_roc_curve(
-        models=[model1, model2],
+        model=[model1, model2],
         X=X_test,
         y=y_test,
         model_titles=model_titles,
@@ -1798,7 +1798,7 @@ you can generate a separate ROC curve for each unique racial group in the datase
     from model_metrics import show_roc_curve
     
     show_roc_curve(
-        models=model_dt["model"].estimator,
+        model=model_dt["model"].estimator,
         X=X_test,
         y=y_test,
         model_titles="Decision Tree Classifier,
@@ -1849,10 +1849,10 @@ where false positives have a high cost. This makes the PR curve a complementary
 and sometimes more informative tool than ROC AUC in skewed classification scenarios.
 
 
-.. function:: show_pr_curve(models, X, y, xlabel="Recall", ylabel="Precision", model_titles=None, decimal_places=2, overlay=False, title=None, save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, curve_kwgs=None, grid=False, n_rows=None, n_cols=2, figsize=(8, 6), label_fontsize=12, tick_fontsize=10, gridlines=True, group_category=None)
+.. function:: show_pr_curve(model, X, y, xlabel="Recall", ylabel="Precision", model_titles=None, decimal_places=2, overlay=False, title=None, save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, curve_kwgs=None, grid=False, n_rows=None, n_cols=2, figsize=(8, 6), label_fontsize=12, tick_fontsize=10, gridlines=True, group_category=None)
 
-    :param models: A trained model, a string placeholder, or a list containing models or strings to evaluate.
-    :type models: object or str or list[object or str]
+    :param model: A trained model, a string placeholder, or a list containing models or strings to evaluate.
+    :type model: object or str or list[object or str]
     :param X: Feature matrix used for prediction.
     :type X: pd.DataFrame or np.ndarray
     :param y: True binary labels for evaluation.
@@ -1912,7 +1912,7 @@ and sometimes more informative tool than ROC AUC in skewed classification scenar
 .. admonition:: Notes
 
     - **Flexible Inputs:**
-        - ``models`` and ``model_titles`` can be individual items or lists. Strings passed in ``models`` are treated as placeholder names.
+        - ``model`` and ``model_titles`` can be individual items or lists. Strings passed in ``model`` are treated as placeholder names.
         - Titles can be automatically inferred or explicitly passed using ``model_titles``.
 
     - **Group-Wise PR:**
@@ -1964,7 +1964,7 @@ analysis and final reporting.
     from model_metrics import show_pr_curve
 
     show_pr_curve(
-        models=[logistic_model, rf_model],
+        model=[logistic_model, rf_model],
         X=X_test,
         y=y_test,
         model_titles=["Logistic Regression", "Random Forest"],
@@ -2013,7 +2013,7 @@ for clarity.
     from model_metrics import show_pr_curve
 
     show_pr_curve(
-        models=[model1, model2],
+        model=[model1, model2],
         X=X_test,
         y=y_test,
         model_titles=model_titles,
@@ -2072,7 +2072,7 @@ you can generate a separate ROC curve for each unique racial group in the datase
     from model_metrics import show_pr_curve
     
     show_pr_curve(
-        models=model_dt["model"].estimator,
+        model=model_dt["model"].estimator,
         X=X_test,
         y=y_test,
         model_titles="Decision Tree Classifier,

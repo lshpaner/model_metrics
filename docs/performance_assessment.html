@@ -1,29 +1,28 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Model Performance Summaries &mdash; Model Metrics 0.0.0.a2 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom.js" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=df76116e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=df76116e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.js?v=f9206548" />
+
   
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
-        <script src="_static/clipboard.min.js"></script>
-        <script src="_static/copybutton.js"></script>
-        <script src="_static/custom.js"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=b8a57ceb"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=a0ccc04e"></script>
+      <script src="_static/custom.js?v=f9206548"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -133,13 +132,14 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <span class="target" id="performance-assessment"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" width="300px" /></a>
+  <span class="target" id="performance-assessment"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" style="width: 300px;" />
+</a>
 </div><div style="height: 100px;"></div><section id="model-performance-summaries">
-<h1>Model Performance Summaries<a class="headerlink" href="#model-performance-summaries" title="Permalink to this heading"></a></h1>
+<h1>Model Performance Summaries<a class="headerlink" href="#model-performance-summaries" title="Link to this heading"></a></h1>
 <p><strong>Summarizes model performance metrics for classification and regression models.</strong></p>
 <dl class="py function">
 <dt class="sig sig-object py" id="summarize_model_performance">
-<span class="sig-name descname"><span class="pre">summarize_model_performance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'classification'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_titles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overall_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decimal_places</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#summarize_model_performance" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">summarize_model_performance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'classification'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_titles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overall_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decimal_places</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#summarize_model_performance" title="Link to this definition"></a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -205,7 +205,7 @@
 <p>The <code class="docutils literal notranslate"><span class="pre">summarize_model_performance</span></code> function provides a structured evaluation of classification and regression models, generating key performance metrics. For classification models, it computes precision, recall, specificity, F1-score, and AUC ROC. For regression models, it extracts coefficients and evaluates error metrics like MSE, RMSE, and R². The function allows specifying custom thresholds, metric rounding, and formatted display options.</p>
 <p>Below are two examples demonstrating how to evaluate multiple models using <code class="docutils literal notranslate"><span class="pre">summarize_model_performance</span></code>. The function calculates and presents metrics for classification and regression models.</p>
 <section id="binary-classification-models">
-<span id="binary-classification"></span><h2>Binary Classification Models<a class="headerlink" href="#binary-classification-models" title="Permalink to this heading"></a></h2>
+<span id="binary-classification"></span><h2>Binary Classification Models<a class="headerlink" href="#binary-classification-models" title="Link to this heading"></a></h2>
 <p>This section introduces binary classification using two widely used machine
 learning models: Logistic Regression and Random Forest Classifier.</p>
 <p>These examples demonstrate how <code class="docutils literal notranslate"><span class="pre">model_metrics</span></code> prepares and trains models on a
@@ -241,7 +241,7 @@ otherwise.</p>
 </pre></div>
 </div>
 <section id="binary-classification-example-1">
-<h3>Binary Classification Example 1<a class="headerlink" href="#binary-classification-example-1" title="Permalink to this heading"></a></h3>
+<h3>Binary Classification Example 1<a class="headerlink" href="#binary-classification-example-1" title="Link to this heading"></a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">summarize_model_performance</span>
 
 <span class="n">model_performance</span> <span class="o">=</span> <span class="n">summarize_model_performance</span><span class="p">(</span>
@@ -356,7 +356,7 @@ otherwise.</p>
     </table>
 </div><div style="height: 40px;"></div></section>
 <section id="binary-classification-example-2">
-<h3>Binary Classification Example 2<a class="headerlink" href="#binary-classification-example-2" title="Permalink to this heading"></a></h3>
+<h3>Binary Classification Example 2<a class="headerlink" href="#binary-classification-example-2" title="Link to this heading"></a></h3>
 <p>In this example, we revisit binary classification with the same two models—Logistic
 Regression and Random Forest—but adjust the classification threshold
 (<code class="docutils literal notranslate"><span class="pre">custom_threshold</span></code> input in this case) from the default 0.5 to 0.2. This
@@ -479,7 +479,7 @@ positive (1) at the expense of precision.</p>
 </div><div style="height: 40px;"></div></section>
 </section>
 <section id="regression-models">
-<h2>Regression Models<a class="headerlink" href="#regression-models" title="Permalink to this heading"></a></h2>
+<h2>Regression Models<a class="headerlink" href="#regression-models" title="Link to this heading"></a></h2>
 <p>In this section, we load the <cite>diabetes dataset</cite> <a class="footnote-reference brackets" href="#id7" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> from <code class="docutils literal notranslate"><span class="pre">scikit-learn</span></code>, which includes
 features like age and BMI, along with a target variable representing disease
 progression. The data is then split with <code class="docutils literal notranslate"><span class="pre">train_test_split</span></code> into training and
@@ -539,7 +539,7 @@ evaluation and comparison using tools provided by the <code class="docutils lite
 </pre></div>
 </div>
 <section id="regression-example-1">
-<h3>Regression Example 1<a class="headerlink" href="#regression-example-1" title="Permalink to this heading"></a></h3>
+<h3>Regression Example 1<a class="headerlink" href="#regression-example-1" title="Link to this heading"></a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">summarize_model_performance</span>
 
 <span class="n">regression_metrics</span> <span class="o">=</span> <span class="n">summarize_model_performance</span><span class="p">(</span>
@@ -925,7 +925,7 @@ effectiveness in [Your Library Name]’s documentation.</p>
     </table>
 </div><div style="height: 40px;"></div></section>
 <section id="regression-example-2">
-<h3>Regression Example 2<a class="headerlink" href="#regression-example-2" title="Permalink to this heading"></a></h3>
+<h3>Regression Example 2<a class="headerlink" href="#regression-example-2" title="Link to this heading"></a></h3>
 <p>In this Regression Example 2, we extend the analysis by introducing a Random Forest
 Regressor alongside Linear Regression and Ridge Regression to demonstrate how a
 model with feature importances, rather than coefficients, impacts evaluation outcomes.
@@ -1477,7 +1477,7 @@ the coefficient-based results of the other models, as shown in the subsequent ta
     </table>
 </div><div style="height: 40px;"></div></section>
 <section id="regression-example-3">
-<h3>Regression Example 3<a class="headerlink" href="#regression-example-3" title="Permalink to this heading"></a></h3>
+<h3>Regression Example 3<a class="headerlink" href="#regression-example-3" title="Link to this heading"></a></h3>
 <p>In some scenarios, you may want to simplify the output by excluding variables,
 coefficients, and feature importances from the model results. This example
 demonstrates how to achieve that by setting <code class="docutils literal notranslate"><span class="pre">overall_only=True</span></code> in the
@@ -1600,7 +1600,7 @@ Root Mean Squared Error (RMSE), Explained Variance, and R² Score.</p>
 </section>
 </section>
 <section id="roc-auc-curves">
-<h1>ROC AUC Curves<a class="headerlink" href="#roc-auc-curves" title="Permalink to this heading"></a></h1>
+<h1>ROC AUC Curves<a class="headerlink" href="#roc-auc-curves" title="Link to this heading"></a></h1>
 <p>This section demonstrates how to evaluate the performance of binary classification
 models using ROC AUC curves, a key metric for assessing the trade-off between
 true positive and false positive rates. Using the Logistic Regression and
@@ -1630,11 +1630,11 @@ Designed to be both user-friendly and highly configurable, <code class="docutils
 is a practical tool for model evaluation and stakeholder communication.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="show_roc_curve">
-<span class="sig-name descname"><span class="pre">show_roc_curve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">models</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xlabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'False</span> <span class="pre">Positive</span> <span class="pre">Rate'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'True</span> <span class="pre">Positive</span> <span class="pre">Rate'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_titles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decimal_places</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">curve_kwgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linestyle_kwgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gridlines</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_category</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#show_roc_curve" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">show_roc_curve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xlabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'False</span> <span class="pre">Positive</span> <span class="pre">Rate'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'True</span> <span class="pre">Positive</span> <span class="pre">Rate'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_titles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decimal_places</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">curve_kwgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linestyle_kwgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gridlines</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_category</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#show_roc_curve" title="Link to this definition"></a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>models</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>]</em>) – A trained model, a string placeholder, or a list containing models or strings to evaluate.</p></li>
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>]</em>) – A trained model, a string placeholder, or a list containing models or strings to evaluate.</p></li>
 <li><p><strong>X</strong> (<em>pd.DataFrame</em><em> or </em><em>np.ndarray</em>) – Feature matrix used for prediction.</p></li>
 <li><p><strong>y</strong> (<em>pd.Series</em><em> or </em><em>np.ndarray</em>) – True binary labels for evaluation.</p></li>
 <li><p><strong>xlabel</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Label for the x-axis. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;False</span> <span class="pre">Positive</span> <span class="pre">Rate&quot;</span></code>.</p></li>
@@ -1681,7 +1681,7 @@ is a practical tool for model evaluation and stakeholder communication.</p>
 <ul class="simple">
 <li><dl class="simple">
 <dt><strong>Flexible Inputs:</strong></dt><dd><ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">models</span></code> and <code class="docutils literal notranslate"><span class="pre">model_titles</span></code> can be individual items or lists. Strings passed in <code class="docutils literal notranslate"><span class="pre">models</span></code> are treated as placeholder names.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">model</span></code> and <code class="docutils literal notranslate"><span class="pre">model_titles</span></code> can be individual items or lists. Strings passed in <code class="docutils literal notranslate"><span class="pre">model</span></code> are treated as placeholder names.</p></li>
 <li><p>Titles can be automatically inferred or explicitly passed using <code class="docutils literal notranslate"><span class="pre">model_titles</span></code>.</p></li>
 </ul>
 </dd>
@@ -1727,7 +1727,7 @@ plotting of ROC curves for binary classification models. It supports overlays,
 grid layouts, and subgroup visualizations, while also allowing export options
 and styling hooks for publication-ready output.</p>
 <section id="roc-auc-example-1-original">
-<h2>ROC AUC Example 1 (Original)<a class="headerlink" href="#roc-auc-example-1-original" title="Permalink to this heading"></a></h2>
+<h2>ROC AUC Example 1 (Original)<a class="headerlink" href="#roc-auc-example-1-original" title="Link to this heading"></a></h2>
 <p>In this first ROC AUC evaluation example, we plot the ROC curves for two
 models: Logistic Regression and Random Forest Classifier, trained on the
 <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a>. The curves are displayed side by side
@@ -1740,7 +1740,7 @@ add a grid, and save the plot for reporting purposes.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_roc_curve</span>
 
 <span class="n">show_roc_curve</span><span class="p">(</span>
-    <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
+    <span class="n">model</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
     <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
     <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
     <span class="n">model_titles</span><span class="o">=</span><span class="n">model_titles</span><span class="p">,</span>
@@ -1758,10 +1758,11 @@ add a grid, and save the plot for reporting purposes.</p>
 </pre></div>
 </div>
 <p><strong>Output</strong></p>
-<div class="no-click"><a class="reference internal image-reference" href="_images/grid_roc_auc_plot.svg"><img alt="ROC AUC Example 1" class="align-center" src="_images/grid_roc_auc_plot.svg" width="900px" /></a>
+<div class="no-click"><a class="reference internal image-reference" href="_images/grid_roc_auc_plot.svg"><img alt="ROC AUC Example 1" class="align-center" src="_images/grid_roc_auc_plot.svg" style="width: 900px;" />
+</a>
 <div style="height: 40px;"></div></section>
 <section id="roc-auc-example-2-overlay">
-<h2>ROC AUC Example 2 (Overlay)<a class="headerlink" href="#roc-auc-example-2-overlay" title="Permalink to this heading"></a></h2>
+<h2>ROC AUC Example 2 (Overlay)<a class="headerlink" href="#roc-auc-example-2-overlay" title="Link to this heading"></a></h2>
 <p>In this second ROC AUC evaluation example, we focus on overlaying the results of
 two models—Logistic Regression and Random Forest Classifier—trained on the
 <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a> onto a single plot. Using the <code class="docutils literal notranslate"><span class="pre">show_roc_curve</span></code>
@@ -1772,7 +1773,7 @@ baseline, and the plot includes a custom title for clarity.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_roc_curve</span>
 
 <span class="n">show_roc_curve</span><span class="p">(</span>
-    <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
+    <span class="n">model</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
     <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
     <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
     <span class="n">model_titles</span><span class="o">=</span><span class="n">model_titles</span><span class="p">,</span>
@@ -1788,16 +1789,17 @@ baseline, and the plot includes a custom title for clarity.</p>
 </pre></div>
 </div>
 <p><strong>Output</strong></p>
-<div class="no-click"><a class="reference internal image-reference" href="_images/overlay_roc_auc.svg"><img alt="ROC AUC Example 2" class="align-center" src="_images/overlay_roc_auc.svg" width="850px" /></a>
+<div class="no-click"><a class="reference internal image-reference" href="_images/overlay_roc_auc.svg"><img alt="ROC AUC Example 2" class="align-center" src="_images/overlay_roc_auc.svg" style="width: 850px;" />
+</a>
 <div style="height: 40px;"></div></section>
 <section id="roc-auc-example-3-by-category">
-<h2>ROC AUC Example 3 (by Category)<a class="headerlink" href="#roc-auc-example-3-by-category" title="Permalink to this heading"></a></h2>
+<h2>ROC AUC Example 3 (by Category)<a class="headerlink" href="#roc-auc-example-3-by-category" title="Link to this heading"></a></h2>
 <p>In this third ROC AUC evaluation example, we utilize the well-known
 <em>Adult Income</em> dataset <a class="footnote-reference brackets" href="#id8" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, a widely used benchmark for binary classification
 tasks. Its rich mix of categorical and numerical features makes it particularly
 suitable for analyzing model performance across different subgroups.</p>
 <p>To build and evaluate our models, we use the <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id9" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.
-<span class="xref std std-ref">Click here to view the corresponding codebase for this workflow.</span></p>
+<a class="reference internal" href="model_training.html#adult-income-training"><span class="std std-ref">Click here to view the corresponding codebase for this workflow.</span></a></p>
 <p>The objective here is to assess ROC AUC scores not just overall, but
 <strong>across each category of a selected feature</strong>—such as <em>occupation</em>,
 <em>education</em>, <em>marital-status</em>, or <em>race</em>. This approach enables deeper insight into how
@@ -1810,7 +1812,7 @@ you can generate a separate ROC curve for each unique racial group in the datase
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_roc_curve</span>
 
 <span class="n">show_roc_curve</span><span class="p">(</span>
-    <span class="n">models</span><span class="o">=</span><span class="n">model_dt</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">estimator</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">model_dt</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">estimator</span><span class="p">,</span>
     <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
     <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
     <span class="n">model_titles</span><span class="o">=</span><span class="s2">&quot;Decision Tree Classifier,</span>
@@ -1820,11 +1822,12 @@ you can generate a separate ROC curve for each unique racial group in the datase
 </pre></div>
 </div>
 <p><strong>Output</strong></p>
-<div class="no-click"><a class="reference internal image-reference" href="_images/decision_tree_classifier_race_roc_auc.svg"><img alt="Decision Tree ROC AUC" class="align-center" src="_images/decision_tree_classifier_race_roc_auc.svg" width="850px" /></a>
+<div class="no-click"><a class="reference internal image-reference" href="_images/decision_tree_classifier_race_roc_auc.svg"><img alt="Decision Tree ROC AUC" class="align-center" src="_images/decision_tree_classifier_race_roc_auc.svg" style="width: 850px;" />
+</a>
 <div style="height: 40px;"></div></section>
 </section>
 <section id="precision-recall-curves">
-<h1>Precision-Recall Curves<a class="headerlink" href="#precision-recall-curves" title="Permalink to this heading"></a></h1>
+<h1>Precision-Recall Curves<a class="headerlink" href="#precision-recall-curves" title="Link to this heading"></a></h1>
 <p>This section demonstrates how to evaluate the performance of binary classification
 models using Precision-Recall (PR) curves, a critical visualization for understanding
 model behavior in the presence of class imbalance. Using the Logistic Regression
@@ -1846,11 +1849,11 @@ where false positives have a high cost. This makes the PR curve a complementary
 and sometimes more informative tool than ROC AUC in skewed classification scenarios.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="show_pr_curve">
-<span class="sig-name descname"><span class="pre">show_pr_curve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">models</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xlabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Recall'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Precision'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_titles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decimal_places</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">curve_kwgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gridlines</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_category</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#show_pr_curve" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">show_pr_curve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xlabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Recall'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Precision'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_titles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decimal_places</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">curve_kwgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gridlines</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_category</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#show_pr_curve" title="Link to this definition"></a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>models</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>]</em>) – A trained model, a string placeholder, or a list containing models or strings to evaluate.</p></li>
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>]</em>) – A trained model, a string placeholder, or a list containing models or strings to evaluate.</p></li>
 <li><p><strong>X</strong> (<em>pd.DataFrame</em><em> or </em><em>np.ndarray</em>) – Feature matrix used for prediction.</p></li>
 <li><p><strong>y</strong> (<em>pd.Series</em><em> or </em><em>np.ndarray</em>) – True binary labels for evaluation.</p></li>
 <li><p><strong>xlabel</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Label for the x-axis. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;Recall&quot;</span></code>.</p></li>
@@ -1904,7 +1907,7 @@ and sometimes more informative tool than ROC AUC in skewed classification scenar
 <ul class="simple">
 <li><dl class="simple">
 <dt><strong>Flexible Inputs:</strong></dt><dd><ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">models</span></code> and <code class="docutils literal notranslate"><span class="pre">model_titles</span></code> can be individual items or lists. Strings passed in <code class="docutils literal notranslate"><span class="pre">models</span></code> are treated as placeholder names.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">model</span></code> and <code class="docutils literal notranslate"><span class="pre">model_titles</span></code> can be individual items or lists. Strings passed in <code class="docutils literal notranslate"><span class="pre">model</span></code> are treated as placeholder names.</p></li>
 <li><p>Titles can be automatically inferred or explicitly passed using <code class="docutils literal notranslate"><span class="pre">model_titles</span></code>.</p></li>
 </ul>
 </dd>
@@ -1958,7 +1961,7 @@ of Precision-Recall curves for binary classification models. It supports overlay
 grid layouts, and subgroup visualizations, while also allowing export options and
 styling hooks for publication-ready output.</p>
 <section id="precision-recall-example-1-original">
-<h2>Precision-Recall Example 1 (Original)<a class="headerlink" href="#precision-recall-example-1-original" title="Permalink to this heading"></a></h2>
+<h2>Precision-Recall Example 1 (Original)<a class="headerlink" href="#precision-recall-example-1-original" title="Link to this heading"></a></h2>
 <p>In this first Precision-Recall evaluation example, we plot the PR curves for two
 models: Logistic Regression and Random Forest Classifier, both trained on the
 <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a>.
@@ -1974,7 +1977,7 @@ analysis and final reporting.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_pr_curve</span>
 
 <span class="n">show_pr_curve</span><span class="p">(</span>
-    <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="n">logistic_model</span><span class="p">,</span> <span class="n">rf_model</span><span class="p">],</span>
+    <span class="n">model</span><span class="o">=</span><span class="p">[</span><span class="n">logistic_model</span><span class="p">,</span> <span class="n">rf_model</span><span class="p">],</span>
     <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
     <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
     <span class="n">model_titles</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Logistic Regression&quot;</span><span class="p">,</span> <span class="s2">&quot;Random Forest&quot;</span><span class="p">],</span>
@@ -1991,10 +1994,11 @@ analysis and final reporting.</p>
 </pre></div>
 </div>
 <p><strong>Output</strong></p>
-<div class="no-click"><a class="reference internal image-reference" href="_images/grid_pr_plot.svg"><img alt="Precision-Recall Curve Example 1" class="align-center" src="_images/grid_pr_plot.svg" width="900px" /></a>
+<div class="no-click"><a class="reference internal image-reference" href="_images/grid_pr_plot.svg"><img alt="Precision-Recall Curve Example 1" class="align-center" src="_images/grid_pr_plot.svg" style="width: 900px;" />
+</a>
 <div style="height: 40px;"></div></section>
 <section id="precision-recall-example-2-overlay">
-<h2>Precision-Recall Example 2 (Overlay)<a class="headerlink" href="#precision-recall-example-2-overlay" title="Permalink to this heading"></a></h2>
+<h2>Precision-Recall Example 2 (Overlay)<a class="headerlink" href="#precision-recall-example-2-overlay" title="Link to this heading"></a></h2>
 <p>In this second Precision-Recall evaluation example, we focus on overlaying the
 results of two models—Logistic Regression and Random Forest Classifier—trained
 on the <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a> onto a single plot. Using the <code class="docutils literal notranslate"><span class="pre">show_pr_curve</span></code>
@@ -2005,7 +2009,7 @@ for clarity.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_pr_curve</span>
 
 <span class="n">show_pr_curve</span><span class="p">(</span>
-    <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
+    <span class="n">model</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
     <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
     <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
     <span class="n">model_titles</span><span class="o">=</span><span class="n">model_titles</span><span class="p">,</span>
@@ -2019,16 +2023,17 @@ for clarity.</p>
 </pre></div>
 </div>
 <p><strong>Output</strong></p>
-<div class="no-click"><a class="reference internal image-reference" href="_images/overlay_pr_plot.svg"><img alt="Precision-Recall Curve Example 2" class="align-center" src="_images/overlay_pr_plot.svg" width="900px" /></a>
+<div class="no-click"><a class="reference internal image-reference" href="_images/overlay_pr_plot.svg"><img alt="Precision-Recall Curve Example 2" class="align-center" src="_images/overlay_pr_plot.svg" style="width: 900px;" />
+</a>
 <div style="height: 40px;"></div></section>
 <section id="precision-recall-example-3-categorical">
-<h2>Precision-Recall Example 3 (Categorical)<a class="headerlink" href="#precision-recall-example-3-categorical" title="Permalink to this heading"></a></h2>
+<h2>Precision-Recall Example 3 (Categorical)<a class="headerlink" href="#precision-recall-example-3-categorical" title="Link to this heading"></a></h2>
 <p>In this third Precision-Recall evaluation example, we utilize the well-known
 <em>Adult Income</em> dataset <a class="footnote-reference brackets" href="#id8" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, a widely used benchmark for binary classification
 tasks. Its rich mix of categorical and numerical features makes it particularly
 suitable for analyzing model performance across different subgroups.</p>
 <p>To build and evaluate our models, we use the <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id9" id="id5" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.
-<span class="xref std std-ref">Click here to view the corresponding codebase for this workflow.</span></p>
+<a class="reference internal" href="model_training.html#adult-income-training"><span class="std std-ref">Click here to view the corresponding codebase for this workflow.</span></a></p>
 <p>The objective here is to assess ROC AUC scores not just overall, but
 <strong>across each category of a selected feature</strong>—such as <em>occupation</em>,
 <em>education</em>, <em>marital-status</em>, or <em>race</em>. This approach enables deeper insight into how
@@ -2041,7 +2046,7 @@ you can generate a separate ROC curve for each unique racial group in the datase
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_pr_curve</span>
 
 <span class="n">show_pr_curve</span><span class="p">(</span>
-    <span class="n">models</span><span class="o">=</span><span class="n">model_dt</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">estimator</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">model_dt</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">estimator</span><span class="p">,</span>
     <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
     <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
     <span class="n">model_titles</span><span class="o">=</span><span class="s2">&quot;Decision Tree Classifier,</span>
@@ -2051,11 +2056,12 @@ you can generate a separate ROC curve for each unique racial group in the datase
 </pre></div>
 </div>
 <p><strong>Output</strong></p>
-<div class="no-click"><a class="reference internal image-reference" href="_images/decision_tree_classifier_precision_recall_race.svg"><img alt="Decision Tree Precision-Recall Example 3" class="align-center" src="_images/decision_tree_classifier_precision_recall_race.svg" width="950px" /></a>
+<div class="no-click"><a class="reference internal image-reference" href="_images/decision_tree_classifier_precision_recall_race.svg"><img alt="Decision Tree Precision-Recall Example 3" class="align-center" src="_images/decision_tree_classifier_precision_recall_race.svg" style="width: 950px;" />
+</a>
 <div style="height: 40px;"></div></section>
 </section>
 <section id="confusion-matrix-evaluation">
-<span id="id6"></span><h1>Confusion Matrix Evaluation<a class="headerlink" href="#confusion-matrix-evaluation" title="Permalink to this heading"></a></h1>
+<span id="id6"></span><h1>Confusion Matrix Evaluation<a class="headerlink" href="#confusion-matrix-evaluation" title="Link to this heading"></a></h1>
 <p>This section introduces the <code class="docutils literal notranslate"><span class="pre">show_confusion_matrix</span></code> function, which provides a
 flexible, styled interface for generating and visualizing confusion matrices
 across one or more classification models. It supports advanced features like
@@ -2070,7 +2076,7 @@ plot exporting, colorbar toggling, and grid visualization.</p>
 publication-ready confusion matrices for stakeholders.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="show_confusion_matrix">
-<span class="sig-name descname"><span class="pre">show_confusion_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_titles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">class_labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Blues'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inner_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">class_report</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#show_confusion_matrix" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">show_confusion_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_titles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">class_labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Blues'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inner_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">class_report</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#show_confusion_matrix" title="Link to this definition"></a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -2164,7 +2170,7 @@ publication-ready confusion matrices for stakeholders.</p>
 </ul>
 </div>
 <section id="confusion-matrix-example-1-threshold-0-5">
-<span id="confusion-matrix-example-1"></span><h2>Confusion Matrix Example 1 (Threshold=0.5)<a class="headerlink" href="#confusion-matrix-example-1-threshold-0-5" title="Permalink to this heading"></a></h2>
+<span id="confusion-matrix-example-1"></span><h2>Confusion Matrix Example 1 (Threshold=0.5)<a class="headerlink" href="#confusion-matrix-example-1-threshold-0-5" title="Link to this heading"></a></h2>
 <p>In this first confusion matrix evaluation example, we focus on showing the
 results of two models—Logistic Regression and Random Forest Classifier—trained
 on the <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a> onto a single plot.</p>
@@ -2185,10 +2191,11 @@ on the <a class="reference internal" href="#binary-classification"><span class="
 </pre></div>
 </div>
 <p><strong>Output</strong></p>
-<div class="no-click"><a class="reference internal image-reference" href="_images/conf_matrix_1.svg"><img alt="Confusion Matrix Example 1" class="align-center" src="_images/conf_matrix_1.svg" width="900px" /></a>
+<div class="no-click"><a class="reference internal image-reference" href="_images/conf_matrix_1.svg"><img alt="Confusion Matrix Example 1" class="align-center" src="_images/conf_matrix_1.svg" style="width: 900px;" />
+</a>
 <div style="height: 40px;"></div></section>
 <section id="confusion-matrix-example-2-classification-report">
-<h2>Confusion Matrix Example 2 (Classification Report)<a class="headerlink" href="#confusion-matrix-example-2-classification-report" title="Permalink to this heading"></a></h2>
+<h2>Confusion Matrix Example 2 (Classification Report)<a class="headerlink" href="#confusion-matrix-example-2-classification-report" title="Link to this heading"></a></h2>
 <p>This second confusion matrix evaluation example is nearly identical to the <a class="reference internal" href="#confusion-matrix-example-1"><span class="std std-ref">first</span></a>,
 but uses a different color map (<code class="docutils literal notranslate"><span class="pre">cmap=&quot;viridis&quot;</span></code>) and sets <code class="docutils literal notranslate"><span class="pre">class_report=True</span></code>
 to print classification reports for each model in addition to the visual output.</p>
@@ -2245,9 +2252,10 @@ Classification Report for Random Forest:
 weighted avg       0.94      0.94      0.93       200
 </pre></div>
 </div>
-<div class="no-click"><img alt="Confusion Matrix Example 2" class="align-center" src="_images/conf_matrix_2.svg" /><div style="height: 40px;"></div></section>
+<div class="no-click"><img alt="Confusion Matrix Example 2" class="align-center" src="_images/conf_matrix_2.svg" />
+<div style="height: 40px;"></div></section>
 <section id="confusion-matrix-example-3-threshold-0-37">
-<h2>Confusion Matrix Example 3 (Threshold = 0.37)<a class="headerlink" href="#confusion-matrix-example-3-threshold-0-37" title="Permalink to this heading"></a></h2>
+<h2>Confusion Matrix Example 3 (Threshold = 0.37)<a class="headerlink" href="#confusion-matrix-example-3-threshold-0-37" title="Link to this heading"></a></h2>
 <p>In this third confusion matrix evaluation example using the <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset
 from the Binary Classification Models section</span></a>, we apply
 a custom classification threshold of 0.37 using the <code class="docutils literal notranslate"><span class="pre">custom_threshold</span></code> parameter.
@@ -2278,17 +2286,18 @@ side by side in a grid layout for easy visual comparison.</p>
 </pre></div>
 </div>
 <p><strong>Output</strong></p>
-<div class="no-click"><img alt="Confusion Matrix Example 3" class="align-center" src="_images/conf_matrix_3.svg" /><div style="height: 40px;"></div><aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id7" role="note">
+<div class="no-click"><img alt="Confusion Matrix Example 3" class="align-center" src="_images/conf_matrix_3.svg" />
+<div style="height: 40px;"></div><aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id7" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
 <p>Efron, B., Hastie, T., Johnstone, I., &amp; Tibshirani, R. (2004). <em>Diabetes Dataset</em>. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. <a class="reference external" href="https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset">https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset</a>.</p>
 </aside>
-<aside class="footnote brackets" id="id8" role="note">
+<aside class="footnote brackets" id="id8" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
 <span class="backrefs">(<a role="doc-backlink" href="#id2">1</a>,<a role="doc-backlink" href="#id4">2</a>)</span>
 <p>Kohavi, R. (1996). <em>Census Income</em>. UCI Machine Learning Repository. <a class="reference external" href="https://doi.org/10.24432/C5GP7S">https://doi.org/10.24432/C5GP7S</a>.</p>
 </aside>
-<aside class="footnote brackets" id="id9" role="note">
+<aside class="footnote brackets" id="id9" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></span>
 <span class="backrefs">(<a role="doc-backlink" href="#id3">1</a>,<a role="doc-backlink" href="#id5">2</a>)</span>
 <p>Funnell, A., Shpaner, L., &amp; Petousis, P. (2024). <em>Model Tuner</em> (Version 0.0.28b) [Software]. Zenodo. <a class="reference external" href="https://doi.org/10.5281/zenodo.12727322">https://doi.org/10.5281/zenodo.12727322</a>.</p>
