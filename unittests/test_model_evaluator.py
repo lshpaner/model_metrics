@@ -1855,6 +1855,52 @@ def test_show_calibration_curve_custom_titles(trained_model, sample_data):
 
 
 @patch("matplotlib.pyplot.show")
+def test_show_calibration_curve_empty_title(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Ensure plot title is suppressed when title=''."""
+    X, y = sample_data
+    try:
+        show_calibration_curve(
+            trained_model,
+            X,
+            y,
+            title="",  # Suppresses title
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed with empty title: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_calibration_curve_text_wrap(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Ensure text_wrap works correctly for long titles."""
+    X, y = sample_data
+    long_title = (
+        "This is a very long title for testing text wrapping in calibration plots"
+    )
+    try:
+        show_calibration_curve(
+            trained_model,
+            X,
+            y,
+            title=long_title,
+            text_wrap=20,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed with text_wrap: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
 def test_show_calibration_curve_group_category_multiple_models(
     mock_show,
     trained_model,
