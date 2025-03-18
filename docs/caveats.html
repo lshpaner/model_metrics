@@ -1,28 +1,30 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="./">
+<html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Caveats &mdash; Model Metrics 0.0.0.a2 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=df76116e" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=df76116e" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.js?v=f9206548" />
-
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.js" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
-      <script src="_static/jquery.js?v=5d32c60e"></script>
-      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=b8a57ceb"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="_static/copybutton.js?v=a0ccc04e"></script>
-      <script src="_static/custom.js?v=f9206548"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script src="_static/clipboard.min.js"></script>
+        <script src="_static/copybutton.js"></script>
+        <script src="_static/custom.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -69,6 +71,13 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Caveats</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#threshold-selection-logic">Threshold Selection logic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#calibration-trade-offs">Calibration Trade-offs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#calibration-methodology">Calibration Methodology</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#alternative-calibration-methods">Alternative Calibration Methods</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dependence-on-validation-data">Dependence on Validation Data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#interpreting-the-brier-score">Interpreting the Brier Score</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -104,12 +113,11 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <span class="target" id="caveats"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" style="width: 300px;" />
-</a>
+  <span class="target" id="caveats"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" width="300px" /></a>
 </div><div style="height: 100px;"></div><section id="id1">
-<h1>Caveats<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
+<h1>Caveats<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h1>
 <section id="threshold-selection-logic">
-<span id="id2"></span><h2>Threshold Selection logic<a class="headerlink" href="#threshold-selection-logic" title="Link to this heading"></a></h2>
+<span id="id2"></span><h2>Threshold Selection logic<a class="headerlink" href="#threshold-selection-logic" title="Permalink to this heading"></a></h2>
 <p>When computing confusion matrices, selecting the right classification threshold
 can significantly impact the output. The function <code class="docutils literal notranslate"><span class="pre">show_confusion_matrix</span></code> is
 documented in <a class="reference internal" href="performance_assessment.html#confusion-matrix-evaluation"><span class="std std-ref">this section</span></a>.</p>
@@ -122,6 +130,89 @@ the function will try to retrieve the threshold using the score parameter:</p>
 <li><p>If <code class="docutils literal notranslate"><span class="pre">score``is</span> <span class="pre">not</span> <span class="pre">passed,</span> <span class="pre">the</span> <span class="pre">function</span> <span class="pre">will</span> <span class="pre">look</span> <span class="pre">up</span> <span class="pre">the</span> <span class="pre">first</span> <span class="pre">item</span> <span class="pre">in</span> <span class="pre">``model.scoring</span></code> (if available).</p></li>
 <li><p>If neither a custom threshold nor a valid model threshold is available, the default value of <code class="docutils literal notranslate"><span class="pre">0.5</span></code> is used.</p></li>
 </ul>
+</section>
+<section id="calibration-trade-offs">
+<span id="caveats-in-calibration"></span><h2>Calibration Trade-offs<a class="headerlink" href="#calibration-trade-offs" title="Permalink to this heading"></a></h2>
+<p>Calibration curves are powerful diagnostic tools for assessing how well a model’s
+predicted probabilities reflect actual outcomes. However, their interpretation—and
+the methods used to derive them—come with important caveats that users should keep
+in mind.</p>
+<section id="calibration-methodology">
+<h3>Calibration Methodology<a class="headerlink" href="#calibration-methodology" title="Permalink to this heading"></a></h3>
+<p>The examples shown in this library are based on models calibrated using Platt
+Scaling, a post-processing technique that fits a sigmoid function to the model’s
+prediction scores. <strong>Platt Scaling</strong> assumes a parametric form:</p>
+<div class="math notranslate nohighlight">
+\[P(y = 1 \mid f(x)) = \frac{1}{1 + \exp(A f(x) + B)}\]</div>
+<p>where <span class="math notranslate nohighlight">\(A\)</span> and <span class="math notranslate nohighlight">\(B\)</span> are scalar parameters learned using a separate
+calibration dataset. This approach is computationally efficient and works well
+for models such as SVMs and Logistic Regression, where prediction scores are
+linearly separable or approximately log-odds in nature.</p>
+<p>However, Platt Scaling may underperform when the relationship between raw scores
+and true probabilities is non-monotonic or highly irregular.</p>
+</section>
+<section id="alternative-calibration-methods">
+<h3>Alternative Calibration Methods<a class="headerlink" href="#alternative-calibration-methods" title="Permalink to this heading"></a></h3>
+<p>An alternative to Platt Scaling is <strong>Isotonic Regression</strong>, a non-parametric method
+that fits a monotonically increasing function to the model’s prediction scores.
+It is particularly effective when the mapping between predicted probabilities and
+observed outcomes is complex or non-linear.</p>
+<p>Mathematically, isotonic regression solves the following constrained optimization problem:</p>
+<div class="math notranslate nohighlight">
+\[\min_{\hat{p}_1, \ldots, \hat{p}_N} \sum_{i=1}^{N} (y_i - \hat{p}_i)^2 \quad \text{subject to} \quad \hat{p}_1 \leq \hat{p}_2 \leq \cdots \leq \hat{p}_N\]</div>
+<p>Here:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(y_i \in \{0, 1\}\)</span> are the true binary labels,</p></li>
+<li><p><span class="math notranslate nohighlight">\(\hat{p}_i\)</span> are the calibrated probabilities corresponding to the model’s scores,</p></li>
+<li><p>and the constraint enforces monotonicity, preserving the order of the original prediction scores.</p></li>
+</ul>
+<p>The solution is obtained using the Pool Adjacent Violators Algorithm (PAVA), an
+efficient method for enforcing monotonicity in a least-squares fit.</p>
+<p>While Isotonic Regression is highly flexible and can model arbitrary step-like
+functions, this same flexibility increases the risk of overfitting, especially
+when the calibration dataset is small, imbalanced, or noisy. It may capture
+spurious fluctuations in the validation data rather than the true underlying
+relationship between scores and outcomes.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Overfitting with isotonic regression can lead to miscalibration in deployment,
+particularly if the validation set is not representative of the production environment.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This library does not perform calibration internally. Instead, users are
+expected to calibrate models during training or preprocessing—e.g., using the
+<code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id4" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> or any external tool. All calibration curve plots
+included here are illustrative and assume models have already been calibrated
+using Platt Scaling prior to visualization.</p>
+</div>
+</section>
+<section id="dependence-on-validation-data">
+<h3>Dependence on Validation Data<a class="headerlink" href="#dependence-on-validation-data" title="Permalink to this heading"></a></h3>
+<p>All calibration techniques rely heavily on the quality of the validation data
+used to learn the mapping. If the validation set is not representative of the
+target population, the resulting calibration curve may be misleading. This
+concern is especially important when deploying models in real-world settings
+where data drift or population imbalance may occur.</p>
+</section>
+<section id="interpreting-the-brier-score">
+<h3>Interpreting the Brier Score<a class="headerlink" href="#interpreting-the-brier-score" title="Permalink to this heading"></a></h3>
+<p>The <strong>Brier Score</strong>, often reported alongside calibration curves, provides a
+quantitative measure of probabilistic accuracy. It is defined as:</p>
+<div class="math notranslate nohighlight">
+\[\text{Brier Score} = \frac{1}{N} \sum_{i=1}^{N} (\hat{p}_i - y_i)^2\]</div>
+<p>where <span class="math notranslate nohighlight">\(\hat{p}_i\)</span> is the predicted probability and <span class="math notranslate nohighlight">\(y_i\)</span> is the
+actual class label. While a lower Brier Score generally indicates better
+performance, it conflates calibration (how close predicted probabilities are to
+actual outcomes) and refinement (how confidently predictions are made). Thus,
+the Brier Score should be interpreted in context and not relied upon in isolation.</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id4" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">1</a><span class="fn-bracket">]</span></span>
+<p>Funnell, A., Shpaner, L., &amp; Petousis, P. (2024). <em>Model Tuner</em> (Version 0.0.28b) [Software]. Zenodo. <a class="reference external" href="https://doi.org/10.5281/zenodo.12727322">https://doi.org/10.5281/zenodo.12727322</a>.</p>
+</aside>
+</aside>
+</section>
 </section>
 </section>
 

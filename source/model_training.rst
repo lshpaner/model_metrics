@@ -394,6 +394,22 @@ saved to disk for future use.
     if __name__ == "__main__":
         app()
 
+Loading (Retrieving) The Model Objects and Data Splits
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    model_path = RESULTS_DIR
+    
+    model_lr = loadObjects(os.path.join(model_path, "LogisticRegression.pkl"))
+    model_dt = loadObjects(os.path.join(model_path, "DecisionTreeClassifier.pkl"))
+    model_rf = loadObjects(os.path.join(model_path, "RandomForestClassifier.pkl"))
+
+
+    X_test = pd.read_parquet(os.path.join(data_path, "X_test.parquet"))
+    y_test = pd.read_parquet(os.path.join(data_path, "y_test.parquet"))
+
+
 
 .. [1] Kohavi, R. (1996). *Census Income*. UCI Machine Learning Repository. `https://doi.org/10.24432/C5GP7S <https://doi.org/10.24432/C5GP7S>`_.
 .. [2] Funnell, A., Shpaner, L., & Petousis, P. (2024). *Model Tuner* (Version 0.0.28b) [Software]. Zenodo. `https://doi.org/10.5281/zenodo.12727322 <https://doi.org/10.5281/zenodo.12727322>`_.

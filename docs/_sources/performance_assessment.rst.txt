@@ -2364,6 +2364,7 @@ side by side in a grid layout for easy visual comparison.
 
 .. image:: ../assets/conf_matrix_3.svg
     :alt: Confusion Matrix Example 3
+    :width: 900px
     :align: center
 
 
@@ -2473,7 +2474,7 @@ plots.
 
     - **Group-Wise Analysis:**
         - Passing ``group_category`` plots separate calibration curves by subgroup (e.g., age, race).
-        - Each subgroup’s Brier score is shown when ``show_brier_score=True``.
+        - Each subgroup's Brier score is shown when ``show_brier_score=True``.
 
     - **Customization:**
         - Use ``curve_kwgs`` and ``linestyle_kwgs`` to control styling.
@@ -2483,14 +2484,31 @@ plots.
         - Set ``save_plot=True`` and specify ``image_path_png`` or ``image_path_svg`` to export figures.
         - Filenames are auto-generated based on model name and plot type.
 
+.. important::
+
+    Calibration curves are a valuable diagnostic tool for assessing the alignment 
+    between predicted probabilities and actual outcomes. By plotting the fraction 
+    of positives against predicted probabilities, we can evaluate how well a model's 
+    confidence scores correspond to observed reality. While these plots offer important 
+    insights, it's equally important to understand the :ref:`assumptions and limitations behind 
+    the calibration methods used <caveats_in_calibration>`.
+
+
 Calibration Curve Example 1 (Grid-like)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This example presents calibration curves for two classification models displayed 
-side by side in a grid layout. Each subplot shows how well the predicted 
-probabilities from a model align with the actual observed outcomes. A diagonal 
-dashed line representing perfect calibration is included in both plots, and Brier 
-scores are shown in the legend to quantify each model's calibration accuracy.
+This example presents calibration curves for two classification models trained on  
+the well-known *Adult Income* dataset [2]_, a widely used benchmark for binary 
+classification tasks. Its rich mix of categorical and numerical features makes 
+it particularly suitable for analyzing model performance across different subgroups.
+
+To build and evaluate our models, we use the ``model_tuner`` library [3]_. 
+:ref:`Click here to view the corresponding codebase for this workflow. <Adult_Income_Training>` 
+The classification models are displayed side by side in a grid layout. Each 
+subplot shows how well the predicted probabilities from a model align with the 
+actual observed outcomes. A diagonal dashed line representing perfect calibration 
+is included in both plots, and Brier scores are shown in the legend to quantify 
+each model's calibration accuracy.
 
 By setting ``grid=True``, the function automatically arranges the individual plots 
 based on the number of models and specified columns. This layout is ideal for 
@@ -2500,7 +2518,6 @@ visually comparing calibration behavior across models without overlapping lines.
 
     from model_metrics import show_calibration_curve
 
-    # Plot calibration curves in grid layout for two models
     show_calibration_curve(
         model=pipelines_or_models[:2],
         X=X_test,
@@ -2514,7 +2531,6 @@ visually comparing calibration behavior across models without overlapping lines.
         show_brier_score=True,
         grid=True,
         linestyle_kwgs={"color": "black"},
-        title="",
     )
 
 
@@ -2525,8 +2541,129 @@ visually comparing calibration behavior across models without overlapping lines.
    <div class="no-click">
 
 
-.. image:: ../assets/grid_calibration.svg
+.. image:: ../assets/calibration_1.svg
     :alt: Calibration Curves Example 1
+    :width: 900px
+    :align: center
+
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+
+Calibration Curve Example 2 (Overlay)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This example also uses the well-known *Adult Income* dataset [2]_, a widely used 
+benchmark for binary classification tasks. Its rich mix of categorical and 
+numerical features makes it particularly suitable for analyzing model performance 
+across different subgroups.
+
+To build and evaluate our models, we use the ``model_tuner`` library [3]_. 
+:ref:`Click here to view the corresponding codebase for this workflow. <Adult_Income_Training>`
+This example demonstrates how to overlay calibration curves from multiple classification 
+models in a single plot. Overlaying allows for direct visual comparison of how predicted 
+probabilities from each model align with actual outcomes on the same axes.
+
+The diagonal dashed line represents perfect calibration, and Brier scores are included 
+in the legend for each model, providing a quantitative measure of calibration accuracy.
+
+By setting ``overlay=True``, the function combines all model curves into one figure, 
+making it easier to evaluate relative performance without splitting across subplots.
+
+.. code-block:: python
+
+    from model_metrics import show_calibration_curve
+
+    show_calibration_curve(
+        model=pipelines_or_models[:2],
+        X=X_test,
+        y=y_test,
+        model_title=model_titles[:2],
+        bins=10,
+        show_brier_score=True,
+        overlay=True
+        linestyle_kwgs={"color": "black"},
+    )
+
+
+**Output**
+
+.. raw:: html
+
+   <div class="no-click">
+
+
+.. image:: ../assets/calibration_2.svg
+    :alt: Calibration Curves Example 2
+    :width: 900px
+    :align: center
+
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+
+Calibration Curve Example 3 (by Category) 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This example, too, uses the well-known *Adult Income* dataset [2]_, a widely used 
+benchmark for binary classification tasks. Its rich mix of categorical and numerical 
+features makes it particularly suitable for analyzing model performance across 
+different subgroups.
+
+To build and evaluate our models, we use the ``model_tuner`` library [3]_. 
+:ref:`Click here to view the corresponding codebase for this workflow. <Adult_Income_Training>`
+This example shows how to visualize calibration curves separately for each
+category within a given feature—in this case, the race column of the joined
+test set—using a single Random Forest classifier. Each plot represents the
+calibration behavior of the model for a specific subgroup, allowing for detailed
+insight into how predicted probabilities align with actual outcomes across
+demographic categories.
+
+This type of disaggregated visualization is especially useful for fairness
+analysis and subgroup performance auditing. By setting ``group_category="race"``,
+the function automatically detects unique values in the specified column and
+generates a separate calibration curve for each.
+
+The dashed diagonal reference line represents perfect calibration. Brier scores
+are included in each plot to provide a quantitative measure of calibration
+performance within the group.
+
+.. note::
+
+    When using ``group_category``, both ``overlay`` and ``grid`` must be set to
+    ``False``. This ensures each group receives its own standalone figure, avoiding
+    conflicting layout behavior.
+
+.. code-block:: python
+
+    from model_metrics import show_calibration_curve
+
+    show_calibration_curve(
+        model=model_rf["model"].estimator,
+        X=X_test,
+        y=y_test,
+        model_title="Random Forest Classifier",
+        bins=10,
+        show_brier_score=True,
+        linestyle_kwgs={"color": "black"},
+        curve_kwgs={title: {"linewidth": 2} for title in model_titles},
+        group_category=X_test_2["race"],
+    )
+
+**Output**
+
+.. raw:: html
+
+   <div class="no-click">
+
+
+.. image:: ../assets/calibration_3.svg
+    :alt: Calibration Curves Example 3
+    :width: 900px
     :align: center
 
 
