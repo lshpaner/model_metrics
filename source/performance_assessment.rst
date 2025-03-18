@@ -1652,7 +1652,7 @@ across the population.
         - Control title wrapping and font sizes via ``text_wrap``, ``label_fontsize``, and ``tick_fontsize``.
 
     - **Saving Plots:**
-        - If ``save_plot=True``, figures are saved as ``<model_title>_Lift.png/svg`` or ``Overlay_Lift.png/svg``.
+        - If ``save_plot=True``, figures are saved as ``<model_title>_lift.png/svg`` or ``overlay_lift.png/svg``.
 
 
 Lift Chart Example 1 (Grid Layout)
@@ -2401,7 +2401,7 @@ publication-ready confusion matrices for stakeholders.
 
     - **Exporting Plots:**
         - Plots can be saved as both PNG and SVG using the respective paths.
-        - Saved filenames follow the pattern ``Confusion_Matrix_<model_name>`` or ``Grid_Confusion_Matrix``.
+        - Saved filenames follow the pattern ``confusion_matrix_<model_name>`` or ``grid_confusion_matrix``.
 
 .. _confusion_matrix_example_1:
 
