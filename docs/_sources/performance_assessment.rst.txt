@@ -1552,6 +1552,145 @@ Root Mean Squared Error (RMSE), Explained Variance, and R² Score.
     <div style="height: 40px;"></div>
 
 
+Lift Charts
+--------------------
+This section illustrates how to assess and compare the ranking effectiveness of
+classification models using Lift Charts, a valuable tool for evaluating how well 
+a model prioritizes positive instances relative to random chance. Leveraging the 
+Logistic Regression, Decision Tree, and Random Forest Classifier models trained 
+on the :ref:`synthetic dataset introduced in the Binary Classification Models section
+<Binary_Classification>`, we plot Lift curves to visualize their relative ability to 
+surface high-value (positive) cases at the top of the prediction list.
+
+A Lift Chart plots the ratio of actual positives identified by the model compared 
+to what would be expected by random selection, across increasingly larger proportions 
+of the sample sorted by predicted probability. The baseline (Lift = 1) represents 
+random chance; curves that rise above this line demonstrate the model's ability to
+"lift" positive outcomes toward the top ranks. This makes Lift Charts especially 
+useful in applications like marketing, fraud detection, and risk stratification—where
+targeting the top segment of predictions can yield outsized value.
+
+The ``show_lift_chart`` function enables flexible creation of Lift Charts for one or more 
+models. It supports single-plot overlays, grid layouts, and detailed customization of 
+labels, titles, and styling. Designed for both exploratory analysis and stakeholder 
+presentation, this utility helps users better understand model ranking performance 
+across the population.
+
+
+.. function:: show_lift_chart(model, X, y, xlabel="Percentage of Sample", ylabel="Lift", model_title=None, overlay=False, title=None, save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, curve_kwgs=None, linestyle_kwgs=None, grid=False, n_rows=None, n_cols=2, figsize=(8, 6), label_fontsize=12, tick_fontsize=10, gridlines=True)
+
+    :param model: A trained model or a list of models. Each must implement ``predict_proba`` to estimate class probabilities.
+    :type model: object or list[object]
+    :param X: Feature matrix used to generate predictions.
+    :type X: pd.DataFrame or np.ndarray
+    :param y: True binary labels corresponding to the input samples.
+    :type y: pd.Series or np.ndarray
+    :param xlabel: Label for the x-axis. Defaults to ``"Percentage of Sample"``.
+    :type xlabel: str, optional
+    :param ylabel: Label for the y-axis. Defaults to ``"Lift"``.
+    :type ylabel: str, optional
+    :param model_title: Custom display names for the models. Can be a string or list of strings.
+    :type model_title: str or list[str], optional
+    :param overlay: If ``True``, overlays all model lift curves into a single plot. Defaults to ``False``.
+    :type overlay: bool, optional
+    :param title: Title for the plot or grid. Set to ``""`` to suppress the title. Defaults to ``None``.
+    :type title: str, optional
+    :param save_plot: Whether to save the chart(s) to disk. Defaults to ``False``.
+    :type save_plot: bool, optional
+    :param image_path_png: Output path for saving PNG image(s).
+    :type image_path_png: str, optional
+    :param image_path_svg: Output path for saving SVG image(s).
+    :type image_path_svg: str, optional
+    :param text_wrap: Maximum number of characters before wrapping titles. If ``None``, no wrapping is applied.
+    :type text_wrap: int, optional
+    :param curve_kwgs: Dictionary or list of dictionaries for customizing the lift curve(s) (e.g., color, linewidth).
+    :type curve_kwgs: dict[str, dict] or list[dict], optional
+    :param linestyle_kwgs: Styling for the baseline (random lift) reference line. Defaults to ``{"color": "gray", "linestyle": "--", "linewidth": 2}``.
+    :type linestyle_kwgs: dict, optional
+    :param grid: Whether to show each model in a subplot grid. Cannot be combined with ``overlay=True``.
+    :type grid: bool, optional
+    :param n_rows: Number of rows in the grid layout. If ``None``, automatically inferred.
+    :type n_rows: int, optional
+    :param n_cols: Number of columns in the grid layout. Defaults to ``2``.
+    :type n_cols: int, optional
+    :param figsize: Tuple specifying the size of the figure in inches. Defaults to ``(8, 6)``.
+    :type figsize: tuple[int, int], optional
+    :param label_fontsize: Font size for x/y-axis labels and titles. Defaults to ``12``.
+    :type label_fontsize: int, optional
+    :param tick_fontsize: Font size for tick marks and legend text. Defaults to ``10``.
+    :type tick_fontsize: int, optional
+    :param gridlines: Whether to display gridlines in plots. Defaults to ``True``.
+    :type gridlines: bool, optional
+
+    :returns: ``None.`` Displays or saves lift charts for the specified classification models.
+    :rtype: ``None``
+
+    :raises ValueError:
+        - If ``overlay=True`` and ``grid=True`` are both set.
+
+
+.. admonition:: Notes
+
+    - **What is a Lift Chart?**
+        - Lift quantifies how much better a model is at identifying positive cases compared to random selection.
+        - The x-axis represents the proportion of the population (from highest to lowest predicted probability).
+        - The y-axis shows the cumulative lift, calculated as the ratio of observed positives to expected positives under random selection.
+
+    - **Interpreting Lift Curves:**
+        - A higher and steeper curve indicates a stronger model.
+        - The horizontal dashed line at ``y = 1`` is the baseline for random performance.
+        - Curves that drop sharply or flatten may indicate poor ranking ability.
+
+    - **Layout Options:**
+        - Use ``overlay=True`` to visualize all models on a single axis.
+        - Use ``grid=True`` for a side-by-side layout of lift charts.
+        - Neither set? Each model gets its own full-sized chart.
+
+    - **Customization:**
+        - Customize the appearance of each model’s curve using ``curve_kwgs``.
+        - Modify the baseline reference line with ``linestyle_kwgs``.
+        - Control title wrapping and font sizes via ``text_wrap``, ``label_fontsize``, and ``tick_fontsize``.
+
+    - **Saving Plots:**
+        - If ``save_plot=True``, figures are saved as ``<model_title>_Lift.png/svg`` or ``Overlay_Lift.png/svg``.
+
+
+Lift Chart Example 1 (Grid Layout)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this first Lift Chart example, we evaluate and compare the ranking performance 
+of two classification models—Logistic Regression and Random Forest Classifier—trained 
+on the :ref:`synthetic dataset from the Binary Classification Models section 
+<Binary_Classification>`. The chart displays Lift curves for both models in a 
+two-column grid layout (``n_cols=2, n_rows=1``), enabling side-by-side comparison 
+of how effectively each model prioritizes positive cases.
+
+Each plot shows the model's Lift across increasing portions of the test set, with 
+a grey dashed line at Lift = 1 indicating the baseline (random performance). Curves 
+above this line reflect the model's ability to identify more positives than would 
+be expected by chance. The Random Forest typically produces a steeper initial lift, 
+demonstrating greater concentration of positive cases near the top-ranked predictions.
+
+The show_lift_chart function allows for rich customization, including plot dimensions, 
+axis font sizes, and curve styling. In this example, we set the line widths for both 
+models and saved the plots in both PNG and SVG formats for further reporting or
+documentation.
+
+.. code-block:: python
+
+    from model_metrics import show_lift_chart
+    
+    show_lift_chart(
+        model=[model1, model2],
+        X=X_test,
+        y=y_test,
+        model_title=["Logistic Regression", "Random Forest"],
+        linestyle_kwgs={"color": "grey", "linestyle": "--"},
+        curve_kwgs={title: {"linewidth": 2} for title in model_titles},
+        grid=True,
+    )
+
+
 ROC AUC Curves
 --------------------
 
@@ -1672,7 +1811,7 @@ grid layouts, and subgroup visualizations, while also allowing export options
 and styling hooks for publication-ready output.
 
 
-ROC AUC Example 1 (Original)
+ROC AUC Example 1 (Grid Layout)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this first ROC AUC evaluation example, we plot the ROC curves for two 
@@ -1942,7 +2081,7 @@ grid layouts, and subgroup visualizations, while also allowing export options an
 styling hooks for publication-ready output.
 
 
-Precision-Recall Example 1 (Original)
+Precision-Recall Example 1 (Grid Layout)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this first Precision-Recall evaluation example, we plot the PR curves for two 

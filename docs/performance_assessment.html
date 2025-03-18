@@ -75,16 +75,21 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="#lift-charts">Lift Charts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#show_lift_chart"><code class="docutils literal notranslate"><span class="pre">show_lift_chart()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lift-chart-example-1-grid-layout">Lift Chart Example 1 (Grid Layout)</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="#roc-auc-curves">ROC AUC Curves</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#show_roc_curve"><code class="docutils literal notranslate"><span class="pre">show_roc_curve()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#roc-auc-example-1-original">ROC AUC Example 1 (Original)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#roc-auc-example-1-grid-layout">ROC AUC Example 1 (Grid Layout)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#roc-auc-example-2-overlay">ROC AUC Example 2 (Overlay)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#roc-auc-example-3-by-category">ROC AUC Example 3 (by Category)</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#precision-recall-curves">Precision-Recall Curves</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#show_pr_curve"><code class="docutils literal notranslate"><span class="pre">show_pr_curve()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#precision-recall-example-1-original">Precision-Recall Example 1 (Original)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#precision-recall-example-1-grid-layout">Precision-Recall Example 1 (Grid Layout)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#precision-recall-example-2-overlay">Precision-Recall Example 2 (Overlay)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#precision-recall-example-3-categorical">Precision-Recall Example 3 (Categorical)</a></li>
 </ul>
@@ -1607,6 +1612,149 @@ Root Mean Squared Error (RMSE), Explained Variance, and R² Score.</p>
 </div><div style="height: 40px;"></div></section>
 </section>
 </section>
+<section id="lift-charts">
+<h1>Lift Charts<a class="headerlink" href="#lift-charts" title="Permalink to this heading"></a></h1>
+<p>This section illustrates how to assess and compare the ranking effectiveness of
+classification models using Lift Charts, a valuable tool for evaluating how well
+a model prioritizes positive instances relative to random chance. Leveraging the
+Logistic Regression, Decision Tree, and Random Forest Classifier models trained
+on the <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset introduced in the Binary Classification Models section</span></a>, we plot Lift curves to visualize their relative ability to
+surface high-value (positive) cases at the top of the prediction list.</p>
+<p>A Lift Chart plots the ratio of actual positives identified by the model compared
+to what would be expected by random selection, across increasingly larger proportions
+of the sample sorted by predicted probability. The baseline (Lift = 1) represents
+random chance; curves that rise above this line demonstrate the model’s ability to
+“lift” positive outcomes toward the top ranks. This makes Lift Charts especially
+useful in applications like marketing, fraud detection, and risk stratification—where
+targeting the top segment of predictions can yield outsized value.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">show_lift_chart</span></code> function enables flexible creation of Lift Charts for one or more
+models. It supports single-plot overlays, grid layouts, and detailed customization of
+labels, titles, and styling. Designed for both exploratory analysis and stakeholder
+presentation, this utility helps users better understand model ranking performance
+across the population.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="show_lift_chart">
+<span class="sig-name descname"><span class="pre">show_lift_chart</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xlabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Percentage</span> <span class="pre">of</span> <span class="pre">Sample'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Lift'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">curve_kwgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linestyle_kwgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gridlines</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#show_lift_chart" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a><em>]</em>) – A trained model or a list of models. Each must implement <code class="docutils literal notranslate"><span class="pre">predict_proba</span></code> to estimate class probabilities.</p></li>
+<li><p><strong>X</strong> (<em>pd.DataFrame</em><em> or </em><em>np.ndarray</em>) – Feature matrix used to generate predictions.</p></li>
+<li><p><strong>y</strong> (<em>pd.Series</em><em> or </em><em>np.ndarray</em>) – True binary labels corresponding to the input samples.</p></li>
+<li><p><strong>xlabel</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Label for the x-axis. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;Percentage</span> <span class="pre">of</span> <span class="pre">Sample&quot;</span></code>.</p></li>
+<li><p><strong>ylabel</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Label for the y-axis. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;Lift&quot;</span></code>.</p></li>
+<li><p><strong>model_title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – Custom display names for the models. Can be a string or list of strings.</p></li>
+<li><p><strong>overlay</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, overlays all model lift curves into a single plot. Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Title for the plot or grid. Set to <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code> to suppress the title. Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>save_plot</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to save the chart(s) to disk. Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>image_path_png</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Output path for saving PNG image(s).</p></li>
+<li><p><strong>image_path_svg</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Output path for saving SVG image(s).</p></li>
+<li><p><strong>text_wrap</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Maximum number of characters before wrapping titles. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, no wrapping is applied.</p></li>
+<li><p><strong>curve_kwgs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>] or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>]</em><em>, </em><em>optional</em>) – Dictionary or list of dictionaries for customizing the lift curve(s) (e.g., color, linewidth).</p></li>
+<li><p><strong>linestyle_kwgs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>, </em><em>optional</em>) – Styling for the baseline (random lift) reference line. Defaults to <code class="docutils literal notranslate"><span class="pre">{&quot;color&quot;:</span> <span class="pre">&quot;gray&quot;,</span> <span class="pre">&quot;linestyle&quot;:</span> <span class="pre">&quot;--&quot;,</span> <span class="pre">&quot;linewidth&quot;:</span> <span class="pre">2}</span></code>.</p></li>
+<li><p><strong>grid</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to show each model in a subplot grid. Cannot be combined with <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code>.</p></li>
+<li><p><strong>n_rows</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Number of rows in the grid layout. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, automatically inferred.</p></li>
+<li><p><strong>n_cols</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Number of columns in the grid layout. Defaults to <code class="docutils literal notranslate"><span class="pre">2</span></code>.</p></li>
+<li><p><strong>figsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><em>tuple</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>]</em><em>, </em><em>optional</em>) – Tuple specifying the size of the figure in inches. Defaults to <code class="docutils literal notranslate"><span class="pre">(8,</span> <span class="pre">6)</span></code>.</p></li>
+<li><p><strong>label_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for x/y-axis labels and titles. Defaults to <code class="docutils literal notranslate"><span class="pre">12</span></code>.</p></li>
+<li><p><strong>tick_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for tick marks and legend text. Defaults to <code class="docutils literal notranslate"><span class="pre">10</span></code>.</p></li>
+<li><p><strong>gridlines</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to display gridlines in plots. Defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">None.</span></code> Displays or saves lift charts for the specified classification models.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – <ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code> and <code class="docutils literal notranslate"><span class="pre">grid=True</span></code> are both set.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>What is a Lift Chart?</strong></dt><dd><ul>
+<li><p>Lift quantifies how much better a model is at identifying positive cases compared to random selection.</p></li>
+<li><p>The x-axis represents the proportion of the population (from highest to lowest predicted probability).</p></li>
+<li><p>The y-axis shows the cumulative lift, calculated as the ratio of observed positives to expected positives under random selection.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Interpreting Lift Curves:</strong></dt><dd><ul>
+<li><p>A higher and steeper curve indicates a stronger model.</p></li>
+<li><p>The horizontal dashed line at <code class="docutils literal notranslate"><span class="pre">y</span> <span class="pre">=</span> <span class="pre">1</span></code> is the baseline for random performance.</p></li>
+<li><p>Curves that drop sharply or flatten may indicate poor ranking ability.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Layout Options:</strong></dt><dd><ul>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code> to visualize all models on a single axis.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">grid=True</span></code> for a side-by-side layout of lift charts.</p></li>
+<li><p>Neither set? Each model gets its own full-sized chart.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Customization:</strong></dt><dd><ul>
+<li><p>Customize the appearance of each model’s curve using <code class="docutils literal notranslate"><span class="pre">curve_kwgs</span></code>.</p></li>
+<li><p>Modify the baseline reference line with <code class="docutils literal notranslate"><span class="pre">linestyle_kwgs</span></code>.</p></li>
+<li><p>Control title wrapping and font sizes via <code class="docutils literal notranslate"><span class="pre">text_wrap</span></code>, <code class="docutils literal notranslate"><span class="pre">label_fontsize</span></code>, and <code class="docutils literal notranslate"><span class="pre">tick_fontsize</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Saving Plots:</strong></dt><dd><ul>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">save_plot=True</span></code>, figures are saved as <code class="docutils literal notranslate"><span class="pre">&lt;model_title&gt;_Lift.png/svg</span></code> or <code class="docutils literal notranslate"><span class="pre">Overlay_Lift.png/svg</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<section id="lift-chart-example-1-grid-layout">
+<h2>Lift Chart Example 1 (Grid Layout)<a class="headerlink" href="#lift-chart-example-1-grid-layout" title="Permalink to this heading"></a></h2>
+<p>In this first Lift Chart example, we evaluate and compare the ranking performance
+of two classification models—Logistic Regression and Random Forest Classifier—trained
+on the <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a>. The chart displays Lift curves for both models in a
+two-column grid layout (<code class="docutils literal notranslate"><span class="pre">n_cols=2,</span> <span class="pre">n_rows=1</span></code>), enabling side-by-side comparison
+of how effectively each model prioritizes positive cases.</p>
+<p>Each plot shows the model’s Lift across increasing portions of the test set, with
+a grey dashed line at Lift = 1 indicating the baseline (random performance). Curves
+above this line reflect the model’s ability to identify more positives than would
+be expected by chance. The Random Forest typically produces a steeper initial lift,
+demonstrating greater concentration of positive cases near the top-ranked predictions.</p>
+<p>The show_lift_chart function allows for rich customization, including plot dimensions,
+axis font sizes, and curve styling. In this example, we set the line widths for both
+models and saved the plots in both PNG and SVG formats for further reporting or
+documentation.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_lift_chart</span>
+
+<span class="n">show_lift_chart</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
+    <span class="n">model_title</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Logistic Regression&quot;</span><span class="p">,</span> <span class="s2">&quot;Random Forest&quot;</span><span class="p">],</span>
+    <span class="n">linestyle_kwgs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;grey&quot;</span><span class="p">,</span> <span class="s2">&quot;linestyle&quot;</span><span class="p">:</span> <span class="s2">&quot;--&quot;</span><span class="p">},</span>
+    <span class="n">curve_kwgs</span><span class="o">=</span><span class="p">{</span><span class="n">title</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;linewidth&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">}</span> <span class="k">for</span> <span class="n">title</span> <span class="ow">in</span> <span class="n">model_titles</span><span class="p">},</span>
+    <span class="n">grid</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
 <section id="roc-auc-curves">
 <h1>ROC AUC Curves<a class="headerlink" href="#roc-auc-curves" title="Permalink to this heading"></a></h1>
 <p>This section demonstrates how to evaluate the performance of binary classification
@@ -1734,8 +1882,8 @@ is a practical tool for model evaluation and stakeholder communication.</p>
 plotting of ROC curves for binary classification models. It supports overlays,
 grid layouts, and subgroup visualizations, while also allowing export options
 and styling hooks for publication-ready output.</p>
-<section id="roc-auc-example-1-original">
-<h2>ROC AUC Example 1 (Original)<a class="headerlink" href="#roc-auc-example-1-original" title="Permalink to this heading"></a></h2>
+<section id="roc-auc-example-1-grid-layout">
+<h2>ROC AUC Example 1 (Grid Layout)<a class="headerlink" href="#roc-auc-example-1-grid-layout" title="Permalink to this heading"></a></h2>
 <p>In this first ROC AUC evaluation example, we plot the ROC curves for two
 models: Logistic Regression and Random Forest Classifier, trained on the
 <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a>. The curves are displayed side by side
@@ -1965,8 +2113,8 @@ and sometimes more informative tool than ROC AUC in skewed classification scenar
 of Precision-Recall curves for binary classification models. It supports overlays,
 grid layouts, and subgroup visualizations, while also allowing export options and
 styling hooks for publication-ready output.</p>
-<section id="precision-recall-example-1-original">
-<h2>Precision-Recall Example 1 (Original)<a class="headerlink" href="#precision-recall-example-1-original" title="Permalink to this heading"></a></h2>
+<section id="precision-recall-example-1-grid-layout">
+<h2>Precision-Recall Example 1 (Grid Layout)<a class="headerlink" href="#precision-recall-example-1-grid-layout" title="Permalink to this heading"></a></h2>
 <p>In this first Precision-Recall evaluation example, we plot the PR curves for two
 models: Logistic Regression and Random Forest Classifier, both trained on the
 <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the Binary Classification Models section</span></a>.
