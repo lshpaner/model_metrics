@@ -1859,7 +1859,7 @@ def show_lift_chart(
             plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
-                f"{name}_Lift",
+                f"{name}_lift",
                 save_plot,
                 image_path_png,
                 image_path_svg,
@@ -1888,7 +1888,7 @@ def show_lift_chart(
         plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
-            "Overlay_Lift",
+            "overlay_lift",
             save_plot,
             image_path_png,
             image_path_svg,
@@ -1900,7 +1900,7 @@ def show_lift_chart(
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(
-            "Grid_Lift",
+            "grid_lift",
             save_plot,
             image_path_png,
             image_path_svg,
@@ -2078,7 +2078,7 @@ def show_gain_chart(
             plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
-                f"{name}_Gain",
+                f"{name}_gain",
                 save_plot,
                 image_path_png,
                 image_path_svg,
@@ -2108,7 +2108,7 @@ def show_gain_chart(
         plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
-            "Overlay_Gain",
+            "overlay_gain",
             save_plot,
             image_path_png,
             image_path_svg,
@@ -2120,7 +2120,7 @@ def show_gain_chart(
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(
-            "Grid_Gain",
+            "grid_gain",
             save_plot,
             image_path_png,
             image_path_svg,
