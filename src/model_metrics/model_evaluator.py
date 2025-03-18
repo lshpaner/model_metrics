@@ -2349,8 +2349,9 @@ def show_calibration_curve(
             plt.grid(visible=gridlines)
 
             # Save grouped plot
+            name_clean = name.lower().replace(" ", "_")
             if save_plot:
-                filename = f"{name}_by_{group_category.name}_calibration"
+                filename = f"{name_clean}_by_{group_category.name}_calibration"
                 save_plot_images(
                     filename,
                     save_plot,
