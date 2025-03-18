@@ -1690,6 +1690,69 @@ documentation.
         grid=True,
     )
 
+**Output**
+
+.. raw:: html
+
+   <div class="no-click">
+
+.. image:: ../assets/lift_chart_1.svg
+   :alt: Lift Chart Example 1
+   :align: center
+   :width: 900px
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+Lift Chart Example 2 (Overlay)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This example overlays Lift curves from two classification models—Logistic 
+Regression and Random Forest Classifier—on a single plot for direct visual 
+comparison. Both models were trained on the same :ref:`synthetic dataset from the 
+Binary Classification Models section <Binary_Classification>`, and their lift 
+performance is evaluated on the shared test set.
+
+The Lift curve shows how many more positive outcomes are captured by the model 
+at each quantile compared to a random baseline. A horizontal dashed black line 
+at Lift = 1 represents random selection; curves above this line indicate effective 
+ranking of positive cases. Overlaying curves makes it easier to assess which model 
+better concentrates true positives near the top of the prediction list.
+
+Using the ``overlay=True`` option, the ``show_lift_chart`` function generates a clean, 
+unified plot. Each curve is styled with ``linewidth=2`` for clarity, and all axis 
+elements and tick marks are sized for presentation-quality output. This layout 
+is particularly helpful for slide decks, performance reports, or model selection 
+discussions.
+
+.. code-block:: python
+
+    from model_metrics import show_lift_chart
+
+    show_lift_chart(
+        model=[model1, model2],
+        X=X_test,
+        y=y_test,
+        overlay=True,
+        model_title=["Logistic Regression", "Random Forest"],
+        linestyle_kwgs={"color": "black", "linestyle": "--", "linewidth": 2},
+        curve_kwgs={title: {"linewidth": 2} for title in model_titles},
+    )
+
+
+.. raw:: html
+
+   <div class="no-click">
+
+.. image:: ../assets/lift_chart_2.svg
+   :alt: Lift Chart Example 2
+   :align: center
+   :width: 900px
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
 
 ROC AUC Curves
 --------------------

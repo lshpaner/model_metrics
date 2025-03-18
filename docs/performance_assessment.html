@@ -78,6 +78,7 @@
 <li class="toctree-l1"><a class="reference internal" href="#lift-charts">Lift Charts</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#show_lift_chart"><code class="docutils literal notranslate"><span class="pre">show_lift_chart()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#lift-chart-example-1-grid-layout">Lift Chart Example 1 (Grid Layout)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lift-chart-example-2-overlay">Lift Chart Example 2 (Overlay)</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#roc-auc-curves">ROC AUC Curves</a><ul>
@@ -1753,7 +1754,41 @@ documentation.</p>
 <span class="p">)</span>
 </pre></div>
 </div>
-</section>
+<p><strong>Output</strong></p>
+<div class="no-click"><a class="reference internal image-reference" href="_images/lift_chart_1.svg"><img alt="Lift Chart Example 1" class="align-center" src="_images/lift_chart_1.svg" width="900px" /></a>
+<div style="height: 40px;"></div></section>
+<section id="lift-chart-example-2-overlay">
+<h2>Lift Chart Example 2 (Overlay)<a class="headerlink" href="#lift-chart-example-2-overlay" title="Permalink to this heading"></a></h2>
+<p>This example overlays Lift curves from two classification models—Logistic
+Regression and Random Forest Classifier—on a single plot for direct visual
+comparison. Both models were trained on the same <a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset from the
+Binary Classification Models section</span></a>, and their lift
+performance is evaluated on the shared test set.</p>
+<p>The Lift curve shows how many more positive outcomes are captured by the model
+at each quantile compared to a random baseline. A horizontal dashed black line
+at Lift = 1 represents random selection; curves above this line indicate effective
+ranking of positive cases. Overlaying curves makes it easier to assess which model
+better concentrates true positives near the top of the prediction list.</p>
+<p>Using the <code class="docutils literal notranslate"><span class="pre">overlay=True</span></code> option, the <code class="docutils literal notranslate"><span class="pre">show_lift_chart</span></code> function generates a clean,
+unified plot. Each curve is styled with <code class="docutils literal notranslate"><span class="pre">linewidth=2</span></code> for clarity, and all axis
+elements and tick marks are sized for presentation-quality output. This layout
+is particularly helpful for slide decks, performance reports, or model selection
+discussions.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">model_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">show_lift_chart</span>
+
+<span class="n">show_lift_chart</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="p">[</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">],</span>
+    <span class="n">X</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span>
+    <span class="n">overlay</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">model_title</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Logistic Regression&quot;</span><span class="p">,</span> <span class="s2">&quot;Random Forest&quot;</span><span class="p">],</span>
+    <span class="n">linestyle_kwgs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="s2">&quot;linestyle&quot;</span><span class="p">:</span> <span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="s2">&quot;linewidth&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span>
+    <span class="n">curve_kwgs</span><span class="o">=</span><span class="p">{</span><span class="n">title</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;linewidth&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">}</span> <span class="k">for</span> <span class="n">title</span> <span class="ow">in</span> <span class="n">model_titles</span><span class="p">},</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="no-click"><a class="reference internal image-reference" href="_images/lift_chart_2.svg"><img alt="Lift Chart Example 2" class="align-center" src="_images/lift_chart_2.svg" width="900px" /></a>
+<div style="height: 40px;"></div></section>
 </section>
 <section id="roc-auc-curves">
 <h1>ROC AUC Curves<a class="headerlink" href="#roc-auc-curves" title="Permalink to this heading"></a></h1>
