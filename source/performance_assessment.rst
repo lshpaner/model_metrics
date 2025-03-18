@@ -1656,7 +1656,7 @@ across the population.
 
 
 Lift Chart Example 1 (Grid Layout)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this first Lift Chart example, we evaluate and compare the ranking performance 
 of two classification models—Logistic Regression and Random Forest Classifier—trained 
@@ -1759,6 +1759,162 @@ discussions.
 .. raw:: html
 
     <div style="height: 40px;"></div>
+
+Gain Charts
+--------------------
+
+This section explores how to evaluate the **cumulative performance** of classification
+models in identifying positive outcomes using **Gain Charts**. These charts are especially 
+effective at showing the model's ability to concentrate the correct (positive) predictions 
+in the top-ranked portion of the dataset. Using the same Logistic Regression, Decision Tree, 
+and Random Forest Classifier models trained on the 
+:ref:`synthetic dataset introduced in the Binary Classification Models section <Binary_Classification>`,
+we demonstrate how to plot and compare Gain Curves across models.
+
+A **Gain Chart** shows the cumulative percentage of actual positive cases captured
+as we move through the population sorted by predicted probability. Unlike the Lift Chart,
+which displays the ratio of model performance over baseline, the Gain Chart directly shows
+the percentage of positives captured—providing a more intuitive sense of how effective a model is
+at identifying positives early in the ranked list.
+
+The ``show_gain_chart`` function supports single or multiple models, with options to 
+overlay all gain curves in a single plot or display them in a flexible grid layout. 
+Labels, title wrapping, curve styles, and saving output images are all customizable,
+making this function well-suited for both development analysis and final reporting.
+
+.. function:: show_gain_chart(model, X, y, xlabel="Percentage of Sample", ylabel="Cumulative Gain", model_title=None, overlay=False, title=None, save_plot=False, image_path_png=None, image_path_svg=None, text_wrap=None, curve_kwgs=None, linestyle_kwgs=None, grid=False, n_rows=None, n_cols=2, figsize=None, label_fontsize=12, tick_fontsize=10, gridlines=True)
+
+    :param model: A trained classifier or list of classifiers. Each model must support ``predict_proba``.
+    :type model: object or list[object]
+    :param X: The feature matrix used for prediction.
+    :type X: pd.DataFrame or np.ndarray
+    :param y: Ground truth binary labels.
+    :type y: pd.Series or np.ndarray
+    :param xlabel: Label for the x-axis. Defaults to ``"Percentage of Sample"``.
+    :type xlabel: str, optional
+    :param ylabel: Label for the y-axis. Defaults to ``"Cumulative Gain"``.
+    :type ylabel: str, optional
+    :param model_title: Custom display names for each model.
+    :type model_title: str or list[str], optional
+    :param overlay: If ``True``, overlay all models on a single axis. Mutually exclusive with ``grid``.
+    :type overlay: bool, optional
+    :param title: Plot or grid title. Set to ``""`` to suppress the title.
+    :type title: str, optional
+    :param save_plot: Whether to save the chart(s) to disk.
+    :type save_plot: bool, optional
+    :param image_path_png: Output path for saving PNG image(s).
+    :type image_path_png: str, optional
+    :param image_path_svg: Output path for saving SVG image(s).
+    :type image_path_svg: str, optional
+    :param text_wrap: Max characters before title wrapping. Set to ``None`` to disable.
+    :type text_wrap: int, optional
+    :param curve_kwgs: Dict or list of kwargs per model to customize line style.
+    :type curve_kwgs: dict[str, dict] or list[dict], optional
+    :param linestyle_kwgs: Styling for the random baseline. Defaults to ``{"color": "gray", "linestyle": "--", "linewidth": 2}``.
+    :type linestyle_kwgs: dict, optional
+    :param grid: Whether to render a grid layout. Cannot be used with ``overlay``.
+    :type grid: bool, optional
+    :param n_rows: Rows in the grid layout. If ``None``, inferred automatically.
+    :type n_rows: int, optional
+    :param n_cols: Columns in the grid layout. Defaults to ``2``.
+    :type n_cols: int, optional
+    :param figsize: Figure size (width, height) in inches.
+    :type figsize: tuple[int, int], optional
+    :param label_fontsize: Font size for axis labels and titles.
+    :type label_fontsize: int, optional
+    :param tick_fontsize: Font size for tick marks and legends.
+    :type tick_fontsize: int, optional
+    :param gridlines: Whether to show gridlines on the plots.
+    :type gridlines: bool, optional
+
+    :returns: ``None.`` Displays or saves Gain Charts for one or more models.
+    :rtype: ``None``
+
+    :raises ValueError:
+        - If ``overlay=True`` and ``grid=True`` are both set.
+
+.. admonition:: Notes
+
+    - **What is a Gain Chart?**
+        - Plots the **cumulative percentage of positives captured** vs. sample size.
+        - The x-axis shows the fraction of the sample, ranked by predicted probability.
+        - The y-axis shows what percentage of the total positives have been captured.
+
+    - **Why use Gain Charts?**
+        - Gain Charts help answer: *"If I contact the top X% of predictions, how many positives will I catch?"*
+        - Especially useful in marketing, lead scoring, risk management, and fraud detection.
+
+    - **Reading Gain Curves:**
+        - Curves that rise steeply and plateau early indicate better model performance.
+        - The dashed baseline (diagonal line) represents random selection.
+
+    - **Layout Options:**
+        - Use ``overlay=True`` to combine all gain curves into a single plot.
+        - Use ``grid=True`` for a subplot layout per model.
+        - If neither is set, plots will be rendered individually.
+
+    - **Styling Options:**
+        - Customize individual model lines via ``curve_kwgs``.
+        - Modify the diagonal baseline line using ``linestyle_kwgs``.
+        - Adjust fonts and wrapping for presentation clarity.
+
+    - **Saving Output:**
+        - Enable ``save_plot=True`` to save figures as PNG and/or SVG.
+        - Files are named using the model title (e.g., ``Model_1_gain.png`` or ``overlay_gain.svg``).
+
+
+Gain Chart Example 1 (Grid Layout)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this first Gain Chart example, we compare the cumulative gain performance of two classification models—
+Logistic Regression and Random Forest Classifier—trained on the 
+:ref:`synthetic dataset from the Binary Classification Models section <Binary_Classification>`. 
+This visualization showcases their ability to identify positive instances across different percentiles 
+of the ranked test data.
+
+Each subplot presents the **cumulative gain** achieved as a function of the percentage of the sample, sorted 
+by descending predicted probability. The grey dashed line represents the **baseline (random gain)**. A model 
+that identifies a high proportion of positive cases in the early part of the ranking will have a steeper and 
+higher curve. In this example, the Random Forest model typically outpaces Logistic Regression, indicating 
+better early identification of positives.
+
+The ``show_gain_chart`` function allows flexible styling and layout control. This example uses a grid 
+configuration (``n_cols=2, n_rows=1``), customized line widths and colors, and includes saving the figure 
+for documentation or stakeholder presentations.
+
+.. code-block:: python
+
+    from model_metrics import show_gain_chart
+
+    show_gain_chart(
+        model=[model1, model2],
+        X=X_test,
+        y=y_test,
+        model_title=["Logistic Regression", "Random Forest"],
+        linestyle_kwgs={"color": "grey", "linestyle": "--"},
+        curve_kwgs={
+            "Logistic Regression": {"color": "blue", "linewidth": 2},
+            "Random Forest": {"color": "black", "linewidth": 2},
+        },
+        grid=True,
+    )
+
+**Output**
+
+.. raw:: html
+
+   <div class="no-click">
+
+.. image:: ../assets/gain_chart_1.svg
+   :alt: Gain Chart Example 1
+   :align: center
+   :width: 900px
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+
 
 ROC AUC Curves
 --------------------

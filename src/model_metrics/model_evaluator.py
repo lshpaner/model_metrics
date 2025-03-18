@@ -1859,7 +1859,7 @@ def show_lift_chart(
             plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
-                f"{name}_lift",
+                f"{name}_Lift",
                 save_plot,
                 image_path_png,
                 image_path_svg,
@@ -1888,7 +1888,7 @@ def show_lift_chart(
         plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
-            "overlay_lift",
+            "Overlay_Lift",
             save_plot,
             image_path_png,
             image_path_svg,
@@ -1900,7 +1900,7 @@ def show_lift_chart(
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(
-            "grid_lift",
+            "Grid_Lift",
             save_plot,
             image_path_png,
             image_path_svg,
@@ -2078,7 +2078,7 @@ def show_gain_chart(
             plt.legend(loc="best", fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
-                f"{name}_gain",
+                f"{name}_Gain",
                 save_plot,
                 image_path_png,
                 image_path_svg,
@@ -2108,7 +2108,7 @@ def show_gain_chart(
         plt.legend(loc="best", fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
-            "overlay_gain",
+            "Overlay_Gain",
             save_plot,
             image_path_png,
             image_path_svg,
@@ -2120,7 +2120,7 @@ def show_gain_chart(
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(
-            "grid_gain",
+            "Grid_Gain",
             save_plot,
             image_path_png,
             image_path_svg,
@@ -2349,9 +2349,8 @@ def show_calibration_curve(
             plt.grid(visible=gridlines)
 
             # Save grouped plot
-            name_clean = name.lower().replace(" ", "_")
             if save_plot:
-                filename = f"{name_clean}_by_{group_category.name}_calibration"
+                filename = f"{name}_by_{group_category.name}_calibration"
                 save_plot_images(
                     filename,
                     save_plot,
