@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Caveats &mdash; Model Metrics 0.0.0.a2 documentation</title>
+  <title>Threshold Selection logic &mdash; Model Metrics 0.0.0.a2 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
@@ -69,15 +69,12 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Caveats</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Caveats</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#threshold-selection-logic">Threshold Selection logic</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#calibration-trade-offs">Calibration Trade-offs</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#calibration-methodology">Calibration Methodology</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#alternative-calibration-methods">Alternative Calibration Methods</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#dependence-on-validation-data">Dependence on Validation Data</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#interpreting-the-brier-score">Interpreting the Brier Score</a></li>
-</ul>
-</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Threshold Selection logic</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#calibration-trade-offs">Calibration Trade-offs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#calibration-methodology">Calibration Methodology</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#alternative-calibration-methods">Alternative Calibration Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dependence-on-validation-data">Dependence on Validation Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interpreting-the-brier-score">Interpreting the Brier Score</a></li>
 </ul>
 </li>
 </ul>
@@ -104,7 +101,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Caveats</li>
+      <li class="breadcrumb-item active">Threshold Selection logic</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -114,10 +111,8 @@
            <div itemprop="articleBody">
              
   <span class="target" id="caveats"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" width="300px" /></a>
-</div><div style="height: 100px;"></div><section id="id1">
-<h1>Caveats<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h1>
-<section id="threshold-selection-logic">
-<span id="id2"></span><h2>Threshold Selection logic<a class="headerlink" href="#threshold-selection-logic" title="Permalink to this heading"></a></h2>
+</div><div style="height: 100px;"></div><section id="threshold-selection-logic">
+<span id="id1"></span><h1>Threshold Selection logic<a class="headerlink" href="#threshold-selection-logic" title="Permalink to this heading"></a></h1>
 <p>When computing confusion matrices, selecting the right classification threshold
 can significantly impact the output. The function <code class="docutils literal notranslate"><span class="pre">show_confusion_matrix</span></code> is
 documented in <a class="reference internal" href="performance_assessment.html#confusion-matrix-evaluation"><span class="std std-ref">this section</span></a>.</p>
@@ -132,13 +127,13 @@ the function will try to retrieve the threshold using the score parameter:</p>
 </ul>
 </section>
 <section id="calibration-trade-offs">
-<span id="caveats-in-calibration"></span><h2>Calibration Trade-offs<a class="headerlink" href="#calibration-trade-offs" title="Permalink to this heading"></a></h2>
+<span id="caveats-in-calibration"></span><h1>Calibration Trade-offs<a class="headerlink" href="#calibration-trade-offs" title="Permalink to this heading"></a></h1>
 <p>Calibration curves are powerful diagnostic tools for assessing how well a model’s
 predicted probabilities reflect actual outcomes. However, their interpretation—and
 the methods used to derive them—come with important caveats that users should keep
 in mind.</p>
 <section id="calibration-methodology">
-<h3>Calibration Methodology<a class="headerlink" href="#calibration-methodology" title="Permalink to this heading"></a></h3>
+<h2>Calibration Methodology<a class="headerlink" href="#calibration-methodology" title="Permalink to this heading"></a></h2>
 <p>The examples shown in this library are based on models calibrated using Platt
 Scaling, a post-processing technique that fits a sigmoid function to the model’s
 prediction scores. <strong>Platt Scaling</strong> assumes a parametric form:</p>
@@ -152,7 +147,7 @@ linearly separable or approximately log-odds in nature.</p>
 and true probabilities is non-monotonic or highly irregular.</p>
 </section>
 <section id="alternative-calibration-methods">
-<h3>Alternative Calibration Methods<a class="headerlink" href="#alternative-calibration-methods" title="Permalink to this heading"></a></h3>
+<h2>Alternative Calibration Methods<a class="headerlink" href="#alternative-calibration-methods" title="Permalink to this heading"></a></h2>
 <p>An alternative to Platt Scaling is <strong>Isotonic Regression</strong>, a non-parametric method
 that fits a monotonically increasing function to the model’s prediction scores.
 It is particularly effective when the mapping between predicted probabilities and
@@ -182,13 +177,13 @@ particularly if the validation set is not representative of the production envir
 <p class="admonition-title">Note</p>
 <p>This library does not perform calibration internally. Instead, users are
 expected to calibrate models during training or preprocessing—e.g., using the
-<code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id4" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> or any external tool. All calibration curve plots
+<code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id3" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> or any external tool. All calibration curve plots
 included here are illustrative and assume models have already been calibrated
 using Platt Scaling prior to visualization.</p>
 </div>
 </section>
 <section id="dependence-on-validation-data">
-<h3>Dependence on Validation Data<a class="headerlink" href="#dependence-on-validation-data" title="Permalink to this heading"></a></h3>
+<h2>Dependence on Validation Data<a class="headerlink" href="#dependence-on-validation-data" title="Permalink to this heading"></a></h2>
 <p>All calibration techniques rely heavily on the quality of the validation data
 used to learn the mapping. If the validation set is not representative of the
 target population, the resulting calibration curve may be misleading. This
@@ -196,7 +191,7 @@ concern is especially important when deploying models in real-world settings
 where data drift or population imbalance may occur.</p>
 </section>
 <section id="interpreting-the-brier-score">
-<h3>Interpreting the Brier Score<a class="headerlink" href="#interpreting-the-brier-score" title="Permalink to this heading"></a></h3>
+<h2>Interpreting the Brier Score<a class="headerlink" href="#interpreting-the-brier-score" title="Permalink to this heading"></a></h2>
 <p>The <strong>Brier Score</strong>, often reported alongside calibration curves, provides a
 quantitative measure of probabilistic accuracy. It is defined as:</p>
 <div class="math notranslate nohighlight">
@@ -207,12 +202,11 @@ performance, it conflates calibration (how close predicted probabilities are to
 actual outcomes) and refinement (how confidently predictions are made). Thus,
 the Brier Score should be interpreted in context and not relied upon in isolation.</p>
 <aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id4" role="note">
-<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">1</a><span class="fn-bracket">]</span></span>
+<aside class="footnote brackets" id="id3" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">1</a><span class="fn-bracket">]</span></span>
 <p>Funnell, A., Shpaner, L., &amp; Petousis, P. (2024). <em>Model Tuner</em> (Version 0.0.28b) [Software]. Zenodo. <a class="reference external" href="https://doi.org/10.5281/zenodo.12727322">https://doi.org/10.5281/zenodo.12727322</a>.</p>
 </aside>
 </aside>
-</section>
 </section>
 </section>
 

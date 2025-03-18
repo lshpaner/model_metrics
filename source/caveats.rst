@@ -25,8 +25,6 @@
    
    <div style="height: 100px;"></div>
 
-Caveats
-============
 
 .. _threshold_selection_logic:
 
