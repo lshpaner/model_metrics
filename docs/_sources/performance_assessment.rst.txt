@@ -1915,6 +1915,57 @@ for documentation or stakeholder presentations.
     <div style="height: 40px;"></div>
 
 
+Gain Chart Example 2 (Overlay)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This example overlays Gain curves from two classification models—Logistic 
+Regression and Random Forest Classifier—on a single plot to enable direct 
+visual comparison of their cumulative gain performance. Both models were 
+trained on the same :ref:`synthetic dataset from the Binary Classification 
+Models section <Binary_Classification>` and evaluated on the same test set.
+
+The Gain curve shows the cumulative proportion of true positives captured as 
+you move through the population, ranked by predicted probability. A diagonal 
+baseline line from (0, 0) to (1, 1) indicates the expected performance of a 
+random model. Curves that rise above this line demonstrate superior model 
+ability to concentrate positive cases near the top of the ranked list.
+
+By setting ``overlay=True``, the ``show_gain_chart`` function produces a single, 
+easy-to-read plot containing both models’ gain curves. Each curve is styled 
+with ``linewidth=2`` for clear visibility. Overlay layouts are ideal for model 
+selection discussions, presentations, and performance dashboards.
+
+.. code-block:: python
+
+    from model_metrics import show_gain_chart
+
+    show_gain_chart(
+        model=[model1, model2],
+        X=X_test,
+        y=y_test,
+        overlay=True,
+        model_title=["Logistic Regression", "Random Forest"],
+        linestyle_kwgs={"color": "black", "linestyle": "--", "linewidth": 2},
+        curve_kwgs={
+            "Logistic Regression": {"color": "blue", "linewidth": 2},
+            "Random Forest": {"color": "black", "linewidth": 2},
+        },
+    )
+
+
+.. raw:: html
+
+   <div class="no-click">
+
+.. image:: ../assets/gain_chart_2.svg
+   :alt: Gain Chart Example 2
+   :align: center
+   :width: 900px
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
 
 ROC AUC Curves
 --------------------
@@ -2068,7 +2119,6 @@ add a grid, and save the plot for reporting purposes.
         },
         linestyle_kwgs={"color": "red", "linestyle": "--"},
         grid=True,
-        figsize=(12, 6),
     )
 
 **Output**
@@ -2880,6 +2930,19 @@ visually comparing calibration behavior across models without overlapping lines.
 
 .. code-block:: python
 
+    pipelines_or_models = [
+    model_lr["model"].estimator,
+    model_rf["model"].estimator,
+    model_dt["model"].estimator,
+    ]
+
+    # Model titles
+    model_titles = [
+        "Logistic Regression",
+        "Random Forest Classifier",
+        "Decision Tree Classifier",
+    ]
+
     from model_metrics import show_calibration_curve
 
     show_calibration_curve(
@@ -2888,9 +2951,6 @@ visually comparing calibration behavior across models without overlapping lines.
         y=y_test,
         model_title=model_titles[:2],
         text_wrap=50,
-        figsize=(12, 6),
-        label_fontsize=16,
-        tick_fontsize=13,
         bins=10,
         show_brier_score=True,
         grid=True,
@@ -2938,13 +2998,27 @@ making it easier to evaluate relative performance without splitting across subpl
 
 .. code-block:: python
 
+    pipelines_or_models = [
+    model_lr["model"].estimator,
+    model_rf["model"].estimator,
+    model_dt["model"].estimator,
+    ]
+
+    # Model titles
+    model_titles = [
+        "Logistic Regression",
+        "Random Forest Classifier",
+        "Decision Tree Classifier",
+    ]
+
+
     from model_metrics import show_calibration_curve
 
     show_calibration_curve(
-        model=pipelines_or_models[:2],
+        model=pipelines_or_models,
         X=X_test,
         y=y_test,
-        model_title=model_titles[:2],
+        model_title=model_titles,
         bins=10,
         show_brier_score=True,
         overlay=True
