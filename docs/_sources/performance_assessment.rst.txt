@@ -1686,7 +1686,10 @@ documentation.
         y=y_test,
         model_title=["Logistic Regression", "Random Forest"],
         linestyle_kwgs={"color": "grey", "linestyle": "--"},
-        curve_kwgs={title: {"linewidth": 2} for title in model_titles},
+        curve_kwgs={
+            "Logistic Regression": {"color": "blue", "linewidth": 2},
+            "Random Forest": {"color": "black", "linewidth": 2},
+        },
         grid=True,
     )
 
@@ -1737,7 +1740,10 @@ discussions.
         overlay=True,
         model_title=["Logistic Regression", "Random Forest"],
         linestyle_kwgs={"color": "black", "linestyle": "--", "linewidth": 2},
-        curve_kwgs={title: {"linewidth": 2} for title in model_titles},
+        curve_kwgs={
+            "Logistic Regression": {"color": "blue", "linewidth": 2},
+            "Random Forest": {"color": "black", "linewidth": 2},
+        },
     )
 
 
