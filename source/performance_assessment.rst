@@ -3110,6 +3110,96 @@ performance within the group.
     <div style="height: 40px;"></div>
 
 
+Threshold Metric Curves
+--------------------------
+
+This section introduces a powerful utility for exploring how classification 
+thresholds affect key performance metrics, including **Precision**, **Recall**, 
+**F1 Score**, and **Specificity**. Rather than fixing a threshold (commonly at 0.5),
+this function allows users to visualize **trade-offs across the full range of 
+possible thresholds**, making it especially useful when optimizing for use-case-specific 
+goals such as maximizing recall or achieving a minimum precision.
+
+.. admonition:: Features
+    :class: features
+
+    Using the Logistic Regression and Random Forest Classifier models trained on the 
+    :ref:`synthetic dataset <Binary_Classification>`, this tool helps users answer 
+    practical questions like:
+
+    - *What threshold achieves at least 85% precision?*
+    - *Where does F1 score peak for this model?*
+    - *How does specificity behave as the threshold increases?*
+
+    The plot_threshold_metrics function supports optional threshold lookups via 
+    ``lookup_metric`` and ``lookup_value``, which prints the closest threshold that
+    meets your constraint. Plots can be customized with colors, gridlines, line styles,
+    wrapped titles, and export options.
+
+.. function:: plot_threshold_metrics(model, X_test, y_test, title=None, text_wrap=None, figsize=(8, 6), label_fontsize=12, tick_fontsize=10, gridlines=True, baseline_thresh=True, curve_kwgs=None, baseline_kwgs=None, save_plot=False, image_path_png=None, image_path_svg=None, lookup_metric=None, lookup_value=None, decimal_places=4)
+
+    :param model: A trained classification model that supports ``predict_proba``.
+    :type model: object
+    :param X_test: Feature matrix for evaluation.
+    :type X_test: pd.DataFrame or np.ndarray
+    :param y_test: True binary labels.
+    :type y_test: pd.Series or np.ndarray
+    :param title: Custom title for the plot. If ``""``, disables the title.
+    :type title: str, optional
+    :param text_wrap: Maximum width of the title before wrapping. If ``None``, no wrapping is applied.
+    :type text_wrap: int, optional
+    :param figsize: Tuple representing the figure size in inches. Defaults to ``(8, 6)``.
+    :type figsize: tuple, optional
+    :param label_fontsize: Font size for axis labels and title.
+    :type label_fontsize: int, optional
+    :param tick_fontsize: Font size for tick labels.
+    :type tick_fontsize: int, optional
+    :param gridlines: Whether to show grid lines. Defaults to ``True``.
+    :type gridlines: bool, optional
+    :param baseline_thresh: If ``True``, adds a dashed line at threshold = 0.5.
+    :type baseline_thresh: bool, optional
+    :param curve_kwgs: Dictionary of styling options for metric curves (e.g., ``{"linewidth": 2}``).
+    :type curve_kwgs: dict, optional
+    :param baseline_kwgs: Dictionary of styling options for the baseline threshold line.
+    :type baseline_kwgs: dict, optional
+    :param save_plot: Whether to save the figure to file.
+    :type save_plot: bool, optional
+    :param image_path_png: File path to save PNG output.
+    :type image_path_png: str, optional
+    :param image_path_svg: File path to save SVG output.
+    :type image_path_svg: str, optional
+    :param lookup_metric: Metric to search for best threshold ("precision", "recall", "f1", or "specificity").
+    :type lookup_metric: str, optional
+    :param lookup_value: Desired value for the lookup metric.
+    :type lookup_value: float, optional
+    :param decimal_places: Number of decimal places for printed threshold output.
+    :type decimal_places: int, optional
+
+    :returns: ``None.`` Displays or saves the metric vs. threshold plot.
+    :rtype: ``None``
+
+.. admonition:: Notes
+
+    - **Metric Curves:**
+        - Plots include ``Precision``, ``Recall``, ``F1 Score``, and ``Specificity`` over threshold values.
+        - Useful for analyzing how changing the threshold alters model behavior.
+
+    - **Threshold Lookup:**
+        - Set ``lookup_metric`` and ``lookup_value`` to find the closest threshold that meets your constraint.
+        - Prints result to console and highlights the corresponding vertical line.
+
+    - **Styling Options:**
+        - Customize plot curves with ``curve_kwgs``.
+        - Adjust baseline style (e.g., at threshold = 0.5) via ``baseline_kwgs``.
+
+    - **Exporting:**
+        - Use ``save_plot=True`` with ``image_path_png`` and/or ``image_path_svg`` to save outputs.
+
+    - **Interactivity:**
+        - Ideal for presentations or dashboards where visualizing threshold sensitivity is crucial.
+        - Particularly helpful for domains like healthcare, fraud detection, or content moderation, where the cost of false positives vs. false negatives must be carefully managed.
+
+
 .. [1] Efron, B., Hastie, T., Johnstone, I., & Tibshirani, R. (2004). *Diabetes Dataset*. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. `https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset <https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset>`_.
 .. [2] Kohavi, R. (1996). *Census Income*. UCI Machine Learning Repository. `https://doi.org/10.24432/C5GP7S <https://doi.org/10.24432/C5GP7S>`_.
 .. [3] Funnell, A., Shpaner, L., & Petousis, P. (2024). *Model Tuner* (Version 0.0.28b) [Software]. Zenodo. `https://doi.org/10.5281/zenodo.12727322 <https://doi.org/10.5281/zenodo.12727322>`_.

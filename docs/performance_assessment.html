@@ -10,8 +10,8 @@
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=df76116e" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=df76116e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=8bd1c22b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=8bd1c22b" />
       <link rel="stylesheet" type="text/css" href="_static/custom.js?v=f9206548" />
 
   
@@ -112,6 +112,10 @@
 <li class="toctree-l2"><a class="reference internal" href="#calibration-curve-example-1-grid-like">Calibration Curve Example 1 (Grid-like)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#calibration-curve-example-2-overlay">Calibration Curve Example 2 (Overlay)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#calibration-curve-example-3-by-category">Calibration Curve Example 3 (by Category)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#threshold-metric-curves">Threshold Metric Curves</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#plot_threshold_metrics"><code class="docutils literal notranslate"><span class="pre">plot_threshold_metrics()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -2950,7 +2954,111 @@ conflicting layout behavior.</p>
 <p><strong>Output</strong></p>
 <div class="no-click"><a class="reference internal image-reference" href="_images/calibration_3.svg"><img alt="Calibration Curves Example 3" class="align-center" src="_images/calibration_3.svg" style="width: 900px;" />
 </a>
-<div style="height: 40px;"></div><aside class="footnote-list brackets">
+<div style="height: 40px;"></div></section>
+</section>
+<section id="threshold-metric-curves">
+<h1>Threshold Metric Curves<a class="headerlink" href="#threshold-metric-curves" title="Link to this heading"></a></h1>
+<p>This section introduces a powerful utility for exploring how classification
+thresholds affect key performance metrics, including <strong>Precision</strong>, <strong>Recall</strong>,
+<strong>F1 Score</strong>, and <strong>Specificity</strong>. Rather than fixing a threshold (commonly at 0.5),
+this function allows users to visualize <strong>trade-offs across the full range of
+possible thresholds</strong>, making it especially useful when optimizing for use-case-specific
+goals such as maximizing recall or achieving a minimum precision.</p>
+<div class="features admonition">
+<p class="admonition-title">Features</p>
+<p>Using the Logistic Regression and Random Forest Classifier models trained on the
+<a class="reference internal" href="#binary-classification"><span class="std std-ref">synthetic dataset</span></a>, this tool helps users answer
+practical questions like:</p>
+<ul class="simple">
+<li><p><em>What threshold achieves at least 85% precision?</em></p></li>
+<li><p><em>Where does F1 score peak for this model?</em></p></li>
+<li><p><em>How does specificity behave as the threshold increases?</em></p></li>
+</ul>
+<p>The plot_threshold_metrics function supports optional threshold lookups via
+<code class="docutils literal notranslate"><span class="pre">lookup_metric</span></code> and <code class="docutils literal notranslate"><span class="pre">lookup_value</span></code>, which prints the closest threshold that
+meets your constraint. Plots can be customized with colors, gridlines, line styles,
+wrapped titles, and export options.</p>
+</div>
+<dl class="py function">
+<dt class="sig sig-object py" id="plot_threshold_metrics">
+<span class="sig-name descname"><span class="pre">plot_threshold_metrics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_test</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_test</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">6)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gridlines</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_thresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">curve_kwgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline_kwgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lookup_metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lookup_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decimal_places</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#plot_threshold_metrics" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><em>object</em></a>) – A trained classification model that supports <code class="docutils literal notranslate"><span class="pre">predict_proba</span></code>.</p></li>
+<li><p><strong>X_test</strong> (<em>pd.DataFrame</em><em> or </em><em>np.ndarray</em>) – Feature matrix for evaluation.</p></li>
+<li><p><strong>y_test</strong> (<em>pd.Series</em><em> or </em><em>np.ndarray</em>) – True binary labels.</p></li>
+<li><p><strong>title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Custom title for the plot. If <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code>, disables the title.</p></li>
+<li><p><strong>text_wrap</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Maximum width of the title before wrapping. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, no wrapping is applied.</p></li>
+<li><p><strong>figsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><em>tuple</em></a><em>, </em><em>optional</em>) – Tuple representing the figure size in inches. Defaults to <code class="docutils literal notranslate"><span class="pre">(8,</span> <span class="pre">6)</span></code>.</p></li>
+<li><p><strong>label_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for axis labels and title.</p></li>
+<li><p><strong>tick_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for tick labels.</p></li>
+<li><p><strong>gridlines</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to show grid lines. Defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>baseline_thresh</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, adds a dashed line at threshold = 0.5.</p></li>
+<li><p><strong>curve_kwgs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>, </em><em>optional</em>) – Dictionary of styling options for metric curves (e.g., <code class="docutils literal notranslate"><span class="pre">{&quot;linewidth&quot;:</span> <span class="pre">2}</span></code>).</p></li>
+<li><p><strong>baseline_kwgs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><em>dict</em></a><em>, </em><em>optional</em>) – Dictionary of styling options for the baseline threshold line.</p></li>
+<li><p><strong>save_plot</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to save the figure to file.</p></li>
+<li><p><strong>image_path_png</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – File path to save PNG output.</p></li>
+<li><p><strong>image_path_svg</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – File path to save SVG output.</p></li>
+<li><p><strong>lookup_metric</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Metric to search for best threshold (“precision”, “recall”, “f1”, or “specificity”).</p></li>
+<li><p><strong>lookup_value</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Desired value for the lookup metric.</p></li>
+<li><p><strong>decimal_places</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Number of decimal places for printed threshold output.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">None.</span></code> Displays or saves the metric vs. threshold plot.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>Metric Curves:</strong></dt><dd><ul>
+<li><p>Plots include <code class="docutils literal notranslate"><span class="pre">Precision</span></code>, <code class="docutils literal notranslate"><span class="pre">Recall</span></code>, <code class="docutils literal notranslate"><span class="pre">F1</span> <span class="pre">Score</span></code>, and <code class="docutils literal notranslate"><span class="pre">Specificity</span></code> over threshold values.</p></li>
+<li><p>Useful for analyzing how changing the threshold alters model behavior.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Threshold Lookup:</strong></dt><dd><ul>
+<li><p>Set <code class="docutils literal notranslate"><span class="pre">lookup_metric</span></code> and <code class="docutils literal notranslate"><span class="pre">lookup_value</span></code> to find the closest threshold that meets your constraint.</p></li>
+<li><p>Prints result to console and highlights the corresponding vertical line.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Styling Options:</strong></dt><dd><ul>
+<li><p>Customize plot curves with <code class="docutils literal notranslate"><span class="pre">curve_kwgs</span></code>.</p></li>
+<li><p>Adjust baseline style (e.g., at threshold = 0.5) via <code class="docutils literal notranslate"><span class="pre">baseline_kwgs</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Exporting:</strong></dt><dd><ul>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">save_plot=True</span></code> with <code class="docutils literal notranslate"><span class="pre">image_path_png</span></code> and/or <code class="docutils literal notranslate"><span class="pre">image_path_svg</span></code> to save outputs.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Interactivity:</strong></dt><dd><ul>
+<li><p>Ideal for presentations or dashboards where visualizing threshold sensitivity is crucial.</p></li>
+<li><p>Particularly helpful for domains like healthcare, fraud detection, or content moderation, where the cost of false positives vs. false negatives must be carefully managed.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<aside class="footnote-list brackets">
 <aside class="footnote brackets" id="id13" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
 <p>Efron, B., Hastie, T., Johnstone, I., &amp; Tibshirani, R. (2004). <em>Diabetes Dataset</em>. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. <a class="reference external" href="https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset">https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset</a>.</p>
@@ -2966,7 +3074,6 @@ conflicting layout behavior.</p>
 <p>Funnell, A., Shpaner, L., &amp; Petousis, P. (2024). <em>Model Tuner</em> (Version 0.0.28b) [Software]. Zenodo. <a class="reference external" href="https://doi.org/10.5281/zenodo.12727322">https://doi.org/10.5281/zenodo.12727322</a>.</p>
 </aside>
 </aside>
-</section>
 </section>
 
 

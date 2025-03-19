@@ -35,3 +35,13 @@
     margin: 0 auto;
 }
 
+.admonition.features {
+    background-color: #ffe6f0;  /* light pink for body */
+    color: inherit;
+}
+
+.admonition.features .admonition-title {
+    background-color: #d63384;  /* deeper magenta for title bar */
+    color: white;               /* white text on magenta */
+    font-weight: bold;
+}
