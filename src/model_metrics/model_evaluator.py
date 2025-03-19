@@ -2544,6 +2544,7 @@ def plot_threshold_metrics(
     baseline_thresh=True,
     curve_kwgs=None,
     baseline_kwgs=None,
+    lookup_kwgs=None,
     save_plot=False,
     image_path_png=None,
     image_path_svg=None,
@@ -2571,6 +2572,9 @@ def plot_threshold_metrics(
       (default: None).
     - baseline_kwgs: Dictionary of keyword arguments for baseline styling
       (default: None).
+    - lookup_kwgs: Dictionary of keyword arguments for styling the lookup
+      threshold line (e.g., {"linestyle": "--", "color": "orange",
+      "linewidth": 2}). Default is gray dashed line.
     - save_plot: Boolean flag to save the plot (default: False).
     - image_path_png: Path to save the plot as a PNG image (default: None).
     - image_path_svg: Path to save the plot as an SVG image (default: None).
@@ -2586,6 +2590,13 @@ def plot_threshold_metrics(
         "linestyle": ":",
         "linewidth": 1.5,
         "color": "black",
+        "alpha": 0.7,
+    }
+
+    lookup_kwgs = lookup_kwgs or {
+        "linestyle": "--",
+        "linewidth": 1.5,
+        "color": "gray",
         "alpha": 0.7,
     }
 
@@ -2614,6 +2625,12 @@ def plot_threshold_metrics(
 
     # Find the best threshold for a given metric (if requested)
     best_threshold = None
+    if (lookup_metric is not None and lookup_value is None) or (
+        lookup_value is not None and lookup_metric is None
+    ):
+        raise ValueError(
+            "Both `lookup_metric` and `lookup_value` must be provided together."
+        )
     if lookup_metric and lookup_value is not None:
         metric_dict = {
             "precision": (precision[:-1], thresholds),
@@ -2642,7 +2659,7 @@ def plot_threshold_metrics(
             )
 
     # Create the plot
-    fig, ax = plt.subplots(figsize=figsize)
+    _, ax = plt.subplots(figsize=figsize)
 
     # Plot Precision, Recall, F1 Score vs. Thresholds
     ax.plot(
@@ -2684,9 +2701,8 @@ def plot_threshold_metrics(
     if best_threshold is not None:
         ax.axvline(
             x=best_threshold,
-            linestyle="--",
-            color="gray",
             label=f"Best Threshold: {round(best_threshold, decimal_places)}",
+            **lookup_kwgs,
         )
 
     # Apply labels, legend, and formatting
@@ -2706,21 +2722,28 @@ def plot_threshold_metrics(
             fontsize=label_fontsize,
         )
 
-    # Move the legend below the plot
     ax.legend(
         loc="upper center",
-        bbox_to_anchor=(0.5, -0.15 * (figsize[0] / 10)),  # Scales with width
-        ncol=int(figsize[0] // 2),  # Adjust columns dynamically
-        fontsize=label_fontsize,
-        columnspacing=1.5,
-        handletextpad=1.2,
+        bbox_to_anchor=(0.5, -0.15),  # Push further down to ensure it's outside
+        ncol=3,
+        fontsize=tick_fontsize,
+        frameon=False,
     )
-    # Save plot if required
-    if save_plot:
-        if image_path_png:
-            fig.savefig(image_path_png, format="png", bbox_inches="tight")
-        if image_path_svg:
-            fig.savefig(image_path_svg, format="svg", bbox_inches="tight")
+
+    if lookup_metric:
+        save_plot_images(
+            filename=f"threshold_metrics_{lookup_metric}",
+            save_plot=save_plot,
+            image_path_png=image_path_png,
+            image_path_svg=image_path_svg,
+        )
+    else:
+        save_plot_images(
+            filename="threshold_metrics",
+            save_plot=save_plot,
+            image_path_png=image_path_png,
+            image_path_svg=image_path_svg,
+        )
 
     # Display the plot
     plt.show()

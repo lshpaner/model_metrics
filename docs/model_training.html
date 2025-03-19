@@ -1,28 +1,29 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="./">
+<html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Adult Income Dataset &mdash; Model Metrics 0.0.0.a2 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=8bd1c22b" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=8bd1c22b" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.js?v=f9206548" />
-
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.js" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
-      <script src="_static/jquery.js?v=5d32c60e"></script>
-      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=b8a57ceb"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="_static/copybutton.js?v=a0ccc04e"></script>
-      <script src="_static/custom.js?v=f9206548"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script src="_static/clipboard.min.js"></script>
+        <script src="_static/copybutton.js"></script>
+        <script src="_static/custom.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -110,10 +111,9 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <span class="target" id="model-training"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" style="width: 300px;" />
-</a>
+  <span class="target" id="model-training"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" width="300px" /></a>
 </div><div style="height: 100px;"></div><section id="adult-income-dataset">
-<span id="adult-income-training"></span><h1>Adult Income Dataset<a class="headerlink" href="#adult-income-dataset" title="Link to this heading"></a></h1>
+<span id="adult-income-training"></span><h1>Adult Income Dataset<a class="headerlink" href="#adult-income-dataset" title="Permalink to this heading"></a></h1>
 <p>This example shows an example of what a <code class="docutils literal notranslate"><span class="pre">train.py</span></code> script could look like to train
 and concisely evaluate classification models on the Adult Census Income dataset <a class="footnote-reference brackets" href="#id7" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> using
 the <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id8" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>. The dataset presents a classic binary classification
@@ -123,7 +123,7 @@ framework streamlines model development by handling preprocessing, cross-validat
 hyperparameter tuning, and performance evaluation, enabling rapid experimentation
 with minimal boilerplate code.</p>
 <section id="model-configuration-hyperparameters-model-params-py">
-<h2>Model Configuration &amp; Hyperparameters (<code class="docutils literal notranslate"><span class="pre">model_params.py</span></code>)<a class="headerlink" href="#model-configuration-hyperparameters-model-params-py" title="Link to this heading"></a></h2>
+<h2>Model Configuration &amp; Hyperparameters (<code class="docutils literal notranslate"><span class="pre">model_params.py</span></code>)<a class="headerlink" href="#model-configuration-hyperparameters-model-params-py" title="Permalink to this heading"></a></h2>
 <p>This script defines the model configurations and hyperparameter grids for three
 classifiers—Logistic Regression, Decision Tree, and Random Forest—used in our
 evaluation of the Adult Income dataset <a class="footnote-reference brackets" href="#id7" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.</p>
@@ -268,7 +268,7 @@ processing for faster computation.</p>
 </div>
 </section>
 <section id="model-training-train-py">
-<h2>Model Training (<code class="docutils literal notranslate"><span class="pre">train.py</span></code>)<a class="headerlink" href="#model-training-train-py" title="Link to this heading"></a></h2>
+<h2>Model Training (<code class="docutils literal notranslate"><span class="pre">train.py</span></code>)<a class="headerlink" href="#model-training-train-py" title="Permalink to this heading"></a></h2>
 <p>This script defines the end-to-end workflow for training and evaluating
 classification models on the Adult Income dataset using the <code class="docutils literal notranslate"><span class="pre">model_tuner</span></code> library <a class="footnote-reference brackets" href="#id8" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>.
 The process is structured as a command-line interface (CLI) application using <a class="reference external" href="https://pypi.org/project/typer/">typer</a>,
@@ -465,7 +465,7 @@ saved to disk for future use.</p>
 </div>
 </section>
 <section id="loading-retrieving-the-model-objects-and-data-splits">
-<h2>Loading (Retrieving) The Model Objects and Data Splits<a class="headerlink" href="#loading-retrieving-the-model-objects-and-data-splits" title="Link to this heading"></a></h2>
+<h2>Loading (Retrieving) The Model Objects and Data Splits<a class="headerlink" href="#loading-retrieving-the-model-objects-and-data-splits" title="Permalink to this heading"></a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model_path</span> <span class="o">=</span> <span class="n">RESULTS_DIR</span>
 
 <span class="n">model_lr</span> <span class="o">=</span> <span class="n">loadObjects</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">model_path</span><span class="p">,</span> <span class="s2">&quot;LogisticRegression.pkl&quot;</span><span class="p">))</span>
@@ -478,17 +478,17 @@ saved to disk for future use.</p>
 </pre></div>
 </div>
 <aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id7" role="doc-footnote">
+<aside class="footnote brackets" id="id7" role="note">
 <span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
 <span class="backrefs">(<a role="doc-backlink" href="#id1">1</a>,<a role="doc-backlink" href="#id3">2</a>,<a role="doc-backlink" href="#id5">3</a>)</span>
 <p>Kohavi, R. (1996). <em>Census Income</em>. UCI Machine Learning Repository. <a class="reference external" href="https://doi.org/10.24432/C5GP7S">https://doi.org/10.24432/C5GP7S</a>.</p>
 </aside>
-<aside class="footnote brackets" id="id8" role="doc-footnote">
+<aside class="footnote brackets" id="id8" role="note">
 <span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
 <span class="backrefs">(<a role="doc-backlink" href="#id2">1</a>,<a role="doc-backlink" href="#id4">2</a>)</span>
 <p>Funnell, A., Shpaner, L., &amp; Petousis, P. (2024). <em>Model Tuner</em> (Version 0.0.28b) [Software]. Zenodo. <a class="reference external" href="https://doi.org/10.5281/zenodo.12727322">https://doi.org/10.5281/zenodo.12727322</a>.</p>
 </aside>
-<aside class="footnote brackets" id="id9" role="doc-footnote">
+<aside class="footnote brackets" id="id9" role="note">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id6">3</a><span class="fn-bracket">]</span></span>
 <p>Dua, D. &amp; Graff, C. (2019). UCI Machine Learning Repository. University of California, Irvine, School of Information and Computer Sciences. <a class="reference external" href="https://archive.ics.uci.edu">https://archive.ics.uci.edu</a>.</p>
 </aside>

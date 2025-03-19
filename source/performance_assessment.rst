@@ -3120,21 +3120,19 @@ this function allows users to visualize **trade-offs across the full range of
 possible thresholds**, making it especially useful when optimizing for use-case-specific 
 goals such as maximizing recall or achieving a minimum precision.
 
-.. admonition:: Features
-    :class: features
+Using the Random Forest Classifier models trained on the 
+:ref:`adult income dataset <Adult_Income_Training>` [2]_, this tool helps users answer 
+practical questions like:
 
-    Using the Logistic Regression and Random Forest Classifier models trained on the 
-    :ref:`synthetic dataset <Binary_Classification>`, this tool helps users answer 
-    practical questions like:
+- *What threshold achieves at least 85% precision?*
+- *Where does F1 score peak for this model?*
+- *How does specificity behave as the threshold increases?*
 
-    - *What threshold achieves at least 85% precision?*
-    - *Where does F1 score peak for this model?*
-    - *How does specificity behave as the threshold increases?*
+The plot_threshold_metrics function supports optional threshold lookups via 
+``lookup_metric`` and ``lookup_value``, which prints the closest threshold that
+meets your constraint. Plots can be customized with colors, gridlines, line styles,
+wrapped titles, and export options.
 
-    The plot_threshold_metrics function supports optional threshold lookups via 
-    ``lookup_metric`` and ``lookup_value``, which prints the closest threshold that
-    meets your constraint. Plots can be customized with colors, gridlines, line styles,
-    wrapped titles, and export options.
 
 .. function:: plot_threshold_metrics(model, X_test, y_test, title=None, text_wrap=None, figsize=(8, 6), label_fontsize=12, tick_fontsize=10, gridlines=True, baseline_thresh=True, curve_kwgs=None, baseline_kwgs=None, save_plot=False, image_path_png=None, image_path_svg=None, lookup_metric=None, lookup_value=None, decimal_places=4)
 
@@ -3199,6 +3197,114 @@ goals such as maximizing recall or achieving a minimum precision.
         - Ideal for presentations or dashboards where visualizing threshold sensitivity is crucial.
         - Particularly helpful for domains like healthcare, fraud detection, or content moderation, where the cost of false positives vs. false negatives must be carefully managed.
 
+Threshold Curves Example 1 (Threshold=0.5)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This example demonstrates how to plot threshold-dependent classification metrics 
+using a Random Forest Classifier trained on the :ref:`adult income dataset <Adult_Income_Training>` [2]_.
+
+The ``plot_threshold_metrics`` function visualizes how Precision, Recall, F1 Score, 
+and Specificity change as the decision threshold varies. In this configuration, 
+the baseline threshold line at 0.5 is enabled (``baseline_thresh=True``), 
+and the line styling is customized via ``curve_kwgs``. Font sizes and wrapping options 
+are adjusted for improved clarity in presentation-ready plots.
+
+.. code-block:: python
+
+    from model_metrics import plot_threshold_metrics
+
+    plot_threshold_metrics(
+        model=model_rf["model"].estimator,
+        X_test=X_test,
+        y_test=y_test,
+        baseline_thresh=False,
+        curve_kwgs={
+            "linestyle": "-",
+            "linewidth": 2,
+        },
+        text_wrap=40,
+    )
+
+**Output**
+
+.. raw:: html
+
+   <div class="no-click">
+
+
+.. image:: ../assets/threshold_metrics_1.svg
+    :alt: Threshold Curves Example 1
+    :width: 900px
+    :align: center
+
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+
+Threshold Curves Example 2 (Targeted Metric Lookup)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This example expands on threshold-based classification metric visualization using 
+a targeted lookup scenario. Suppose a clinical stakeholder or domain expert has 
+determined—based on prior research, cost-benefit considerations, or operational
+constraints—that a precision of approximately ``0.879`` is ideal for downstream 
+decision-making (e.g., minimizing false positives in a healthcare setting).
+
+The ``plot_threshold_metrics`` function accepts the optional arguments ``lookup_metric`` 
+and ``lookup_value`` to help identify the threshold that best aligns with this target. 
+When these are set, the function automatically locates and highlights the threshold 
+that most closely achieves the desired metric value, offering transparency and 
+guidance for threshold tuning.
+
+
+.. code-block:: python
+
+    from model_metrics import plot_threshold_metrics
+
+    plot_threshold_metrics(
+        model=model_rf["model"].estimator,
+        X_test=X_test,
+        y_test=y_test,
+        lookup_metric="precision",
+        lookup_value=0.879,
+        baseline_thresh=False,
+        lookup_kwgs={
+            "color": "red",
+            "linestyle": "--",
+            "linewidth": 2,
+        },
+        curve_kwgs={
+            "linestyle": "-",
+            "linewidth": 2,
+        },
+        text_wrap=40,
+    )
+
+**Output**
+
+.. raw:: html
+
+   <div class="no-click">
+
+
+.. image:: ../assets/threshold_metrics_2.svg
+    :alt: Threshold Curves Example 2
+    :width: 900px
+    :align: center
+
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+In this example:
+
+- ``lookup_metric="precision"`` specifies that we are targeting the precision curve.
+- ``lookup_value=0.879`` provides the desired value for that metric.
+- The function will search for the closest possible precision value along the threshold range and display a vertical line at that corresponding threshold.
+- The threshold value is printed to the console and included in the legend (e.g., Best Threshold: 0.6757).
 
 .. [1] Efron, B., Hastie, T., Johnstone, I., & Tibshirani, R. (2004). *Diabetes Dataset*. Scikit-learn. Derived from: Efron, B., et al. (2004). Least Angle Regression. The Annals of Statistics, 32(2), 407-499. `https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset <https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset>`_.
 .. [2] Kohavi, R. (1996). *Census Income*. UCI Machine Learning Repository. `https://doi.org/10.24432/C5GP7S <https://doi.org/10.24432/C5GP7S>`_.
