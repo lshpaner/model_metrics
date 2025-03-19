@@ -42,7 +42,7 @@ is used directly.
 the function will try to retrieve the threshold using the score parameter:
 
 - If ``score`` is passed (e.g., ``"f1"``), then ``model.threshold[score]`` is used.
-- If ``score``is not passed, the function will look up the first item in ``model.scoring`` (if available).
+- If ``score`` is not passed, the function will look up the first item in ``model.scoring`` (if available).
 - If neither a custom threshold nor a valid model threshold is available, the default value of ``0.5`` is used.
 
 .. _caveats_in_calibration:

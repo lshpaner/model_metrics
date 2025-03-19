@@ -125,7 +125,7 @@ is used directly.</p>
 the function will try to retrieve the threshold using the score parameter:</p>
 <ul class="simple">
 <li><p>If <code class="docutils literal notranslate"><span class="pre">score</span></code> is passed (e.g., <code class="docutils literal notranslate"><span class="pre">&quot;f1&quot;</span></code>), then <code class="docutils literal notranslate"><span class="pre">model.threshold[score]</span></code> is used.</p></li>
-<li><p>If <code class="docutils literal notranslate"><span class="pre">score``is</span> <span class="pre">not</span> <span class="pre">passed,</span> <span class="pre">the</span> <span class="pre">function</span> <span class="pre">will</span> <span class="pre">look</span> <span class="pre">up</span> <span class="pre">the</span> <span class="pre">first</span> <span class="pre">item</span> <span class="pre">in</span> <span class="pre">``model.scoring</span></code> (if available).</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">score</span></code> is not passed, the function will look up the first item in <code class="docutils literal notranslate"><span class="pre">model.scoring</span></code> (if available).</p></li>
 <li><p>If neither a custom threshold nor a valid model threshold is available, the default value of <code class="docutils literal notranslate"><span class="pre">0.5</span></code> is used.</p></li>
 </ul>
 </section>
