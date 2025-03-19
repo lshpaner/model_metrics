@@ -1,0 +1,518 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Partial Dependence Plots &mdash; Model Metrics 0.0.0.a2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=8bd1c22b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=8bd1c22b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.js?v=f9206548" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=b8a57ceb"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=a0ccc04e"></script>
+      <script src="_static/custom.js?v=f9206548"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Threshold Selection logic" href="caveats.html" />
+    <link rel="prev" title="Model Performance Summaries" href="performance_assessment.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Model Metrics
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Welcome to the Model Metrics Python Library Documentation!</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Model Training Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="model_training.html">Adult Income Dataset</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Performance Assessment</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="performance_assessment.html">Model Performance Summaries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance_assessment.html#lift-charts">Lift Charts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance_assessment.html#gain-charts">Gain Charts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance_assessment.html#roc-auc-curves">ROC AUC Curves</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance_assessment.html#precision-recall-curves">Precision-Recall Curves</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance_assessment.html#confusion-matrix-evaluation">Confusion Matrix Evaluation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance_assessment.html#calibration-curves">Calibration Curves</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance_assessment.html#threshold-metric-curves">Threshold Metric Curves</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Partial Dependence</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Partial Dependence Plots</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#d-partial-dependence-plots">2D Partial Dependence Plots</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#plot_2d_pdp"><code class="docutils literal notranslate"><span class="pre">plot_2d_pdp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#d-plots-ca-housing-example">2D Plots - CA Housing Example</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">3D Partial Dependence Plots</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#plot_3d_pdp"><code class="docutils literal notranslate"><span class="pre">plot_3d_pdp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id5">3D Plots - CA Housing Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#static-plot">Static Plot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#interactive-plot">Interactive Plot</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Caveats</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="caveats.html">Threshold Selection logic</a></li>
+<li class="toctree-l1"><a class="reference internal" href="caveats.html#calibration-trade-offs">Calibration Trade-offs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">About Model Metrics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="acknowledgements.html">Acknowledgements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributors.html">Contributors/Maintainers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citations.html">Citing Model Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Model Metrics</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Partial Dependence Plots</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <span class="target" id="partial-dependence"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" style="width: 300px;" />
+</a>
+</div><div style="height: 100px;"></div><section id="partial-dependence-plots">
+<h1>Partial Dependence Plots<a class="headerlink" href="#partial-dependence-plots" title="Link to this heading"></a></h1>
+<p><strong>Partial Dependence Plots (PDPs)</strong> are a powerful tool in machine learning
+interpretability, providing insights into how features influence the predicted
+outcome of a model. PDPs can be generated in both 2D and 3D, depending on
+whether you want to analyze the effect of one feature or the interaction between
+two features on the model’s predictions.</p>
+<section id="d-partial-dependence-plots">
+<span id="id1"></span><h2>2D Partial Dependence Plots<a class="headerlink" href="#d-partial-dependence-plots" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">plot_2d_pdp</span></code> function generates 2D partial dependence plots (PDPs) for specified features or pairs of features. These plots help analyze the marginal effect of individual or paired features on the predicted outcome.</p>
+<p><strong>Key Features</strong>:</p>
+<ul class="simple">
+<li><p><strong>Flexible Plot Layouts</strong>: Generate all 2D PDPs in a grid layout, as separate individual plots, or both for maximum versatility.</p></li>
+<li><p><strong>Customization Options</strong>: Adjust figure size, font sizes for labels and ticks, and wrap long titles to ensure clear and visually appealing plots.</p></li>
+<li><p><strong>Save Plots</strong>: Save generated plots in PNG or SVG formats with options to save all plots, only individual plots, or just the grid plot.</p></li>
+</ul>
+<dl class="py function">
+<dt class="sig sig-object py" id="plot_2d_pdp">
+<span class="sig-name descname"><span class="pre">plot_2d_pdp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_train</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Partial</span> <span class="pre">dependence</span> <span class="pre">plot'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'grid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(12,</span> <span class="pre">8)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">individual_figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(6,</span> <span class="pre">4)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plots</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'partial_dependence'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#plot_2d_pdp" title="Link to this definition"></a></dt>
+<dd><p>Generate and save 2D partial dependence plots for specified features using a trained machine learning model. The function supports grid and individual layouts and provides options for customization and saving plots in various formats.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>estimator object</em>) – The trained machine learning model used to generate partial dependence plots.</p></li>
+<li><p><strong>X_train</strong> (<em>pandas.DataFrame</em><em> or </em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><em>numpy.ndarray</em></a>) – The training data used to compute partial dependence. Should correspond to the features used to train the model.</p></li>
+<li><p><strong>feature_names</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a>) – A list of feature names corresponding to the columns in <code class="docutils literal notranslate"><span class="pre">X_train</span></code>.</p></li>
+<li><p><strong>features</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><em>tuple</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a>) – A list of feature indices or tuples of feature indices for which to generate partial dependence plots.</p></li>
+<li><p><strong>title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – The title for the entire plot. Default is <code class="docutils literal notranslate"><span class="pre">&quot;Partial</span> <span class="pre">dependence</span> <span class="pre">plot&quot;</span></code>.</p></li>
+<li><p><strong>grid_resolution</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – The resolution of the grid used to compute the partial dependence. Higher values provide smoother curves but may increase computation time. Default is <code class="docutils literal notranslate"><span class="pre">50</span></code>.</p></li>
+<li><p><strong>plot_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – The type of plot to generate. Choose <code class="docutils literal notranslate"><span class="pre">&quot;grid&quot;</span></code> for a grid layout, <code class="docutils literal notranslate"><span class="pre">&quot;individual&quot;</span></code> for separate plots, or <code class="docutils literal notranslate"><span class="pre">&quot;both&quot;</span></code> to generate both layouts. Default is <code class="docutils literal notranslate"><span class="pre">&quot;grid&quot;</span></code>.</p></li>
+<li><p><strong>grid_figsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><em>tuple</em></a><em>, </em><em>optional</em>) – Tuple specifying the width and height of the figure for the grid layout. Default is <code class="docutils literal notranslate"><span class="pre">(12,</span> <span class="pre">8)</span></code>.</p></li>
+<li><p><strong>individual_figsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><em>tuple</em></a><em>, </em><em>optional</em>) – Tuple specifying the width and height of the figure for individual plots. Default is <code class="docutils literal notranslate"><span class="pre">(6,</span> <span class="pre">4)</span></code>.</p></li>
+<li><p><strong>label_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for the axis labels and titles. Default is <code class="docutils literal notranslate"><span class="pre">12</span></code>.</p></li>
+<li><p><strong>tick_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for the axis tick labels. Default is <code class="docutils literal notranslate"><span class="pre">10</span></code>.</p></li>
+<li><p><strong>text_wrap</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – The maximum width of the title text before wrapping. Useful for managing long titles. Default is <code class="docutils literal notranslate"><span class="pre">50</span></code>.</p></li>
+<li><p><strong>image_path_png</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – The directory path where PNG images of the plots will be saved, if saving is enabled.</p></li>
+<li><p><strong>image_path_svg</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – The directory path where SVG images of the plots will be saved, if saving is enabled.</p></li>
+<li><p><strong>save_plots</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Controls whether to save the plots. Options include <code class="docutils literal notranslate"><span class="pre">&quot;all&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;individual&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;grid&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">None</span></code> (default). If saving is enabled, ensure <code class="docutils literal notranslate"><span class="pre">image_path_png</span></code> or <code class="docutils literal notranslate"><span class="pre">image_path_svg</span></code> are provided.</p></li>
+<li><p><strong>file_prefix</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Prefix for the filenames of the saved grid plots. Default is <code class="docutils literal notranslate"><span class="pre">&quot;partial_dependence&quot;</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – <ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">plot_type</span></code> is not one of <code class="docutils literal notranslate"><span class="pre">&quot;grid&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;individual&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;both&quot;</span></code>.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">save_plots</span></code> is enabled but neither <code class="docutils literal notranslate"><span class="pre">image_path_png</span></code> nor <code class="docutils literal notranslate"><span class="pre">image_path_svg</span></code> is provided.</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code>
+This function generates partial dependence plots and displays them. It does not return any values.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<section id="d-plots-ca-housing-example">
+<h3>2D Plots - CA Housing Example<a class="headerlink" href="#d-plots-ca-housing-example" title="Link to this heading"></a></h3>
+<p>Consider a scenario where you have a machine learning model predicting median
+house values in California. <a href="#id6"><span class="problematic" id="id2">[4]_</span></a> Suppose you want to understand how non-location
+features like the average number of occupants per household (<code class="docutils literal notranslate"><span class="pre">AveOccup</span></code>) and the
+age of the house (<code class="docutils literal notranslate"><span class="pre">HouseAge</span></code>) jointly influence house values. A 2D partial
+dependence plot allows you to visualize this relationship in two ways: either as
+individual plots for each feature or as a combined plot showing the interaction
+between two features.</p>
+<p>For instance, the 2D partial dependence plot can help you analyze how the age of
+the house impacts house values while holding the number of occupants constant, or
+vice versa. This is particularly useful for identifying the most influential
+features and understanding how changes in these features might affect the
+predicted house value.</p>
+<p>If you extend this to two interacting features, such as <code class="docutils literal notranslate"><span class="pre">AveOccup</span></code> and <code class="docutils literal notranslate"><span class="pre">HouseAge</span></code>,
+you can explore their combined effect on house prices. The plot can reveal how
+different combinations of occupancy levels and house age influence the value,
+potentially uncovering non-linear relationships or interactions that might not be
+immediately obvious from a simple 1D analysis.</p>
+<p>Here’s how you can generate and visualize these 2D partial dependence plots using
+the California housing dataset:</p>
+<p><strong>Fetch The CA Housing Dataset and Prepare The DataFrame</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">fetch_california_housing</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.ensemble</span><span class="w"> </span><span class="kn">import</span> <span class="n">GradientBoostingRegressor</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="c1"># Load the dataset</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">fetch_california_housing</span><span class="p">()</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Split The Data Into Training and Testing Sets</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Train a GradientBoostingRegressor Model</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">GradientBoostingRegressor</span><span class="p">(</span>
+    <span class="n">n_estimators</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">max_depth</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">loss</span><span class="o">=</span><span class="s2">&quot;huber&quot;</span><span class="p">,</span>
+    <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Create 2D Partial Dependence Plot Grid</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">eda_toolkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_2d_pdp</span>
+
+<span class="c1"># Feature names</span>
+<span class="n">names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">feature_names</span>
+
+<span class="c1"># Generate 2D partial dependence plots</span>
+<span class="n">plot_2d_pdp</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+    <span class="n">X_train</span><span class="o">=</span><span class="n">X_train</span><span class="p">,</span>
+    <span class="n">feature_names</span><span class="o">=</span><span class="n">names</span><span class="p">,</span>
+    <span class="n">features</span><span class="o">=</span><span class="p">[</span>
+        <span class="s2">&quot;MedInc&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;AveOccup&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;HouseAge&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;AveRooms&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Population&quot;</span><span class="p">,</span>
+        <span class="p">(</span><span class="s2">&quot;AveOccup&quot;</span><span class="p">,</span> <span class="s2">&quot;HouseAge&quot;</span><span class="p">),</span>
+    <span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;PDP of house value on CA non-location features&quot;</span><span class="p">,</span>
+    <span class="n">grid_figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+    <span class="n">individual_figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+    <span class="n">label_fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span>
+    <span class="n">tick_fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span>
+    <span class="n">text_wrap</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span>
+    <span class="n">plot_type</span><span class="o">=</span><span class="s2">&quot;grid&quot;</span><span class="p">,</span>
+    <span class="n">image_path_png</span><span class="o">=</span><span class="s2">&quot;path/to/save/png&quot;</span><span class="p">,</span>
+    <span class="n">save_plots</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="no-click"><a class="reference internal image-reference" href="_images/2d_pdp_grid.svg"><img alt="Scatter Plot Comparisons (Grouped)" class="align-center" src="_images/2d_pdp_grid.svg" style="width: 900px;" />
+</a>
+</div><div style="height: 50px;"></div></section>
+</section>
+<section id="id3">
+<span id="id4"></span><h2>3D Partial Dependence Plots<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">plot_3d_pdp</span></code> function extends the concept of partial dependence to three dimensions, allowing you to visualize the interaction between two features and their combined effect on the model’s predictions.</p>
+<ul class="simple">
+<li><p><strong>Interactive and Static 3D Plots</strong>: Generate static 3D plots using Matplotlib or interactive 3D plots using Plotly. The function also allows for generating both types simultaneously.</p></li>
+<li><p><strong>Colormap and Layout Customization</strong>: Customize the colormaps for both Matplotlib and Plotly plots. Adjust figure size, camera angles, and zoom levels to create plots that fit perfectly within your presentation or report.</p></li>
+<li><p><strong>Axis and Title Configuration</strong>: Customize axis labels for both Matplotlib and Plotly plots. Adjust font sizes and control the wrapping of long titles to maintain readability.</p></li>
+</ul>
+<dl class="py function">
+<dt class="sig sig-object py" id="plot_3d_pdp">
+<span class="sig-name descname"><span class="pre">plot_3d_pdp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_names_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_label=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_label=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_label=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">html_file_path=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">html_file_name=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_filename=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_type=&quot;both&quot;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matplotlib_colormap=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plotly_colormap=&quot;Viridis&quot;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zoom_out_factor=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wireframe_color=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">view_angle=(22</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">70)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize=(7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">4.5)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap=50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">horizontal=-1.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth=1.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vertical=1.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cbar_x=1.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cbar_thickness=25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title_x=0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title_y=0.95</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_margin=100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_cbar=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_resolution=20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left_margin=20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_margin=65</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize=8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize=6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable_zoom=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_modebar=True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#plot_3d_pdp" title="Link to this definition"></a></dt>
+<dd><p>Generate 3D partial dependence plots for two features of a machine learning model.</p>
+<p>This function supports both static (Matplotlib) and interactive (Plotly) visualizations, allowing for flexible and comprehensive analysis of the relationship between two features and the target variable in a model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>estimator object</em>) – The trained machine learning model used to generate partial dependence plots.</p></li>
+<li><p><strong>dataframe</strong> (<em>pandas.DataFrame</em><em> or </em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><em>numpy.ndarray</em></a>) – The dataset on which the model was trained or a representative sample. If a DataFrame is provided, <code class="docutils literal notranslate"><span class="pre">feature_names_list</span></code> should correspond to the column names. If a NumPy array is provided, <code class="docutils literal notranslate"><span class="pre">feature_names_list</span></code> should correspond to the indices of the columns.</p></li>
+<li><p><strong>feature_names_list</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a>) – A list of two feature names or indices corresponding to the features for which partial dependence plots are generated.</p></li>
+<li><p><strong>x_label</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Label for the x-axis in the plots. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>y_label</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Label for the y-axis in the plots. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>z_label</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Label for the z-axis in the plots. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a>) – The title for the plots.</p></li>
+<li><p><strong>html_file_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Path to save the interactive Plotly HTML file. Required if <code class="docutils literal notranslate"><span class="pre">plot_type</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;interactive&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;both&quot;</span></code>. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>html_file_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Name of the HTML file to save the interactive Plotly plot. Required if <code class="docutils literal notranslate"><span class="pre">plot_type</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;interactive&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;both&quot;</span></code>. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>image_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Base filename for saving static Matplotlib plots as PNG and/or SVG. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>plot_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – The type of plots to generate. Options are:
+- <code class="docutils literal notranslate"><span class="pre">&quot;static&quot;</span></code>: Generate only static Matplotlib plots.
+- <code class="docutils literal notranslate"><span class="pre">&quot;interactive&quot;</span></code>: Generate only interactive Plotly plots.
+- <code class="docutils literal notranslate"><span class="pre">&quot;both&quot;</span></code>: Generate both static and interactive plots. Default is <code class="docutils literal notranslate"><span class="pre">&quot;both&quot;</span></code>.</p></li>
+<li><p><strong>matplotlib_colormap</strong> (<em>matplotlib.colors.Colormap</em><em>, </em><em>optional</em>) – Custom colormap for the Matplotlib plot. If not provided, a default colormap is used.</p></li>
+<li><p><strong>plotly_colormap</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Colormap for the Plotly plot. Default is <code class="docutils literal notranslate"><span class="pre">&quot;Viridis&quot;</span></code>.</p></li>
+<li><p><strong>zoom_out_factor</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Factor to adjust the zoom level of the Plotly plot. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>wireframe_color</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Color for the wireframe in the Matplotlib plot. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, no wireframe is plotted. Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>view_angle</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><em>tuple</em></a><em>, </em><em>optional</em>) – Elevation and azimuthal angles for the Matplotlib plot view. Default is <code class="docutils literal notranslate"><span class="pre">(22,</span> <span class="pre">70)</span></code>.</p></li>
+<li><p><strong>figsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><em>tuple</em></a><em>, </em><em>optional</em>) – Figure size for the Matplotlib plot. Default is <code class="docutils literal notranslate"><span class="pre">(7,</span> <span class="pre">4.5)</span></code>.</p></li>
+<li><p><strong>text_wrap</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Maximum width of the title text before wrapping. Useful for managing long titles. Default is <code class="docutils literal notranslate"><span class="pre">50</span></code>.</p></li>
+<li><p><strong>horizontal</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Horizontal camera position for the Plotly plot. Default is <code class="docutils literal notranslate"><span class="pre">-1.25</span></code>.</p></li>
+<li><p><strong>depth</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Depth camera position for the Plotly plot. Default is <code class="docutils literal notranslate"><span class="pre">1.25</span></code>.</p></li>
+<li><p><strong>vertical</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Vertical camera position for the Plotly plot. Default is <code class="docutils literal notranslate"><span class="pre">1.25</span></code>.</p></li>
+<li><p><strong>cbar_x</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Position of the color bar along the x-axis in the Plotly plot. Default is <code class="docutils literal notranslate"><span class="pre">1.05</span></code>.</p></li>
+<li><p><strong>cbar_thickness</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Thickness of the color bar in the Plotly plot. Default is <code class="docutils literal notranslate"><span class="pre">25</span></code>.</p></li>
+<li><p><strong>title_x</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Horizontal position of the title in the Plotly plot. Default is <code class="docutils literal notranslate"><span class="pre">0.5</span></code>.</p></li>
+<li><p><strong>title_y</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Vertical position of the title in the Plotly plot. Default is <code class="docutils literal notranslate"><span class="pre">0.95</span></code>.</p></li>
+<li><p><strong>top_margin</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Top margin for the Plotly plot layout. Default is <code class="docutils literal notranslate"><span class="pre">100</span></code>.</p></li>
+<li><p><strong>image_path_png</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Directory path to save the PNG file of the Matplotlib plot. Default is None.</p></li>
+<li><p><strong>image_path_svg</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>, </em><em>optional</em>) – Directory path to save the SVG file of the Matplotlib plot. Default is None.</p></li>
+<li><p><strong>show_cbar</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to display the color bar in the Matplotlib plot. Default is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>grid_resolution</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – The resolution of the grid for computing partial dependence. Default is <code class="docutils literal notranslate"><span class="pre">20</span></code>.</p></li>
+<li><p><strong>left_margin</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Left margin for the Plotly plot layout. Default is <code class="docutils literal notranslate"><span class="pre">20</span></code>.</p></li>
+<li><p><strong>right_margin</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Right margin for the Plotly plot layout. Default is <code class="docutils literal notranslate"><span class="pre">65</span></code>.</p></li>
+<li><p><strong>label_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for axis labels in the Matplotlib plot. Default is <code class="docutils literal notranslate"><span class="pre">8</span></code>.</p></li>
+<li><p><strong>tick_fontsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><em>int</em></a><em>, </em><em>optional</em>) – Font size for tick labels in the Matplotlib plot. Default is <code class="docutils literal notranslate"><span class="pre">6</span></code>.</p></li>
+<li><p><strong>enable_zoom</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to enable zooming in the Plotly plot. Default is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>show_modebar</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to display the mode bar in the Plotly plot. Default is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – <ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">plot_type</span></code> is not one of <code class="docutils literal notranslate"><span class="pre">&quot;static&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;interactive&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;both&quot;</span></code>.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">plot_type</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;interactive&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;both&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">html_file_path</span></code> or <code class="docutils literal notranslate"><span class="pre">html_file_name</span></code> are not provided.</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">None</span></code>
+This function generates 3D partial dependence plots and displays or saves them. It does not return any values.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p>This function handles warnings related to scikit-learn’s <code class="docutils literal notranslate"><span class="pre">partial_dependence</span></code> function, specifically a <code class="docutils literal notranslate"><span class="pre">FutureWarning</span></code> related to non-tuple sequences for multidimensional indexing. This warning is suppressed as it stems from the internal workings of scikit-learn in Python versions like 3.7.4.</p></li>
+<li><p>To maintain compatibility with different versions of scikit-learn, the function attempts to use <code class="docutils literal notranslate"><span class="pre">&quot;values&quot;</span></code> for grid extraction in newer versions and falls back to <code class="docutils literal notranslate"><span class="pre">&quot;grid_values&quot;</span></code> for older versions.</p></li>
+</ul>
+</div>
+</dd></dl>
+
+<section id="id5">
+<h3>3D Plots - CA Housing Example<a class="headerlink" href="#id5" title="Link to this heading"></a></h3>
+<p>Consider a scenario where you have a machine learning model predicting median
+house values in California.[4]_ Suppose you want to understand how non-location
+features like the average number of occupants per household (<code class="docutils literal notranslate"><span class="pre">AveOccup</span></code>) and the
+age of the house (<code class="docutils literal notranslate"><span class="pre">HouseAge</span></code>) jointly influence house values. A 3D partial
+dependence plot allows you to visualize this relationship in a more comprehensive
+manner, providing a detailed view of how these two features interact to affect
+the predicted house value.</p>
+<p>For instance, the 3D partial dependence plot can help you explore how different
+combinations of house age and occupancy levels influence house values. By
+visualizing the interaction between AveOccup and HouseAge in a 3D space, you can
+uncover complex, non-linear relationships that might not be immediately apparent
+in 2D plots.</p>
+<p>This type of plot is particularly useful when you need to understand the joint
+effect of two features on the target variable, as it provides a more intuitive
+and detailed view of how changes in both features impact predictions simultaneously.</p>
+<p>Here’s how you can generate and visualize these 3D partial dependence plots
+using the California housing dataset:</p>
+</section>
+<section id="static-plot">
+<h3>Static Plot<a class="headerlink" href="#static-plot" title="Link to this heading"></a></h3>
+<p><strong>Fetch The CA Housing Dataset and Prepare The DataFrame</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.ensemble</span><span class="w"> </span><span class="kn">import</span> <span class="n">GradientBoostingRegressor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">fetch_california_housing</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="c1"># Load the dataset</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">fetch_california_housing</span><span class="p">()</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Split The Data Into Training and Testing Sets</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Train a GradientBoostingRegressor Model</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">GradientBoostingRegressor</span><span class="p">(</span>
+    <span class="n">n_estimators</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">max_depth</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">loss</span><span class="o">=</span><span class="s2">&quot;huber&quot;</span><span class="p">,</span>
+    <span class="n">random_state</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Create Static 3D Partial Dependence Plot</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">eda_toolkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_3d_pdp</span>
+
+<span class="n">plot_3d_pdp</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+    <span class="n">dataframe</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">feature_names_list</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;HouseAge&quot;</span><span class="p">,</span> <span class="s2">&quot;AveOccup&quot;</span><span class="p">],</span>
+    <span class="n">x_label</span><span class="o">=</span><span class="s2">&quot;House Age&quot;</span><span class="p">,</span>
+    <span class="n">y_label</span><span class="o">=</span><span class="s2">&quot;Average Occupancy&quot;</span><span class="p">,</span>
+    <span class="n">z_label</span><span class="o">=</span><span class="s2">&quot;Partial Dependence&quot;</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;3D Partial Dependence Plot of House Age vs. Average Occupancy&quot;</span><span class="p">,</span>
+    <span class="n">image_filename</span><span class="o">=</span><span class="s2">&quot;3d_pdp&quot;</span><span class="p">,</span>
+    <span class="n">plot_type</span><span class="o">=</span><span class="s2">&quot;static&quot;</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+    <span class="n">text_wrap</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
+    <span class="n">wireframe_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+    <span class="n">image_path_png</span><span class="o">=</span><span class="n">image_path_png</span><span class="p">,</span>
+    <span class="n">grid_resolution</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="no-click"><a class="reference internal image-reference" href="_images/3d_pdp.svg"><img alt="Scatter Plot Comparisons (Grouped)" class="align-center" src="_images/3d_pdp.svg" style="width: 900px;" />
+</a>
+</div><div style="height: 50px;"></div></section>
+<section id="interactive-plot">
+<h3>Interactive Plot<a class="headerlink" href="#interactive-plot" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">eda_toolkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_3d_pdp</span>
+
+<span class="n">plot_3d_pdp</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+    <span class="n">dataframe</span><span class="o">=</span><span class="n">X_test</span><span class="p">,</span>
+    <span class="n">feature_names_list</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;HouseAge&quot;</span><span class="p">,</span> <span class="s2">&quot;AveOccup&quot;</span><span class="p">],</span>
+    <span class="n">x_label</span><span class="o">=</span><span class="s2">&quot;House Age&quot;</span><span class="p">,</span>
+    <span class="n">y_label</span><span class="o">=</span><span class="s2">&quot;Average Occupancy&quot;</span><span class="p">,</span>
+    <span class="n">z_label</span><span class="o">=</span><span class="s2">&quot;Partial Dependence&quot;</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;3D Partial Dependence Plot of House Age vs. Average Occupancy&quot;</span><span class="p">,</span>
+    <span class="n">html_file_path</span><span class="o">=</span><span class="n">image_path_png</span><span class="p">,</span>
+    <span class="n">image_filename</span><span class="o">=</span><span class="s2">&quot;3d_pdp&quot;</span><span class="p">,</span>
+    <span class="n">html_file_name</span><span class="o">=</span><span class="s2">&quot;3d_pdp.html&quot;</span><span class="p">,</span>
+    <span class="n">plot_type</span><span class="o">=</span><span class="s2">&quot;interactive&quot;</span><span class="p">,</span>
+    <span class="n">text_wrap</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span>
+    <span class="n">zoom_out_factor</span><span class="o">=</span><span class="mf">1.2</span><span class="p">,</span>
+    <span class="n">image_path_png</span><span class="o">=</span><span class="n">image_path_png</span><span class="p">,</span>
+    <span class="n">image_path_svg</span><span class="o">=</span><span class="n">image_path_svg</span><span class="p">,</span>
+    <span class="n">grid_resolution</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+    <span class="n">label_fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">tick_fontsize</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
+    <span class="n">title_x</span><span class="o">=</span><span class="mf">0.38</span><span class="p">,</span>
+    <span class="n">top_margin</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">right_margin</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">left_margin</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">cbar_x</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+    <span class="n">cbar_thickness</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span>
+    <span class="n">show_modebar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">enable_zoom</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><strong>Scrolling Notice:</strong></p>
+<p>While interacting with the interactive Plotly plot below, scrolling down the
+page using the mouse wheel may be blocked when the mouse pointer is hovering
+over the plot. To continue scrolling, either move the mouse pointer outside
+the plot area or use the keyboard arrow keys to navigate down the page.</p>
+</div>
+<iframe src="3d_pdp.html" style="border:none; width:100%; height:650px; margin-left: 0; padding: 0; overflow: auto;" scrolling="no"></iframe>
+
+<div style="height: 50px;"></div><p>This interactive plot was generated using Plotly, which allows for rich,
+interactive visualizations directly in the browser. The plot above is an example
+of an interactive 3D Partial Dependence Plot. Here’s how it differs from
+generating a static plot using Matplotlib.</p>
+<p><strong>Key Differences</strong></p>
+<p><strong>Plot Type</strong>:</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">plot_type</span></code> is set to <code class="docutils literal notranslate"><span class="pre">&quot;interactive&quot;</span></code> for the Plotly plot and <code class="docutils literal notranslate"><span class="pre">&quot;static&quot;</span></code> for the Matplotlib plot.</p></li>
+</ul>
+<p><strong>Interactive-Specific Parameters</strong>:</p>
+<ul class="simple">
+<li><p><strong>HTML File Path and Name</strong>: The <code class="docutils literal notranslate"><span class="pre">html_file_path</span></code> and <code class="docutils literal notranslate"><span class="pre">html_file_name</span></code> parameters are required to save the interactive Plotly plot as an HTML file. These parameters are not needed for static plots.</p></li>
+<li><p><strong>Zoom and Positioning</strong>: The interactive plot includes parameters like <code class="docutils literal notranslate"><span class="pre">zoom_out_factor</span></code>, <code class="docutils literal notranslate"><span class="pre">title_x</span></code>, <code class="docutils literal notranslate"><span class="pre">cbar_x</span></code>, and <code class="docutils literal notranslate"><span class="pre">cbar_thickness</span></code> to control the zoom level, title position, and color bar position in the Plotly plot. These parameters do not affect the static plot.</p></li>
+<li><p><strong>Mode Bar and Zoom</strong>: The <code class="docutils literal notranslate"><span class="pre">show_modebar</span></code> and <code class="docutils literal notranslate"><span class="pre">enable_zoom</span></code> parameters are specific to the interactive Plotly plot, allowing you to toggle the visibility of the mode bar and enable or disable zoom functionality.</p></li>
+</ul>
+<p><strong>Static-Specific Parameters</strong>:</p>
+<ul class="simple">
+<li><p><strong>Figure Size and Wireframe Color</strong>: The static plot uses parameters like <code class="docutils literal notranslate"><span class="pre">figsize</span></code> to control the size of the Matplotlib plot and <code class="docutils literal notranslate"><span class="pre">wireframe_color</span></code> to define the color of the wireframe in the plot. These parameters are not applicable to the interactive Plotly plot.</p></li>
+</ul>
+<p>By adjusting these parameters, you can customize the behavior and appearance of your 3D Partial Dependence Plots according to your needs, whether for static or interactive visualization.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="performance_assessment.html" class="btn btn-neutral float-left" title="Model Performance Summaries" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="caveats.html" class="btn btn-neutral float-right" title="Threshold Selection logic" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Leonid Shpaner.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

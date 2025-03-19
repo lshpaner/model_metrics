@@ -45,6 +45,13 @@ Table of Contents
 
 .. toctree::
    :maxdepth: 4
+   :caption: Partial Dependence
+
+   partial_dependence 
+
+
+.. toctree::
+   :maxdepth: 4
    :caption: Caveats
 
    caveats  

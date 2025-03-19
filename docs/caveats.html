@@ -1,35 +1,34 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Threshold Selection logic &mdash; Model Metrics 0.0.0.a2 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom.js" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=8bd1c22b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=8bd1c22b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.js?v=f9206548" />
+
   
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
-        <script src="_static/clipboard.min.js"></script>
-        <script src="_static/copybutton.js"></script>
-        <script src="_static/custom.js"></script>
-        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=b8a57ceb"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=a0ccc04e"></script>
+      <script src="_static/custom.js?v=f9206548"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Acknowledgements" href="acknowledgements.html" />
-    <link rel="prev" title="Model Performance Summaries" href="performance_assessment.html" /> 
+    <link rel="prev" title="Partial Dependence Plots" href="partial_dependence.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -69,6 +68,10 @@
 <li class="toctree-l1"><a class="reference internal" href="performance_assessment.html#confusion-matrix-evaluation">Confusion Matrix Evaluation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="performance_assessment.html#calibration-curves">Calibration Curves</a></li>
 <li class="toctree-l1"><a class="reference internal" href="performance_assessment.html#threshold-metric-curves">Threshold Metric Curves</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Partial Dependence</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="partial_dependence.html">Partial Dependence Plots</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Caveats</span></p>
 <ul class="current">
@@ -113,9 +116,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <span class="target" id="caveats"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" width="300px" /></a>
+  <span class="target" id="caveats"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" style="width: 300px;" />
+</a>
 </div><div style="height: 100px;"></div><section id="threshold-selection-logic">
-<span id="id1"></span><h1>Threshold Selection logic<a class="headerlink" href="#threshold-selection-logic" title="Permalink to this heading"></a></h1>
+<span id="id1"></span><h1>Threshold Selection logic<a class="headerlink" href="#threshold-selection-logic" title="Link to this heading"></a></h1>
 <p>When computing confusion matrices, selecting the right classification threshold
 can significantly impact the output. The function <code class="docutils literal notranslate"><span class="pre">show_confusion_matrix</span></code> is
 documented in <a class="reference internal" href="performance_assessment.html#confusion-matrix-evaluation"><span class="std std-ref">this section</span></a>.</p>
@@ -130,13 +134,13 @@ the function will try to retrieve the threshold using the score parameter:</p>
 </ul>
 </section>
 <section id="calibration-trade-offs">
-<span id="caveats-in-calibration"></span><h1>Calibration Trade-offs<a class="headerlink" href="#calibration-trade-offs" title="Permalink to this heading"></a></h1>
+<span id="caveats-in-calibration"></span><h1>Calibration Trade-offs<a class="headerlink" href="#calibration-trade-offs" title="Link to this heading"></a></h1>
 <p>Calibration curves are powerful diagnostic tools for assessing how well a model’s
 predicted probabilities reflect actual outcomes. However, their interpretation—and
 the methods used to derive them—come with important caveats that users should keep
 in mind.</p>
 <section id="calibration-methodology">
-<h2>Calibration Methodology<a class="headerlink" href="#calibration-methodology" title="Permalink to this heading"></a></h2>
+<h2>Calibration Methodology<a class="headerlink" href="#calibration-methodology" title="Link to this heading"></a></h2>
 <p>The examples shown in this library are based on models calibrated using Platt
 Scaling, a post-processing technique that fits a sigmoid function to the model’s
 prediction scores. <strong>Platt Scaling</strong> assumes a parametric form:</p>
@@ -150,7 +154,7 @@ linearly separable or approximately log-odds in nature.</p>
 and true probabilities is non-monotonic or highly irregular.</p>
 </section>
 <section id="alternative-calibration-methods">
-<h2>Alternative Calibration Methods<a class="headerlink" href="#alternative-calibration-methods" title="Permalink to this heading"></a></h2>
+<h2>Alternative Calibration Methods<a class="headerlink" href="#alternative-calibration-methods" title="Link to this heading"></a></h2>
 <p>An alternative to Platt Scaling is <strong>Isotonic Regression</strong>, a non-parametric method
 that fits a monotonically increasing function to the model’s prediction scores.
 It is particularly effective when the mapping between predicted probabilities and
@@ -186,7 +190,7 @@ using Platt Scaling prior to visualization.</p>
 </div>
 </section>
 <section id="dependence-on-validation-data">
-<h2>Dependence on Validation Data<a class="headerlink" href="#dependence-on-validation-data" title="Permalink to this heading"></a></h2>
+<h2>Dependence on Validation Data<a class="headerlink" href="#dependence-on-validation-data" title="Link to this heading"></a></h2>
 <p>All calibration techniques rely heavily on the quality of the validation data
 used to learn the mapping. If the validation set is not representative of the
 target population, the resulting calibration curve may be misleading. This
@@ -194,7 +198,7 @@ concern is especially important when deploying models in real-world settings
 where data drift or population imbalance may occur.</p>
 </section>
 <section id="interpreting-the-brier-score">
-<h2>Interpreting the Brier Score<a class="headerlink" href="#interpreting-the-brier-score" title="Permalink to this heading"></a></h2>
+<h2>Interpreting the Brier Score<a class="headerlink" href="#interpreting-the-brier-score" title="Link to this heading"></a></h2>
 <p>The <strong>Brier Score</strong>, often reported alongside calibration curves, provides a
 quantitative measure of probabilistic accuracy. It is defined as:</p>
 <div class="math notranslate nohighlight">
@@ -205,7 +209,7 @@ performance, it conflates calibration (how close predicted probabilities are to
 actual outcomes) and refinement (how confidently predictions are made). Thus,
 the Brier Score should be interpreted in context and not relied upon in isolation.</p>
 <aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id3" role="note">
+<aside class="footnote brackets" id="id3" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">1</a><span class="fn-bracket">]</span></span>
 <p>Funnell, A., Shpaner, L., &amp; Petousis, P. (2024). <em>Model Tuner</em> (Version 0.0.28b) [Software]. Zenodo. <a class="reference external" href="https://doi.org/10.5281/zenodo.12727322">https://doi.org/10.5281/zenodo.12727322</a>.</p>
 </aside>
@@ -217,7 +221,7 @@ the Brier Score should be interpreted in context and not relied upon in isolatio
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="performance_assessment.html" class="btn btn-neutral float-left" title="Model Performance Summaries" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="partial_dependence.html" class="btn btn-neutral float-left" title="Partial Dependence Plots" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="acknowledgements.html" class="btn btn-neutral float-right" title="Acknowledgements" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
