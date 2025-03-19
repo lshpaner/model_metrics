@@ -4,14 +4,15 @@ from unittest.mock import patch
 import os
 import pandas as pd
 import numpy as np
-from sklearn.svm import SVC
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 import matplotlib
 import matplotlib.pyplot as plt
+import statsmodels.api as sm
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
 from sklearn.datasets import make_classification, make_regression
 from sklearn.linear_model import LogisticRegression, Lasso
-from sklearn.model_selection import KFold, GridSearchCV, train_test_split
+from sklearn.model_selection import KFold, train_test_split
 from model_metrics.model_evaluator import (
     save_plot_images,
     get_predictions,
@@ -157,7 +158,7 @@ def test_get_predictions_single_model_no_proba(sample_data):
 
     model = CustomModel()
     X, y = sample_data
-    y_true, y_prob, y_pred, threshold = get_predictions(
+    y_true, y_prob, y_pred, _ = get_predictions(
         model,
         X,
         y,
@@ -214,6 +215,63 @@ def test_get_predictions_kfold(sample_data):
     assert len(y_prob) > 0
     assert len(y_pred) > 0
     assert isinstance(threshold, float)
+
+
+def test_get_predictions_dict_model_threshold_fallback(sample_data):
+    X, y = sample_data
+
+    class DummyModel:
+        def predict(self, X):
+            return np.ones(len(X))
+
+        def predict_proba(self, X):
+            return np.tile(np.array([[0.2, 0.8]]), (len(X), 1))  # shape (n, 2)
+
+    model = DummyModel()
+    model.threshold = {"not_used_score": 0.3}
+
+    y_true, y_prob, y_pred, threshold = get_predictions(
+        model=model,
+        X=X,
+        y=y,
+        model_threshold=model,
+        custom_threshold=None,
+        score="unused_score",
+    )
+
+    assert threshold == 0.5  # fallback default
+    assert len(y_true) == len(y_pred) == len(y_prob)
+
+
+def test_get_predictions_kfold_with_predict_proba(sample_data):
+    class KFoldModelWithProba:
+        def __init__(self):
+            self.kfold = True
+            self.kf = KFold(n_splits=3)
+
+        def fit(self, X, y):
+            return self
+
+        def predict_proba(self, X):
+            proba = np.random.rand(len(X), 2)
+            proba /= proba.sum(axis=1, keepdims=True)
+            return proba
+
+    model = KFoldModelWithProba()
+    X, y = sample_data
+    y = pd.Series(y)  # make sure .iloc works
+
+    y_true, y_prob, y_pred, threshold = get_predictions(
+        model,
+        X,
+        y,
+        model_threshold=None,
+        custom_threshold=None,
+        score=None,
+    )
+
+    assert len(y_true) == len(y_pred)
+    assert 0 <= threshold <= 1
 
 
 def test_summarize_model_performance(trained_model, sample_data, capsys):
@@ -2186,3 +2244,84 @@ def test_plot_threshold_metrics_custom_styles(
     )
 
     assert mock_show.called, "plt.show() was not called."
+
+
+def test_invalid_model_type_raises_value_error(trained_model, sample_data):
+    X, y = sample_data
+    with pytest.raises(
+        ValueError,
+        match="Invalid model_type. Must be 'classification' or 'regression'.",
+    ):
+        summarize_model_performance(
+            [trained_model], X, y, model_type="clustering", return_df=True
+        )
+
+
+def test_invalid_model_title_type(trained_model, sample_data):
+    X, y = sample_data
+    with pytest.raises(
+        TypeError,
+        match="model_title must be a string, list of strings, Series, or None.",
+    ):
+        summarize_model_performance(
+            [trained_model], X, y, model_type="classification", model_title=123
+        )
+
+
+def test_statsmodels_ols_model_handling():
+    # Generate simple data
+    np.random.seed(0)
+    X = pd.DataFrame({"x1": np.random.rand(100)})
+    y = X["x1"] * 3 + np.random.normal(0, 0.1, 100)
+
+    X_with_const = sm.add_constant(X)
+    model = sm.OLS(y, X_with_const).fit()
+
+    df = summarize_model_performance(
+        model,
+        X,
+        y,
+        model_type="regression",
+        return_df=True,
+    )
+    assert "MAE" in df.columns or "MAE" in df["Metric"].values  # Based on mode
+
+
+def test_pipeline_last_step_has_coef(sample_data):
+    X, y = sample_data
+    pipeline = Pipeline([("scaler", StandardScaler()), ("lr", LogisticRegression())])
+    pipeline.fit(X, y)
+    df = summarize_model_performance(
+        pipeline,
+        X,
+        y,
+        model_type="classification",
+        return_df=True,
+    )
+    assert isinstance(df, pd.DataFrame)
+
+
+@patch("builtins.print")
+def test_print_classification_output_format(mock_print, trained_model, sample_data):
+    X, y = sample_data
+    summarize_model_performance(
+        [trained_model],
+        X,
+        y,
+        model_type="classification",
+        return_df=False,
+    )
+    assert mock_print.called
+
+
+@patch("builtins.print")
+def test_print_regression_output_format(mock_print, regression_model):
+    model, (X, y) = regression_model
+    summarize_model_performance(
+        [model],
+        X,
+        y,
+        model_type="regression",
+        return_df=False,
+    )
+    assert mock_print.called
