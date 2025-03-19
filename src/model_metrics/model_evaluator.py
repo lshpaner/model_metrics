@@ -1,16 +1,13 @@
 import pandas as pd
 import numpy as np
 import math
-import itertools
 import matplotlib.pyplot as plt
 import matplotlib.colorbar as mcolorbar
-import seaborn as sns
 import os
 from tqdm import tqdm
 import textwrap
 
 import statsmodels.api as sm
-from scipy.stats import ks_2samp
 from sklearn.pipeline import Pipeline
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import (
@@ -719,7 +716,7 @@ def show_confusion_matrix(
     if grid:
         n_cols = kwargs.get("n_cols", 2)
         n_rows = (len(model) + n_cols - 1) // n_cols
-        fig, axes = plt.subplots(
+        _, axes = plt.subplots(
             n_rows, n_cols, figsize=(figsize[0] * n_cols, figsize[1] * n_rows)
         )
         axes = axes.flatten()
@@ -784,7 +781,7 @@ def show_confusion_matrix(
             else:
                 disp.plot(cmap=cmap, ax=ax)
         else:
-            fig, ax = plt.subplots(figsize=figsize)
+            _, ax = plt.subplots(figsize=figsize)
             if "colorbar" in disp.plot.__code__.co_varnames:
                 disp.plot(cmap=cmap, ax=ax, colorbar=show_colorbar)
             else:
@@ -800,8 +797,6 @@ def show_confusion_matrix(
                 else:
                     unique_texts.add(text_value)
 
-        # Re-annotate correctly
-        fmt = ".0f"  # Adjust format if needed
         for i in range(disp.text_.shape[0]):
             for j in range(disp.text_.shape[1]):
                 new_value = disp.confusion_matrix[i, j]
@@ -913,7 +908,10 @@ def show_confusion_matrix(
             ax.axis("off")
         plt.tight_layout()
         save_plot_images(
-            "grid_confusion_matrix", save_plot, image_path_png, image_path_svg
+            "grid_confusion_matrix",
+            save_plot,
+            image_path_png,
+            image_path_svg,
         )
         plt.show()
 
@@ -1088,7 +1086,7 @@ def show_roc_curve(
     if grid and not overlay:
         if n_rows is None:
             n_rows = math.ceil(len(model) / n_cols)
-        fig, axes = plt.subplots(
+        _, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
@@ -1451,7 +1449,7 @@ def show_pr_curve(
     if grid and not overlay:
         if n_rows is None:
             n_rows = math.ceil(len(model) / n_cols)
-        fig, axes = plt.subplots(
+        _, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
@@ -1772,7 +1770,7 @@ def show_lift_chart(
     if grid and not overlay:
         if n_rows is None:
             n_rows = math.ceil(len(model) / n_cols)
-        fig, axes = plt.subplots(
+        _, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
@@ -1996,7 +1994,7 @@ def show_gain_chart(
     if grid and not overlay:
         if n_rows is None:
             n_rows = math.ceil(len(model) / n_cols)
-        fig, axes = plt.subplots(
+        _, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
@@ -2247,7 +2245,7 @@ def show_calibration_curve(
     if grid:
         if n_rows is None:
             n_rows = math.ceil(len(model) / n_cols)
-        fig, axes = plt.subplots(
+        _, axes = plt.subplots(
             n_rows, n_cols, figsize=figsize or (n_cols * 6, n_rows * 4)
         )
         axes = axes.flatten()
