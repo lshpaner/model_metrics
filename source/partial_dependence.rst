@@ -112,7 +112,7 @@ The ``plot_2d_pdp`` function generates 2D partial dependence plots (PDPs) for sp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Consider a scenario where you have a machine learning model predicting median 
-house values in California. [4]_ Suppose you want to understand how non-location 
+house values in California. [1]_ Suppose you want to understand how non-location 
 features like the average number of occupants per household (``AveOccup``) and the 
 age of the house (``HouseAge``) jointly influence house values. A 2D partial 
 dependence plot allows you to visualize this relationship in two ways: either as 
@@ -363,7 +363,7 @@ The ``plot_3d_pdp`` function extends the concept of partial dependence to three 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Consider a scenario where you have a machine learning model predicting median 
-house values in California.[4]_ Suppose you want to understand how non-location 
+house values in California.[1]_ Suppose you want to understand how non-location 
 features like the average number of occupants per household (``AveOccup``) and the 
 age of the house (``HouseAge``) jointly influence house values. A 3D partial 
 dependence plot allows you to visualize this relationship in a more comprehensive 
@@ -539,3 +539,6 @@ generating a static plot using Matplotlib.
 - **Figure Size and Wireframe Color**: The static plot uses parameters like ``figsize`` to control the size of the Matplotlib plot and ``wireframe_color`` to define the color of the wireframe in the plot. These parameters are not applicable to the interactive Plotly plot.
 
 By adjusting these parameters, you can customize the behavior and appearance of your 3D Partial Dependence Plots according to your needs, whether for static or interactive visualization.
+
+
+.. [1] Pace, R. K., & Barry, R. (1997). *Sparse Spatial Autoregressions*. *Statistics & Probability Letters*, 33(3), 291-297. `https://doi.org/10.1016/S0167-7152(96)00140-X <https://doi.org/10.1016/S0167-7152(96)00140-X>`_.

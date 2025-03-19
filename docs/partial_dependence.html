@@ -1,28 +1,29 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="./">
+<html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Partial Dependence Plots &mdash; Model Metrics 0.0.0.a2 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=8bd1c22b" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=8bd1c22b" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.js?v=f9206548" />
-
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.js" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
-      <script src="_static/jquery.js?v=5d32c60e"></script>
-      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=b8a57ceb"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="_static/copybutton.js?v=a0ccc04e"></script>
-      <script src="_static/custom.js?v=f9206548"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script src="_static/clipboard.min.js"></script>
+        <script src="_static/copybutton.js"></script>
+        <script src="_static/custom.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -123,17 +124,16 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <span class="target" id="partial-dependence"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" style="width: 300px;" />
-</a>
+  <span class="target" id="partial-dependence"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" width="300px" /></a>
 </div><div style="height: 100px;"></div><section id="partial-dependence-plots">
-<h1>Partial Dependence Plots<a class="headerlink" href="#partial-dependence-plots" title="Link to this heading"></a></h1>
+<h1>Partial Dependence Plots<a class="headerlink" href="#partial-dependence-plots" title="Permalink to this heading"></a></h1>
 <p><strong>Partial Dependence Plots (PDPs)</strong> are a powerful tool in machine learning
 interpretability, providing insights into how features influence the predicted
 outcome of a model. PDPs can be generated in both 2D and 3D, depending on
 whether you want to analyze the effect of one feature or the interaction between
 two features on the model’s predictions.</p>
 <section id="d-partial-dependence-plots">
-<span id="id1"></span><h2>2D Partial Dependence Plots<a class="headerlink" href="#d-partial-dependence-plots" title="Link to this heading"></a></h2>
+<span id="id1"></span><h2>2D Partial Dependence Plots<a class="headerlink" href="#d-partial-dependence-plots" title="Permalink to this heading"></a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">plot_2d_pdp</span></code> function generates 2D partial dependence plots (PDPs) for specified features or pairs of features. These plots help analyze the marginal effect of individual or paired features on the predicted outcome.</p>
 <p><strong>Key Features</strong>:</p>
 <ul class="simple">
@@ -143,7 +143,7 @@ two features on the model’s predictions.</p>
 </ul>
 <dl class="py function">
 <dt class="sig sig-object py" id="plot_2d_pdp">
-<span class="sig-name descname"><span class="pre">plot_2d_pdp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_train</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Partial</span> <span class="pre">dependence</span> <span class="pre">plot'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'grid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(12,</span> <span class="pre">8)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">individual_figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(6,</span> <span class="pre">4)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plots</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'partial_dependence'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#plot_2d_pdp" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">plot_2d_pdp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_train</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Partial</span> <span class="pre">dependence</span> <span class="pre">plot'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'grid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(12,</span> <span class="pre">8)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">individual_figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(6,</span> <span class="pre">4)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_plots</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'partial_dependence'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#plot_2d_pdp" title="Permalink to this definition"></a></dt>
 <dd><p>Generate and save 2D partial dependence plots for specified features using a trained machine learning model. The function supports grid and individual layouts and provides options for customization and saving plots in various formats.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -181,9 +181,9 @@ This function generates partial dependence plots and displays them. It does not 
 </dd></dl>
 
 <section id="d-plots-ca-housing-example">
-<h3>2D Plots - CA Housing Example<a class="headerlink" href="#d-plots-ca-housing-example" title="Link to this heading"></a></h3>
+<h3>2D Plots - CA Housing Example<a class="headerlink" href="#d-plots-ca-housing-example" title="Permalink to this heading"></a></h3>
 <p>Consider a scenario where you have a machine learning model predicting median
-house values in California. <a href="#id6"><span class="problematic" id="id2">[4]_</span></a> Suppose you want to understand how non-location
+house values in California. <a class="footnote-reference brackets" href="#id6" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> Suppose you want to understand how non-location
 features like the average number of occupants per household (<code class="docutils literal notranslate"><span class="pre">AveOccup</span></code>) and the
 age of the house (<code class="docutils literal notranslate"><span class="pre">HouseAge</span></code>) jointly influence house values. A 2D partial
 dependence plot allows you to visualize this relationship in two ways: either as
@@ -260,12 +260,11 @@ the California housing dataset:</p>
 <span class="p">)</span>
 </pre></div>
 </div>
-<div class="no-click"><a class="reference internal image-reference" href="_images/2d_pdp_grid.svg"><img alt="Scatter Plot Comparisons (Grouped)" class="align-center" src="_images/2d_pdp_grid.svg" style="width: 900px;" />
-</a>
+<div class="no-click"><a class="reference internal image-reference" href="_images/2d_pdp_grid.svg"><img alt="Scatter Plot Comparisons (Grouped)" class="align-center" src="_images/2d_pdp_grid.svg" width="900px" /></a>
 </div><div style="height: 50px;"></div></section>
 </section>
 <section id="id3">
-<span id="id4"></span><h2>3D Partial Dependence Plots<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
+<span id="id4"></span><h2>3D Partial Dependence Plots<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">plot_3d_pdp</span></code> function extends the concept of partial dependence to three dimensions, allowing you to visualize the interaction between two features and their combined effect on the model’s predictions.</p>
 <ul class="simple">
 <li><p><strong>Interactive and Static 3D Plots</strong>: Generate static 3D plots using Matplotlib or interactive 3D plots using Plotly. The function also allows for generating both types simultaneously.</p></li>
@@ -274,7 +273,7 @@ the California housing dataset:</p>
 </ul>
 <dl class="py function">
 <dt class="sig sig-object py" id="plot_3d_pdp">
-<span class="sig-name descname"><span class="pre">plot_3d_pdp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_names_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_label=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_label=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_label=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">html_file_path=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">html_file_name=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_filename=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_type=&quot;both&quot;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matplotlib_colormap=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plotly_colormap=&quot;Viridis&quot;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zoom_out_factor=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wireframe_color=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">view_angle=(22</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">70)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize=(7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">4.5)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap=50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">horizontal=-1.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth=1.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vertical=1.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cbar_x=1.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cbar_thickness=25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title_x=0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title_y=0.95</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_margin=100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_cbar=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_resolution=20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left_margin=20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_margin=65</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize=8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize=6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable_zoom=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_modebar=True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#plot_3d_pdp" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">plot_3d_pdp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_names_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_label=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_label=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_label=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">html_file_path=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">html_file_name=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_filename=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_type=&quot;both&quot;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matplotlib_colormap=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plotly_colormap=&quot;Viridis&quot;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zoom_out_factor=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wireframe_color=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">view_angle=(22</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">70)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize=(7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">4.5)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_wrap=50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">horizontal=-1.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth=1.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vertical=1.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cbar_x=1.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cbar_thickness=25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title_x=0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title_y=0.95</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_margin=100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_png=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_path_svg=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_cbar=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_resolution=20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left_margin=20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_margin=65</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_fontsize=8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_fontsize=6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable_zoom=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_modebar=True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#plot_3d_pdp" title="Permalink to this definition"></a></dt>
 <dd><p>Generate 3D partial dependence plots for two features of a machine learning model.</p>
 <p>This function supports both static (Matplotlib) and interactive (Plotly) visualizations, allowing for flexible and comprehensive analysis of the relationship between two features and the target variable in a model.</p>
 <dl class="field-list simple">
@@ -343,9 +342,9 @@ This function generates 3D partial dependence plots and displays or saves them. 
 </dd></dl>
 
 <section id="id5">
-<h3>3D Plots - CA Housing Example<a class="headerlink" href="#id5" title="Link to this heading"></a></h3>
+<h3>3D Plots - CA Housing Example<a class="headerlink" href="#id5" title="Permalink to this heading"></a></h3>
 <p>Consider a scenario where you have a machine learning model predicting median
-house values in California.[4]_ Suppose you want to understand how non-location
+house values in California.[1]_ Suppose you want to understand how non-location
 features like the average number of occupants per household (<code class="docutils literal notranslate"><span class="pre">AveOccup</span></code>) and the
 age of the house (<code class="docutils literal notranslate"><span class="pre">HouseAge</span></code>) jointly influence house values. A 3D partial
 dependence plot allows you to visualize this relationship in a more comprehensive
@@ -363,7 +362,7 @@ and detailed view of how changes in both features impact predictions simultaneou
 using the California housing dataset:</p>
 </section>
 <section id="static-plot">
-<h3>Static Plot<a class="headerlink" href="#static-plot" title="Link to this heading"></a></h3>
+<h3>Static Plot<a class="headerlink" href="#static-plot" title="Permalink to this heading"></a></h3>
 <p><strong>Fetch The CA Housing Dataset and Prepare The DataFrame</strong></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.ensemble</span><span class="w"> </span><span class="kn">import</span> <span class="n">GradientBoostingRegressor</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">fetch_california_housing</span>
@@ -413,11 +412,10 @@ using the California housing dataset:</p>
 <span class="p">)</span>
 </pre></div>
 </div>
-<div class="no-click"><a class="reference internal image-reference" href="_images/3d_pdp.svg"><img alt="Scatter Plot Comparisons (Grouped)" class="align-center" src="_images/3d_pdp.svg" style="width: 900px;" />
-</a>
+<div class="no-click"><a class="reference internal image-reference" href="_images/3d_pdp.svg"><img alt="Scatter Plot Comparisons (Grouped)" class="align-center" src="_images/3d_pdp.svg" width="900px" /></a>
 </div><div style="height: 50px;"></div></section>
 <section id="interactive-plot">
-<h3>Interactive Plot<a class="headerlink" href="#interactive-plot" title="Link to this heading"></a></h3>
+<h3>Interactive Plot<a class="headerlink" href="#interactive-plot" title="Permalink to this heading"></a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">eda_toolkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_3d_pdp</span>
 
 <span class="n">plot_3d_pdp</span><span class="p">(</span>
@@ -480,6 +478,12 @@ generating a static plot using Matplotlib.</p>
 <li><p><strong>Figure Size and Wireframe Color</strong>: The static plot uses parameters like <code class="docutils literal notranslate"><span class="pre">figsize</span></code> to control the size of the Matplotlib plot and <code class="docutils literal notranslate"><span class="pre">wireframe_color</span></code> to define the color of the wireframe in the plot. These parameters are not applicable to the interactive Plotly plot.</p></li>
 </ul>
 <p>By adjusting these parameters, you can customize the behavior and appearance of your 3D Partial Dependence Plots according to your needs, whether for static or interactive visualization.</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id6" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">1</a><span class="fn-bracket">]</span></span>
+<p>Pace, R. K., &amp; Barry, R. (1997). <em>Sparse Spatial Autoregressions</em>. <em>Statistics &amp; Probability Letters</em>, 33(3), 291-297. <a class="reference external" href="https://doi.org/10.1016/S0167-7152(96)00140-X">https://doi.org/10.1016/S0167-7152(96)00140-X</a>.</p>
+</aside>
+</aside>
 </section>
 </section>
 </section>
