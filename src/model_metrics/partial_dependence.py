@@ -41,53 +41,38 @@ def plot_2d_pdp(
     -----------
     model : estimator object
         A fitted machine learning model that supports the `predict` method.
-
     X_train : pandas.DataFrame or numpy.ndarray
         The training data (features) used to generate partial dependence plots.
-
     feature_names : list of str
         List of feature names corresponding to columns in X_train.
-
     features : list of int or tuple of int
         List of feature indices or tuples of feature indices for which to
         generate partial dependence plots.
-
     title : str, optional
         Title for the entire plot. Default is "Partial dependence plot".
-
     grid_resolution : int, optional
         The resolution of the grid used to compute the partial dependence.
         Default is 50.
-
     plot_type : str, optional
         Choose between "grid" for all plots in a grid layout, "individual" for
         separate plots, or "both" for both layouts. Default is "grid".
-
     grid_figsize : tuple, optional
         Figure size for the grid layout. Default is (12, 8).
-
     individual_figsize : tuple, optional
         Figure size for individual plots. Default is (6, 4).
-
     label_fontsize : int, optional
         Font size for axis labels and titles. Default is 12.
-
     tick_fontsize : int, optional
         Font size for tick labels. Default is 10.
-
     text_wrap : int, optional
         Maximum width of the title text before wrapping. Default is 50.
-
     image_path_png : str, optional
         Directory to save PNG files. If not specified, PNG files are not saved.
-
     image_path_svg : str, optional
         Directory to save SVG files. If not specified, SVG files are not saved.
-
     save_plots : str, optional
         Controls which plots to save: "all", "individual", "grid", or None to
         save no plots. Default is None.
-
     file_prefix : str, optional
         Prefix for filenames of saved grid plots. Default is "partial_dependence".
 
@@ -260,7 +245,6 @@ def plot_3d_pdp(
     save_plots=None,  # "html", "static", "both", or None
     html_file_path=None,
     html_file_name=None,
-    image_filename=None,
     plot_type="both",
     matplotlib_colormap=None,
     plotly_colormap="Viridis",
@@ -301,49 +285,36 @@ def plot_3d_pdp(
     model : estimator object
         A trained machine learning model that implements the `predict`,
         `predict_proba`, or `decision_function` method.
-
     dataframe : pandas.DataFrame or numpy.ndarray
         The dataset on which the model was trained or a representative sample.
         If a DataFrame is provided, `feature_names` should correspond to
         the column names. If a numpy array is provided, `feature_names`
         should correspond to the indices of the columns.
-
     feature_names : list of str
         A list of two feature names or indices for which partial dependence
         plots are generated.
-
     x_label : str, optional
         Label for the x-axis in the plots. Defaults to the first feature in
         `feature_names`.
-
     y_label : str, optional
         Label for the y-axis in the plots. Defaults to the second feature in
         `feature_names`.
-
     z_label : str, optional
         Label for the z-axis in the plots. Defaults to "Partial Dependence".
-
     title : str, optional
         Title for the plots. If not provided, no title is displayed.
-
     save_plots : {"html", "static", "both", None}, optional
         Specifies whether and how to save the generated plots.
         - `"static"`: Saves only the Matplotlib (PNG/SVG) plot.
         - `"html"`: Saves only the Plotly interactive plot as an HTML file.
         - `"both"`: Saves both static (PNG/SVG) and interactive (HTML) plots.
         - `None`: Does not save any plots.
-
     html_file_path : str, optional
         Directory path to save the interactive Plotly HTML file.
         Required if `save_plots="html"` or `save_plots="both"`.
-
     html_file_name : str, optional
         Name of the HTML file to save the interactive Plotly plot. Required if
         `plot_type` is "interactive" or "both".
-
-    image_filename : str, optional
-        Base filename for saving static Matplotlib plots as PNG and/or SVG.
-
     plot_type : {"static", "interactive", "both"}, optional, default="both"
         Specifies the type of plot to generate.
         - `"static"`: Generates only a Matplotlib 3D plot.
@@ -356,77 +327,53 @@ def plot_3d_pdp(
     matplotlib_colormap : matplotlib.colors.Colormap, optional
         Custom colormap for the Matplotlib plot. If not provided, a
         default colormap is used.
-
     plotly_colormap : str, optional, default="Viridis"
         Colormap for the Plotly plot.
-
     zoom_out_factor : float, optional
         Factor to adjust the zoom level of the Plotly plot.
-
     wireframe_color : str, optional
         Color for the wireframe in the Matplotlib plot. If `None`, no
         wireframe is plotted.
-
     view_angle : tuple, optional, default=(22, 70)
         Elevation and azimuthal angles for the Matplotlib plot view.
-
     figsize : tuple, optional, default=(7, 4.5)
         Figure size for the Matplotlib plot.
-
     text_wrap : int, optional, default=50
         Maximum width of the title text before wrapping.
-
     horizontal : float, optional, default=-1.25
         Horizontal camera position for the Plotly plot.
-
     depth : float, optional, default=1.25
         Depth camera position for the Plotly plot.
-
     vertical : float, optional, default=1.25
         Vertical camera position for the Plotly plot.
-
     cbar_x : float, optional, default=1.05
         Position of the color bar along the x-axis in the Plotly plot.
-
     cbar_thickness : int, optional, default=25
         Thickness of the color bar in the Plotly plot.
-
     title_x : float, optional, default=0.5
         Horizontal position of the title in the Plotly plot.
-
     title_y : float, optional, default=0.95
         Vertical position of the title in the Plotly plot.
-
     top_margin : int, optional, default=100
         Top margin for the Plotly plot layout.
-
     image_path_png : str, optional
         Directory path to save the PNG file of the Matplotlib plot.
-
     image_path_svg : str, optional
         Directory path to save the SVG file of the Matplotlib plot.
-
     show_cbar : bool, optional, default=True
         Whether to display the color bar in the Matplotlib plot.
-
     grid_resolution : int, optional, default=20
         The resolution of the grid for computing partial dependence.
-
     left_margin : int, optional, default=20
         Left margin for the Plotly plot layout.
-
     right_margin : int, optional, default=65
         Right margin for the Plotly plot layout.
-
     label_fontsize : int, optional, default=8
         Font size for axis labels in the Matplotlib plot.
-
     tick_fontsize : int, optional, default=6
         Font size for tick labels in the Matplotlib plot.
-
     enable_zoom : bool, optional, default=True
         Whether to enable zooming in the Plotly plot.
-
     show_modebar : bool, optional, default=True
         Whether to display the mode bar in the Plotly plot.
 
@@ -463,7 +410,11 @@ def plot_3d_pdp(
     # within the scikit-learn library and not in this code base. Sklearn cannot
     # be updated from 1.0.2 to 1.3.2 in this Python version, hence this
     # mandated suppression.
-    warnings.filterwarnings("ignore", category=FutureWarning, module="sklearn")
+    warnings.filterwarnings(
+        "ignore",
+        category=FutureWarning,
+        module="sklearn",
+    )
 
     # Validate `save_plots` input
     if save_plots not in [None, "html", "static", "both"]:
