@@ -1,8 +1,8 @@
 from .model_calculator import *
 from .model_evaluator import *
+from .partial_dependence import *
 from .logo import *
 
-import os
 import sys
 import builtins
 
