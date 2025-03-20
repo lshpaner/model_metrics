@@ -9,7 +9,11 @@ from model_metrics.partial_dependence import plot_2d_pdp, plot_3d_pdp
 
 @pytest.fixture
 def trained_model_and_data():
-    X, y = make_classification(n_samples=100, n_features=5, random_state=42)
+    X, y = make_classification(
+        n_samples=100,
+        n_features=5,
+        random_state=42,
+    )
     feature_names = [f"feature_{i}" for i in range(X.shape[1])]
     X_df = pd.DataFrame(X, columns=feature_names)
     model = RandomForestClassifier(random_state=42).fit(X_df, y)
@@ -233,9 +237,10 @@ def test_3d_pdp_interactive_missing_html_filename(trained_model_and_data):
 def test_plot_3d_pdp_fallback_to_plot(tmp_path, trained_model_and_data):
     model, X_df, feature_names = trained_model_and_data
 
-    with mock.patch("plotly.offline.iplot", side_effect=ImportError), mock.patch(
-        "plotly.offline.plot"
-    ) as mock_plot:
+    with mock.patch(
+        "plotly.offline.iplot",
+        side_effect=ImportError,
+    ), mock.patch("plotly.offline.plot") as mock_plot:
         plot_3d_pdp(
             model=model,
             dataframe=X_df,
