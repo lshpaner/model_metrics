@@ -540,5 +540,9 @@ generating a static plot using Matplotlib.
 
 By adjusting these parameters, you can customize the behavior and appearance of your 3D Partial Dependence Plots according to your needs, whether for static or interactive visualization.
 
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
 
 .. [1] Pace, R. K., & Barry, R. (1997). *Sparse Spatial Autoregressions*. *Statistics & Probability Letters*, 33(3), 291-297. `https://doi.org/10.1016/S0167-7152(96)00140-X <https://doi.org/10.1016/S0167-7152(96)00140-X>`_.

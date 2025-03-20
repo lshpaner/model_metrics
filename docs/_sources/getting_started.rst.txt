@@ -28,7 +28,7 @@
 Welcome to the Model Metrics Python Library Documentation!
 ============================================================
 .. note::
-   This documentation is for ``model_metrics`` version ``0.0.1a``.
+   This documentation is for ``model_metrics`` version ``0.0.2a``.
 
 
 Welcome to Model Metrics! Model Metrics is a versatile Python library designed 

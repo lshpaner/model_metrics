@@ -12,7 +12,7 @@ from docutils.parsers.rst import roles
 project = "Model Metrics"
 copyright = "2025, Leonid Shpaner"
 author = "Leonid Shpaner"
-release = "0.0.0.a2"
+release = "0.0.2.a"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
