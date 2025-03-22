@@ -25,8 +25,6 @@ Additionally, `model_metrics` depends on the following packages, which will be a
 - `numpy`: version `1.21.6` or higher, but capped at `2.1.0`
 - `pandas`: version `1.3.5` or higher, but capped at `2.2.3`
 - `scikit-learn`: version `1.0.2` or higher, but capped at `1.5.2`
-- `scipy`: version `1.7.3` or higher, but capped at `1.14.0`
-- `seaborn`: version `0.12.2` or higher, but capped below `0.13.2`
 - `shap`: version `0.41.0` or higher, but capped below `0.46.0`
 - `statsmodels`: version `0.12.2` or higher, but capped below `0.14.4`
 - `tqdm`: version `4.66.4` or higher, but capped below `4.67.1`
@@ -54,7 +52,8 @@ https://lshpaner.github.io/model_metrics
 
 Gratitude goes to Dr. Ebrahim Tarshizi for his mentorship during the University of San Diego M.S. Applied Data Science Program, as well as the Shiley-Marcos School of Engineering for its support.
 
-Special thanks to Dr. Alex Bui for his invaluable guidance and support, and to Panayiotis Petousis and Arthur Funnell for their exceptional teamwork in maintaining a solid data science foundation at UCLA CTSI. Additional thanks to those who have contributed to the development of this library, provided guidance, and supported a strong data science foundation. This work is built upon a collaborative effort that values knowledge sharing, teamwork, and dedication to advancing model evaluation practices.
+Special thanks to Dr. Alex Bui, and to Panayiotis Petousis, PhD, and Arthur Funnell for their invaluable guidance and their exceptional teamwork in maintaining a strong data science infrastructure at UCLA CTSI. Their leadership and support have helped foster the kind of collaborative environment that makes work like this possible. Additional thanks to all who offered guidance and encouragement throughout the development of this library. This project reflects a shared commitment to knowledge sharing, teamwork, and advancing model evaluation practices.
+
 
 ## ⚖️ License
 
