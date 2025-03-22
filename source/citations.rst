@@ -21,7 +21,7 @@
 Citing Model Metrics
 ======================
 
-Shpaner, L. (2025). Model Metrics (0.0.1a). Zenodo. https://doi.org/10.5281/zenodo.14879819
+Shpaner, L. (2025). Model Metrics (0.0.3a). Zenodo. https://doi.org/10.5281/zenodo.14879819
 
 .. code:: text
 
