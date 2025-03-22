@@ -52,9 +52,9 @@ Table of Contents
 
 .. toctree::
    :maxdepth: 4
-   :caption: Caveats
+   :caption: Conceptual Notes
 
-   caveats  
+   conceptual_notes  
 
 .. toctree::
    :maxdepth: 4

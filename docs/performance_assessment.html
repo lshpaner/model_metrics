@@ -126,11 +126,11 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="partial_dependence.html">Partial Dependence Plots</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Caveats</span></p>
+<p class="caption" role="heading"><span class="caption-text">Conceptual Notes</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="caveats.html">Threshold Selection logic</a></li>
-<li class="toctree-l1"><a class="reference internal" href="caveats.html#calibration-trade-offs">Calibration Trade-offs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="caveats.html#partial-dependence-foundations">Partial Dependence Foundations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conceptual_notes.html">Threshold Selection logic</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conceptual_notes.html#calibration-trade-offs">Calibration Trade-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conceptual_notes.html#partial-dependence-foundations">Partial Dependence Foundations</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">About Model Metrics</span></p>
 <ul>
@@ -2653,7 +2653,7 @@ from the Binary Classification Models section</span></a>, we apply
 a custom classification threshold of 0.37 using the <code class="docutils literal notranslate"><span class="pre">custom_threshold</span></code> parameter.
 This overrides the default threshold of 0.5 and enables us to inspect how the
 confusion matrices shift when a more lenient decision boundary is applied. Refer
-to the section on <a class="reference internal" href="caveats.html#threshold-selection-logic"><span class="std std-ref">threshold selection logic</span></a>
+to the section on <a class="reference internal" href="conceptual_notes.html#threshold-selection-logic"><span class="std std-ref">threshold selection logic</span></a>
 for caveats on choosing the right threshold.</p>
 <p>This is especially useful in imbalanced classification problems or cost-sensitive
 environments where the trade-off between precision and recall must be adjusted.
@@ -2805,7 +2805,7 @@ plots.</p>
 between predicted probabilities and actual outcomes. By plotting the fraction
 of positives against predicted probabilities, we can evaluate how well a model’s
 confidence scores correspond to observed reality. While these plots offer important
-insights, it’s equally important to understand the <a class="reference internal" href="caveats.html#caveats-in-calibration"><span class="std std-ref">assumptions and limitations behind
+insights, it’s equally important to understand the <a class="reference internal" href="conceptual_notes.html#caveats-in-calibration"><span class="std std-ref">assumptions and limitations behind
 the calibration methods used</span></a>.</p>
 </div>
 <section id="calibration-curve-example-1-grid-like">

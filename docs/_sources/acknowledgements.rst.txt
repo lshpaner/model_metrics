@@ -27,10 +27,11 @@ Gratitude goes to Dr. Ebrahim Tarshizi for his mentorship during the University
 of San Diego M.S. Applied Data Science Program, as well as the Shiley-Marcos 
 School of Engineering for its support.
 
-Special thanks to Dr. Alex Bui for his invaluable guidance and support, and to 
-Panayiotis Petousis and Arthur Funnell for their exceptional teamwork in maintaining 
-a solid data science foundation at UCLA CTSI. Special thanks to those who have 
-contributed to the development of this library, provided guidance, and supported 
-a strong data science foundation. This work is built upon a collaborative effort 
-that values knowledge sharing, teamwork, and dedication to advancing model 
-evaluation practices.
+Special thanks to Dr. Alex Bui, and to Panayiotis Petousis, PhD, and Arthur 
+Funnell for their invaluable guidance and their exceptional teamwork in 
+maintaining a strong data science infrastructure at UCLA CTSI. Their leadership 
+and support have helped foster the kind of collaborative environment that makes 
+work like this possible. Additional thanks to all who offered guidance and 
+encouragement throughout the development of this library. This project reflects 
+a shared commitment to knowledge sharing, teamwork, and advancing model evaluation 
+practices.

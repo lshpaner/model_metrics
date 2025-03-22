@@ -73,11 +73,11 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="partial_dependence.html">Partial Dependence Plots</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Caveats</span></p>
+<p class="caption" role="heading"><span class="caption-text">Conceptual Notes</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="caveats.html">Threshold Selection logic</a></li>
-<li class="toctree-l1"><a class="reference internal" href="caveats.html#calibration-trade-offs">Calibration Trade-offs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="caveats.html#partial-dependence-foundations">Partial Dependence Foundations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conceptual_notes.html">Threshold Selection logic</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conceptual_notes.html#calibration-trade-offs">Calibration Trade-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conceptual_notes.html#partial-dependence-foundations">Partial Dependence Foundations</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">About Model Metrics</span></p>
 <ul class="current">
@@ -85,6 +85,7 @@
 <li class="toctree-l1"><a class="reference internal" href="contributors.html">Contributors/Maintainers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="citations.html">Citing Model Metrics</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Changelog</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#version-0-0-2a">Version 0.0.2a</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version-0-0-1a">Version 0.0.1a</a></li>
 </ul>
 </li>
@@ -118,10 +119,31 @@
 </div><div style="height: 100px;"></div><p></p>
 <section id="id1">
 <h1>Changelog<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h1>
+<section id="version-0-0-2a">
+<h2>Version 0.0.2a<a class="headerlink" href="#version-0-0-2a" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">show_ks_curve</span></code> function and enhance <code class="docutils literal notranslate"><span class="pre">summarize_model_performance</span></code> by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/1">https://github.com/lshpaner/model_metrics/pull/1</a></p></li>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">plot_threshold_metrics</span></code> Function by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/2">https://github.com/lshpaner/model_metrics/pull/2</a></p></li>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">pr_feature_plot</span></code> and Update <code class="docutils literal notranslate"><span class="pre">roc_feature_plot</span></code> for Enhanced Visualization by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/3">https://github.com/lshpaner/model_metrics/pull/3</a></p></li>
+<li><p>Reg table enhance by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/4">https://github.com/lshpaner/model_metrics/pull/4</a></p></li>
+<li><p>Rmvd (%) from MAPE header by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/5">https://github.com/lshpaner/model_metrics/pull/5</a></p></li>
+<li><p>Moved roc legend to lower right default by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/6">https://github.com/lshpaner/model_metrics/pull/6</a></p></li>
+<li><p>Allow Flexible Inputs and Save Behavior for <code class="docutils literal notranslate"><span class="pre">show_roc_curve()</span></code> by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/7">https://github.com/lshpaner/model_metrics/pull/7</a></p></li>
+<li><p>Prcurve calc tests by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/8">https://github.com/lshpaner/model_metrics/pull/8</a></p></li>
+<li><p>Removed unused imports and functions by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/9">https://github.com/lshpaner/model_metrics/pull/9</a></p></li>
+<li><p>changed saving nomenclature in <code class="docutils literal notranslate"><span class="pre">show_confusion_matrix</span></code> by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/10">https://github.com/lshpaner/model_metrics/pull/10</a></p></li>
+<li><p>Fix Calibration Curve Grid Plot Behavior and Update Model Nomenclature by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/11">https://github.com/lshpaner/model_metrics/pull/11</a></p></li>
+<li><p>Improved support for multiple models and group categories in calibration curve by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/13">https://github.com/lshpaner/model_metrics/pull/13</a></p></li>
+<li><p>Upd. <code class="docutils literal notranslate"><span class="pre">plot_threshold_metrics</span></code> w/ new lookup_kwgs and legend logic by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/14">https://github.com/lshpaner/model_metrics/pull/14</a></p></li>
+<li><p>Rmv. unused arguments by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/15">https://github.com/lshpaner/model_metrics/pull/15</a></p></li>
+<li><p>Move PDF-related Functions from <code class="docutils literal notranslate"><span class="pre">eda_toolkit</span></code> to <code class="docutils literal notranslate"><span class="pre">model_metrics</span></code> by &#64;lshpaner in <a class="reference external" href="https://github.com/lshpaner/model_metrics/pull/16">https://github.com/lshpaner/model_metrics/pull/16</a></p></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a class="reference external" href="https://github.com/lshpaner/model_metrics/compare/0.0.1a...0.0.2a">https://github.com/lshpaner/model_metrics/compare/0.0.1a…0.0.2a</a></p>
+</section>
 <section id="version-0-0-1a">
 <h2>Version 0.0.1a<a class="headerlink" href="#version-0-0-1a" title="Permalink to this heading"></a></h2>
 <ul class="simple">
-<li><p>Updated unit tests and README</p></li>
+<li><p>Updated unit tests and <code class="docutils literal notranslate"><span class="pre">README</span></code></p></li>
 <li><p>Added <code class="docutils literal notranslate"><span class="pre">statsmodels</span></code> to library imports</p></li>
 <li><p>Added coefficients and p-values to regression summary</p></li>
 <li><p>Added regression capabilities to <code class="docutils literal notranslate"><span class="pre">summarize_model_performance</span></code></p></li>
