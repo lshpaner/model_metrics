@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Threshold Selection logic &mdash; Model Metrics 0.0.3a documentation</title>
+  <title>Interpretive Context &mdash; Model Metrics 0.0.3a documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
@@ -76,7 +76,16 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Conceptual Notes</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Threshold Selection logic</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Interpretive Context</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#binary-classification-outputs">Binary Classification Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#roc-curve-and-auc">ROC Curve and AUC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#precision-recall-curve-and-auc-pr">Precision-Recall Curve and AUC-PR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#thresholding-and-predictions">Thresholding and Predictions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#summary-table-theory-meets-interpretation">Summary Table: Theory Meets Interpretation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interpretive-caveats">Interpretive Caveats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#threshold-selection-logic">Threshold Selection logic</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#calibration-trade-offs">Calibration Trade-offs</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#calibration-methodology">Calibration Methodology</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#alternative-calibration-methods">Alternative Calibration Methods</a></li>
@@ -109,7 +118,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Threshold Selection logic</li>
+      <li class="breadcrumb-item active">Interpretive Context</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -119,7 +128,128 @@
            <div itemprop="articleBody">
              
   <span class="target" id="conceptual-notes"></span><div class="no-click"><a class="reference internal image-reference" href="_images/mm_logo.svg"><img alt="Model Metrics Logo" class="align-left" src="_images/mm_logo.svg" width="300px" /></a>
-</div><div style="height: 100px;"></div><section id="threshold-selection-logic">
+</div><div style="height: 100px;"></div><section id="interpretive-context">
+<h1>Interpretive Context<a class="headerlink" href="#interpretive-context" title="Permalink to this heading"></a></h1>
+<p>This section blends <strong>classical evaluation metrics</strong> with <strong>probabilistic theory</strong>, helping users understand both the <strong>foundations</strong> and the <strong>limitations</strong> of model performance metrics like <strong>AUC-ROC</strong> and <strong>AUC-PR</strong>.</p>
+<section id="binary-classification-outputs">
+<h2>Binary Classification Outputs<a class="headerlink" href="#binary-classification-outputs" title="Permalink to this heading"></a></h2>
+<p>Let <span class="math notranslate nohighlight">\(\hat{y} = f(x) \in [0, 1]\)</span> be the probabilistic score assigned by the model for a sample <span class="math notranslate nohighlight">\(x \in \mathbb{R}^d\)</span>, and <span class="math notranslate nohighlight">\(y \in \{0, 1\}\)</span> the ground-truth label.</p>
+<p>At any threshold <span class="math notranslate nohighlight">\(\tau\)</span>, we define the standard classification metrics:</p>
+<div class="math notranslate nohighlight">
+\[\text{TPR}(\tau) = \frac{\text{TP}}{\text{TP} + \text{FN}}, \quad
+\text{FPR}(\tau) = \frac{\text{FP}}{\text{FP} + \text{TN}}\]</div>
+<div class="math notranslate nohighlight">
+\[\text{Precision}(\tau) = \frac{\text{TP}}{\text{TP} + \text{FP}}, \quad
+\text{Recall}(\tau) = \frac{\text{TP}}{\text{TP} + \text{FN}}\]</div>
+<p>These metrics form the foundation of ROC and Precision-Recall curves, which evaluate how performance shifts across different thresholds <span class="math notranslate nohighlight">\(\tau \in [0, 1]\)</span>.</p>
+</section>
+<section id="roc-curve-and-auc">
+<h2>ROC Curve and AUC<a class="headerlink" href="#roc-curve-and-auc" title="Permalink to this heading"></a></h2>
+<p>The <strong>Receiver Operating Characteristic (ROC)</strong> curve plots:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(\text{TPR}(\tau)\)</span> vs. <span class="math notranslate nohighlight">\(\text{FPR}(\tau)\)</span></p></li>
+<li><p>As threshold <span class="math notranslate nohighlight">\(\tau\)</span> varies from 1 to 0</p></li>
+</ul>
+<p>The <strong>Area Under the ROC Curve (AUC-ROC)</strong> is defined as:</p>
+<div class="math notranslate nohighlight">
+\[\text{AUC} = \int_0^1 \text{TPR}(F_0^{-1}(1 - u)) \, du\]</div>
+<p>Where <span class="math notranslate nohighlight">\(F_0\)</span> is the CDF of scores from the negative class.</p>
+<p><strong>Probabilistic Interpretation</strong></p>
+<p>AUC can also be seen as the probability that a randomly chosen positive sample is ranked higher than a randomly chosen negative sample:</p>
+<div class="math notranslate nohighlight">
+\[\text{AUC} = P(\hat{y}^+ &gt; \hat{y}^-)\]</div>
+<p><strong>Proof (U-statistic representation):</strong></p>
+<div class="math notranslate nohighlight">
+\[\text{AUC} = \iint \mathbb{1}(\hat{y}_1 &gt; \hat{y}_0) \, dF_1(\hat{y}_1) \, dF_0(\hat{y}_0)\]</div>
+<p>Where <span class="math notranslate nohighlight">\(F_1\)</span> and <span class="math notranslate nohighlight">\(F_0\)</span> are the score distributions of the positive and negative classes.</p>
+</section>
+<section id="precision-recall-curve-and-auc-pr">
+<h2>Precision-Recall Curve and AUC-PR<a class="headerlink" href="#precision-recall-curve-and-auc-pr" title="Permalink to this heading"></a></h2>
+<p>The <strong>Precision-Recall (PR)</strong> curve focuses solely on the <strong>positive class</strong>. It plots:</p>
+<div class="math notranslate nohighlight">
+\[\text{Precision}(\tau) = \frac{\pi_1 \cdot \text{TPR}(\tau)}{P(\hat{y} \ge \tau)}, \quad
+\text{Recall}(\tau) = \text{TPR}(\tau)\]</div>
+<p>Where <span class="math notranslate nohighlight">\(\pi_1 = P(y = 1)\)</span> is the class prevalence.</p>
+<p>The <strong>AUC-PR</strong> is defined as:</p>
+<div class="math notranslate nohighlight">
+\[\text{AUC-PR} = \int_0^1 \text{Precision}(r) \, dr\]</div>
+<p>Unlike ROC, the PR curve is not invariant to class imbalance. The baseline for precision is simply the proportion of positive samples in the data: <span class="math notranslate nohighlight">\(\pi_1\)</span>.</p>
+</section>
+<section id="thresholding-and-predictions">
+<h2>Thresholding and Predictions<a class="headerlink" href="#thresholding-and-predictions" title="Permalink to this heading"></a></h2>
+<p>To convert scores into hard predictions, we apply a threshold <span class="math notranslate nohighlight">\(\tau\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\hat{y}_\tau = \begin{cases}
+1 &amp; \text{if } \hat{y} \ge \tau \\
+0 &amp; \text{otherwise}
+\end{cases}\end{split}\]</div>
+<div class="line-block">
+<div class="line"><strong>Threshold-based metrics include:</strong></div>
+<div class="line"><br /></div>
+<div class="line-block">
+<div class="line"><strong>Accuracy</strong>: <span class="math notranslate nohighlight">\(\frac{\text{TP} + \text{TN}}{\text{Total}}\)</span></div>
+<div class="line"><br /></div>
+<div class="line"><strong>F1 Score</strong>: <span class="math notranslate nohighlight">\(2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}\)</span></div>
+</div>
+</div>
+</section>
+<section id="summary-table-theory-meets-interpretation">
+<h2>Summary Table: Theory Meets Interpretation<a class="headerlink" href="#summary-table-theory-meets-interpretation" title="Permalink to this heading"></a></h2>
+<table style="width:100%; border-collapse: collapse;" border="1" cellpadding="6">
+  <thead style="text-align: left;">
+    <tr>
+      <th><strong>Metric</strong></th>
+      <th><strong>Mathematical Formulation</strong></th>
+      <th><strong>Key Property</strong></th>
+      <th><strong>Practical Caveat</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>AUC-ROC</td>
+      <td>\( P(\hat{y}^+ > \hat{y}^-) \)</td>
+      <td>Rank-based, threshold-free</td>
+      <td>Can be misleading with class imbalance</td>
+    </tr>
+    <tr>
+      <td>AUC-PR</td>
+      <td>\( \int_0^1 \text{Precision}(r)\,dr \)</td>
+      <td>Focused on positives</td>
+      <td>Sensitive to prevalence and score noise</td>
+    </tr>
+    <tr>
+      <td>Precision</td>
+      <td>\( \frac{\text{TP}}{\text{TP} + \text{FP}} \)</td>
+      <td>Measures correctness</td>
+      <td>Not monotonic across thresholds</td>
+    </tr>
+    <tr>
+      <td>Recall</td>
+      <td>\( \frac{\text{TP}}{\text{TP} + \text{FN}} \)</td>
+      <td>Measures completeness</td>
+      <td>Ignores false positives</td>
+    </tr>
+    <tr>
+      <td>F1 Score</td>
+      <td>Harmonic mean of precision and recall</td>
+      <td>Tradeoff-aware</td>
+      <td>Requires threshold, hides base rates</td>
+    </tr>
+  </tbody>
+</table><div style="height: 40px;"></div></section>
+<section id="interpretive-caveats">
+<h2>Interpretive Caveats<a class="headerlink" href="#interpretive-caveats" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>AUC-ROC</strong> can be <strong>overly optimistic</strong> when the negative class dominates.</p></li>
+<li><p><strong>AUC-PR</strong> gives more meaningful insight for imbalanced datasets, but is more volatile and harder to interpret.</p></li>
+<li><p><strong>Neither AUC metric defines an optimal threshold</strong> — for deployment, threshold tuning must be contextualized.</p></li>
+<li><p><strong>Calibration</strong> affects PR metrics and thresholds, but not AUC-ROC.</p></li>
+<li><p><strong>Metric conflicts are common</strong>: one model may outperform in AUC but underperform in F1.</p></li>
+<li><p><strong>Fairness and subgroup analysis</strong> are essential: A model may perform well overall, yet exhibit bias in subgroup-specific metrics.</p></li>
+</ul>
+</section>
+</section>
+<section id="threshold-selection-logic">
 <span id="id1"></span><h1>Threshold Selection logic<a class="headerlink" href="#threshold-selection-logic" title="Permalink to this heading"></a></h1>
 <p>When computing confusion matrices, selecting the right classification threshold
 can significantly impact the output. The function <code class="docutils literal notranslate"><span class="pre">show_confusion_matrix</span></code> is

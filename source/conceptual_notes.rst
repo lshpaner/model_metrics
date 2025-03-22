@@ -26,6 +26,177 @@
    <div style="height: 100px;"></div>
 
 
+
+Interpretive Context
+---------------------------
+
+This section blends **classical evaluation metrics** with **probabilistic theory**, helping users understand both the **foundations** and the **limitations** of model performance metrics like **AUC-ROC** and **AUC-PR**.
+
+Binary Classification Outputs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Let :math:`\hat{y} = f(x) \in [0, 1]` be the probabilistic score assigned by the model for a sample :math:`x \in \mathbb{R}^d`, and :math:`y \in \{0, 1\}` the ground-truth label.
+
+At any threshold :math:`\tau`, we define the standard classification metrics:
+
+.. math::
+
+   \text{TPR}(\tau) = \frac{\text{TP}}{\text{TP} + \text{FN}}, \quad
+   \text{FPR}(\tau) = \frac{\text{FP}}{\text{FP} + \text{TN}}
+
+.. math::
+
+   \text{Precision}(\tau) = \frac{\text{TP}}{\text{TP} + \text{FP}}, \quad
+   \text{Recall}(\tau) = \frac{\text{TP}}{\text{TP} + \text{FN}}
+
+These metrics form the foundation of ROC and Precision-Recall curves, which evaluate how performance shifts across different thresholds :math:`\tau \in [0, 1]`.
+
+ROC Curve and AUC
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The **Receiver Operating Characteristic (ROC)** curve plots:
+
+- :math:`\text{TPR}(\tau)` vs. :math:`\text{FPR}(\tau)`
+- As threshold :math:`\tau` varies from 1 to 0
+
+The **Area Under the ROC Curve (AUC-ROC)** is defined as:
+
+.. math::
+
+   \text{AUC} = \int_0^1 \text{TPR}(F_0^{-1}(1 - u)) \, du
+
+Where :math:`F_0` is the CDF of scores from the negative class.
+
+**Probabilistic Interpretation**
+
+AUC can also be seen as the probability that a randomly chosen positive sample is ranked higher than a randomly chosen negative sample:
+
+.. math::
+
+   \text{AUC} = P(\hat{y}^+ > \hat{y}^-)
+
+**Proof (U-statistic representation):**
+
+.. math::
+
+   \text{AUC} = \iint \mathbb{1}(\hat{y}_1 > \hat{y}_0) \, dF_1(\hat{y}_1) \, dF_0(\hat{y}_0)
+
+Where :math:`F_1` and :math:`F_0` are the score distributions of the positive and negative classes.
+
+Precision-Recall Curve and AUC-PR
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The **Precision-Recall (PR)** curve focuses solely on the **positive class**. It plots:
+
+.. math::
+
+   \text{Precision}(\tau) = \frac{\pi_1 \cdot \text{TPR}(\tau)}{P(\hat{y} \ge \tau)}, \quad
+   \text{Recall}(\tau) = \text{TPR}(\tau)
+
+Where :math:`\pi_1 = P(y = 1)` is the class prevalence.
+
+The **AUC-PR** is defined as:
+
+.. math::
+
+   \text{AUC-PR} = \int_0^1 \text{Precision}(r) \, dr
+
+Unlike ROC, the PR curve is not invariant to class imbalance. The baseline for precision is simply the proportion of positive samples in the data: :math:`\pi_1`.
+
+Thresholding and Predictions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To convert scores into hard predictions, we apply a threshold :math:`\tau`:
+
+.. math::
+
+   \hat{y}_\tau = \begin{cases}
+   1 & \text{if } \hat{y} \ge \tau \\
+   0 & \text{otherwise}
+   \end{cases}
+
+.. line-block::
+
+   **Threshold-based metrics include:**
+
+    **Accuracy**: :math:`\frac{\text{TP} + \text{TN}}{\text{Total}}`
+
+    **F1 Score**: :math:`2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}`
+
+Summary Table: Theory Meets Interpretation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. raw:: html
+
+    <table style="width:100%; border-collapse: collapse;" border="1" cellpadding="6">
+      <thead style="text-align: left;">
+        <tr>
+          <th><strong>Metric</strong></th>
+          <th><strong>Mathematical Formulation</strong></th>
+          <th><strong>Key Property</strong></th>
+          <th><strong>Practical Caveat</strong></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>AUC-ROC</td>
+          <td>\( P(\hat{y}^+ > \hat{y}^-) \)</td>
+          <td>Rank-based, threshold-free</td>
+          <td>Can be misleading with class imbalance</td>
+        </tr>
+        <tr>
+          <td>AUC-PR</td>
+          <td>\( \int_0^1 \text{Precision}(r)\,dr \)</td>
+          <td>Focused on positives</td>
+          <td>Sensitive to prevalence and score noise</td>
+        </tr>
+        <tr>
+          <td>Precision</td>
+          <td>\( \frac{\text{TP}}{\text{TP} + \text{FP}} \)</td>
+          <td>Measures correctness</td>
+          <td>Not monotonic across thresholds</td>
+        </tr>
+        <tr>
+          <td>Recall</td>
+          <td>\( \frac{\text{TP}}{\text{TP} + \text{FN}} \)</td>
+          <td>Measures completeness</td>
+          <td>Ignores false positives</td>
+        </tr>
+        <tr>
+          <td>F1 Score</td>
+          <td>Harmonic mean of precision and recall</td>
+          <td>Tradeoff-aware</td>
+          <td>Requires threshold, hides base rates</td>
+        </tr>
+      </tbody>
+    </table>
+
+
+.. raw:: html
+
+    <div style="height: 40px;"></div>
+
+Interpretive Caveats
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- **AUC-ROC** can be **overly optimistic** when the negative class dominates.
+- **AUC-PR** gives more meaningful insight for imbalanced datasets, but is more volatile and harder to interpret.
+- **Neither AUC metric defines an optimal threshold** — for deployment, threshold tuning must be contextualized.
+- **Calibration** affects PR metrics and thresholds, but not AUC-ROC.
+- **Metric conflicts are common**: one model may outperform in AUC but underperform in F1.
+- **Fairness and subgroup analysis** are essential: A model may perform well overall, yet exhibit bias in subgroup-specific metrics.
+
+
+
+
+
+
+
+
+
+
+
+
 .. _threshold_selection_logic:
 
 Threshold Selection logic
