@@ -92,10 +92,11 @@ Additionally, ``model_metrics`` depends on the following packages, which will be
 
 - ``matplotlib``: version ``3.5.3`` or higher, but capped at ``3.9.2``
 - ``numpy``: version ``1.21.6`` or higher, but capped at ``2.1.0``
+- ``pandas``: version ``1.3.5`` or higher, but capped at ``2.2.3``
 - ``plotly``: version ``5.18.0`` or higher, but capped at ``5.24.0``
 - ``scikit-learn``: version ``1.0.2`` or higher, but capped at ``1.5.2``
-- ``seaborn```: version ``0.12.2`` or higher, but capped below ``0.13.2``
 - ``shap``: version ``0.41.0`` or higher, but capped below ``0.46.0``
+- ``statsmodels``: version ``0.12.2`` or higher, but capped below ``0.14.4``
 - ``tqdm```: version ``4.66.4`` or higher, but capped below ``4.67.1``
 
 .. _installation:
@@ -105,7 +106,7 @@ Installation
 
 You can install ``model_metrics`` directly from PyPI:
 
-.. code-block:: bash
+.. code-block:: python
 
     pip install model_metrics
 
