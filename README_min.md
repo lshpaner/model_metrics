@@ -24,6 +24,7 @@ Additionally, `model_metrics` depends on the following packages, which will be a
 - `matplotlib`: version `3.5.3` or higher, but capped at `3.10.0`
 - `numpy`: version `1.21.6` or higher, but capped at `2.1.0`
 - `pandas`: version `1.3.5` or higher, but capped at `2.2.3`
+- `plotly`: version `5.18.0` or higher, but capped at `5.24.1`
 - `scikit-learn`: version `1.0.2` or higher, but capped at `1.5.2`
 - `shap`: version `0.41.0` or higher, but capped below `0.46.0`
 - `statsmodels`: version `0.12.2` or higher, but capped below `0.14.4`
@@ -78,7 +79,7 @@ If you use `model_metrics` in your research or projects, please consider citing 
   month        = feb,
   year         = 2025,
   publisher    = {Zenodo},
-  version      = {0.0.2a},
+  version      = {0.0.3a},
   doi          = {10.5281/zenodo.14879819},
   url          = {https://doi.org/10.5281/zenodo.14879819}
 }
