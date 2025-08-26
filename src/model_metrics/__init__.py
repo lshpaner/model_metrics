@@ -19,7 +19,7 @@ Whether you're working with SHAP values, model coefficients, confusion matrices,
 ROC curves, precision-recall plots, and other key performance indicators.
 
 PyPI: https://pypi.org/project/model-metrics/
-Documentation: https://lshpaner.github.io/model_metrics/
+Documentation: https://lshpaner.github.io/model_metrics_docs/
 
 
 Version: 0.0.4a
