@@ -1,12 +1,10 @@
-[![PyPI](https://img.shields.io/pypi/v/model_metrics)](https://pypi.org/project/model_metrics/)
-[![Downloads](https://pepy.tech/badge/model_metrics)](https://pepy.tech/project/model_metrics)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/lshpaner/model_metrics/blob/main/LICENSE.md)
-
-<br>
-
 <img src="https://raw.githubusercontent.com/lshpaner/model_metrics/refs/heads/main/assets/mm_logo.svg" width="300" style="border: none; outline: none; box-shadow: none;" oncontextmenu="return false;">
 
 <br> 
+
+[![PyPI](https://img.shields.io/pypi/v/model_metrics)](https://pypi.org/project/model_metrics/)
+[![Downloads](https://pepy.tech/badge/model_metrics)](https://pepy.tech/project/model_metrics)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/lshpaner/model_metrics/blob/main/LICENSE.md)
 
 
 Welcome to Model Metrics! Model Metrics is a versatile Python library designed to streamline the evaluation and interpretation of machine learning models. It provides a robust framework for generating predictions, computing model metrics, analyzing feature importance, and visualizing results. Whether you're working with SHAP values, model coefficients, confusion matrices, ROC curves, precision-recall plots, and other key performance indicators.
@@ -42,7 +40,7 @@ pip install model_metrics
 
 ## 📄 Official Documentation
 
-https://lshpaner.github.io/model_metrics 
+https://lshpaner.github.io/model_metrics_docs 
 
 
 ## 🌐 Author's Website
