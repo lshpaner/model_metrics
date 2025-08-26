@@ -1,10 +1,62 @@
+import os
 import pytest
 from unittest import mock
 import pandas as pd
+import numpy as np
+import matplotlib
+
+matplotlib.use("Agg")  # hard-stop any interactive GUI use
+import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification
 from sklearn.ensemble import RandomForestClassifier
 
 from model_metrics.partial_dependence import plot_2d_pdp, plot_3d_pdp
+
+
+# --- Global hygiene to prevent freezes / GUI calls ---------------------------------
+@pytest.fixture(autouse=True)
+def _matplotlib_hygiene():
+    """Prevent interactive windows and clean up figures after every test."""
+    # make sure plt.show() is a noop during tests
+    orig_show = plt.show
+    plt.show = lambda *a, **k: None
+    try:
+        yield
+    finally:
+        plt.close("all")
+        plt.show = orig_show
+
+
+@pytest.fixture(autouse=True)
+def _plotly_hygiene(monkeypatch, tmp_path):
+    """
+    Disable interactive Plotly outputs and ensure html files are created
+    deterministically when requested, without opening a browser.
+    """
+    try:
+        import plotly.offline as po
+    except Exception:
+        # If plotly isn't installed in CI, tests that rely on it will be skipped anyway.
+        yield
+        return
+
+    # iplot should never try to display in tests
+    monkeypatch.setattr(po, "iplot", lambda *a, **k: None, raising=False)
+
+    def _safe_plot(fig=None, filename=None, auto_open=False, *a, **k):
+        # Respect provided filename, create minimal html to satisfy existence checks
+        if filename:
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write("<html><head></head><body>test</body></html>")
+        return filename
+
+    # Make plotly.offline.plot safe and non-blocking; never open a browser
+    monkeypatch.setattr(po, "plot", _safe_plot, raising=False)
+    yield
+
+
+# -----------------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -125,7 +177,6 @@ def test_2d_pdp_save_grid_svg(tmp_path, trained_model_and_data):
         image_path_svg=str(tmp_path),
         file_prefix="test_prefix",
     )
-
     expected = tmp_path / "test_prefix_2d_pdp_grid.svg"
     assert expected.exists()
 
@@ -166,16 +217,16 @@ def test_plot_3d_pdp_interactive_missing_path(trained_model_and_data):
 
 def test_plot_3d_pdp_save_html(tmp_path, trained_model_and_data):
     model, X_df, feature_names = trained_model_and_data
-    expected_file = tmp_path / "plot_3d_pdp.html"  # Your function hardcodes this
+    expected_file = tmp_path / "plot_3d_pdp.html"  # function hardcodes this
 
     plot_3d_pdp(
         model=model,
         dataframe=X_df,
         feature_names=[feature_names[0], feature_names[1]],
-        plot_type="both",  # ← 'interactive' alone skips saving logic
+        plot_type="both",  # ensure saving logic executes
         save_plots="html",
         html_file_path=str(tmp_path),
-        html_file_name="ignored.html",  # Still ignored
+        html_file_name="ignored.html",  # ignored by implementation
         title="Test Save HTML",
     )
 

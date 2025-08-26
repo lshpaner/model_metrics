@@ -3,12 +3,6 @@
 metrics_venv/
 *venv*/
 
-##Images
-
-model_files/images/png_images/
-model_files/images/svg_images/
-
-
 # Distribution / packaging
 .Python
 *_build/
@@ -20,6 +14,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+images/
+model_files/
 parts/
 sdist/
 var/
@@ -48,6 +44,7 @@ __pycache__/
 .Python
 *_build/
 build/
+data/
 develop-eggs/
 dist/
 downloads/
