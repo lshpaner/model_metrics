@@ -160,9 +160,11 @@ def has_feature_importances(model):
 
 
 def summarize_model_performance(
-    model,
-    X,
-    y,
+    model=None,
+    X=None,
+    y_prob=None,
+    y_pred=None,
+    y=None,
     model_type="classification",
     model_threshold=None,
     model_title=None,
@@ -173,89 +175,112 @@ def summarize_model_performance(
     decimal_places=3,
 ):
     """
-    Summarizes model performance metrics, including overall metrics and model
-    coefficients or feature importances based on model type and attributes.
+    Summarize performance metrics for classification or regression models.
 
-    Parameters:
-    -----------
-    model : list or object
-        - A single trained model or a list of trained models.
-        - Supports classification and regression models.
+    This function computes and displays (or returns) key performance metrics
+    for one or more models. It supports classification and regression tasks,
+    and can operate either from model objects with feature data, or directly
+    from provided predictions/probabilities. Outputs include classification
+    metrics, regression metrics, model thresholds, coefficients, and feature
+    importances where applicable.
 
-    X : pd.DataFrame
-        Feature matrix used for evaluation. Must have column names for feature
-        importance calculations if using tree-based models.
+    Parameters
+    ----------
+    model : estimator, list of estimators, or None, default=None
+        A single trained model or a list of models/pipelines.
+        If None, `y_prob` or `y_pred` must be provided.
 
-    y : pd.Series or np.array
-        Target variable.
+    X : array-like or None, default=None
+        Feature matrix used for evaluation. Required if `model` is given
+        without `y_prob`/`y_pred`. Must have column names if feature
+        importance or coefficients are extracted.
 
-    model_type : str, default="classification"
-        Specifies whether the models are classification or regression.
-        - Must be either "classification" or "regression".
+    y_prob : array-like, list of arrays, or None, default=None
+        Predicted probabilities for classification models. Can be used
+        instead of `model` and `X`.
 
-    model_threshold : dict or None, default=None
-        - If provided, contains threshold values for classification models.
-        - Used when custom_threshold is not set.
+    y_pred : array-like, list of arrays, or None, default=None
+        Predicted values for regression models or predicted class labels for
+        classification. Can be used instead of `model` and `X`.
 
-    model_title : str, list of str, pd.Series, or None, default=None
-        Custom model names for display.
-        - If a single string is provided, it is automatically wrapped in a list.
-        - If a Series is provided, it is converted to a list.
-        - If None, default names like "Model_1", "Model_2", etc. are used.
+    y : array-like
+        Ground truth labels or target values.
+
+    model_type : {"classification", "regression"}, default="classification"
+        Type of task. Determines which metrics are computed.
+
+    model_threshold : float, dict, or None, default=None
+        Decision threshold(s) for classification models. Can be a single float
+        applied to all models or a dict keyed by model title or class name.
+        Ignored if `custom_threshold` is set.
+
+    model_title : str, list of str, pandas.Series, or None, default=None
+        Custom model names for display. If None, defaults to "Model_1",
+        "Model_2", etc.
 
     custom_threshold : float or None, default=None
-        - If set, overrides model_threshold and applies a fixed threshold for
-          classification.
-        - When set, the "Model Threshold" row is excluded.
+        Overrides `model_threshold` and applies a fixed threshold across all
+        classification models. When set, the "Model Threshold" row is excluded.
 
     score : str or None, default=None
-        - Custom scoring metric for classification models.
+        Optional scoring metric used when thresholds are resolved from
+        `get_predictions`.
 
     return_df : bool, default=False
-        - If True, returns a DataFrame instead of printing results.
+        If True, returns results as a pandas DataFrame.
+        If False, prints a formatted table.
 
     overall_only : bool, default=False
-        - If True, returns only the "Overall Metrics" row for regression models.
-        - Removes "Variable", "Coefficient", and "Feat. Imp." columns.
-        - Ensures index removal for a clean DataFrame display.
+        For regression models only, if True, only overall metrics are returned
+        without coefficients or feature importances.
 
     decimal_places : int, default=3
-        Number of decimal places to round metrics.
+        Number of decimal places to round results.
 
-    Returns:
-    --------
-    pd.DataFrame or None
-        - If return_df=True, returns a DataFrame containing model performance
-          metrics.
-        - Otherwise, prints the formatted table.
-
-    Raises:
+    Returns
     -------
-    ValueError:
-        - If model_type="classification" and overall_only=True.
-        - If model_type is not "classification" or "regression".
+    pandas.DataFrame or None
+        - If `return_df=True`, returns a DataFrame of metrics.
+        - Otherwise, prints metrics to stdout and returns None.
 
-    Notes:
+    Raises
     ------
-    - For classification models:
-        - Computes precision, recall, specificity, AUC ROC, F1-score,
-          Brier score, etc.
-        - Requires models supporting predict_proba or decision_function.
-
-    - For regression models:
-        - Computes MAE, MAPE, MSE, RMSE, Expl. Var., and R² Score.
-        - Uses statsmodels.OLS to extract coefficients for models with a `coef_`
-          attribute (e.g., linear models like Lasso, LinearRegression).
-        - Uses feature importances for models with a `feature_importances_`
-          attribute (e.g., tree-based models like RandomForestRegressor), displayed
-          in a "Feat. Imp." column.
-
-    - If overall_only=True, the DataFrame will:
-        - Contain only "Overall Metrics".
-        - Drop unnecessary coefficient-related columns ("Variable", "Coefficient",
-          "Feat. Imp.").
-        - Have an empty index to remove the leading row number.
+    ValueError
+        - If `model_type` is not "classification" or "regression".
+        - If `overall_only=True` is used with classification models.
+        - If neither (`model` and `X`) nor (`y_prob` or `y_pred`) are provided.
     """
+
+    if not (
+        (model is not None and X is not None)
+        or y_prob is not None
+        or y_pred is not None
+    ):
+        raise ValueError("You need to provide model and X or y_pred")
+
+    if model is not None and not isinstance(model, list):
+        model = [model]
+
+    if model_type == "classification":
+        if isinstance(y_prob, list) and isinstance(y_prob[0], float):
+            y_probs = [y_prob]
+        else:
+            y_probs = y_prob
+    else:
+        if isinstance(y_pred, list) and isinstance(y_pred[0], float):
+            y_preds = [y_pred]
+        else:
+            y_preds = y_pred
+
+    if model:
+        num_models = len(model)
+    elif y_prob:
+        num_models = len(y_probs)
+    else:
+        num_models = len(y_preds)
+
+    if y_prob is not None or y_pred is not None:
+        model = [None] * num_models
 
     # Check if model is iterable; if not, wrap it in a list
     try:
@@ -293,9 +318,23 @@ def summarize_model_performance(
     for i, model in enumerate(models):
         name = model_title[i]
         if model_type == "classification":
-            y_true, y_prob, y_pred, threshold = get_predictions(
-                model, X, y, model_threshold, custom_threshold, score
-            )
+
+            if X is None:
+                y_true = y
+                y_prob = y_probs[i]
+                threshold = 0.5
+                if custom_threshold:
+                    threshold = custom_threshold
+                if model_threshold:
+                    threshold = model_threshold[name]
+            else:
+                # get y_true and y_prob from your helper, but ignore its threshold
+                y_true, y_prob, _, threshold = get_predictions(
+                    model, X, y, model_threshold, custom_threshold, score
+                )
+
+            # always derive predictions from the resolved threshold
+            y_pred = (np.asarray(y_prob) > float(threshold)).astype(int)
 
             # Compute metrics
             precision = precision_score(y_true, y_pred)
@@ -324,20 +363,25 @@ def summarize_model_performance(
             metrics_data.append(model_metrics)
 
         elif model_type == "regression":
-            # Always add a constant term for all regression models
-            X_with_intercept = sm.add_constant(X)
 
-            if isinstance(model, sm.OLS):
+            if model and isinstance(model, sm.OLS):
+                # Always add a constant term for all regression models
+                X_with_intercept = sm.add_constant(X)
                 # For statsmodels OLS, predict and extract coefficients directly
                 y_pred = model.predict(X_with_intercept)
                 coefficients = pd.Series(model.params.round(decimal_places)).to_dict()
             else:
                 # For scikit-learn models, predict on X_with_intercept, adjusting for intercept
-                try:
-                    y_pred = model.predict(X_with_intercept)
-                except ValueError:
-                    # If the model doesn’t accept the constant, predict on original X
-                    y_pred = model.predict(X)
+                if X is None:
+                    y_pred = y_preds[i]
+                else:
+                    try:
+                        # Always add a constant term for all regression models
+                        X_with_intercept = sm.add_constant(X)
+                        y_pred = model.predict(X_with_intercept)
+                    except ValueError:
+                        # If the model doesn’t accept the constant, predict on original X
+                        y_pred = model.predict(X)
 
                 # Extract coefficients for scikit-learn models
                 if hasattr(model, "coef_") or (
@@ -640,14 +684,15 @@ def summarize_model_performance(
 
 
 ################################################################################
-############################## COnfusion Matrix ################################
+############################## Confusion Matrix ################################
 ################################################################################
 
 
 def show_confusion_matrix(
-    model,
-    X,
-    y,
+    model=None,
+    X=None,
+    y_prob=None,
+    y=None,
     model_title=None,
     title=None,
     model_threshold=None,
@@ -676,33 +721,71 @@ def show_confusion_matrix(
     classification reports. Supports both individual and grid-based plots.
 
     Parameters:
-    - model (estimator): A single model (string) or a list of models/pipelines.
-    - X (array-like): Feature matrix for predictions.
+    - model (estimator or list, optional): A single model or a list of
+      models or pipelines.
+    - X (array-like, optional): Feature matrix for predictions. Required
+      when `model` is provided and `y_prob` is not.
+    - y_prob (array-like or list of array-like, optional): Predicted
+      probabilities for the positive class. Can be provided instead of
+      `model` and `X`.
     - y (array-like): True labels.
-    - model_title (list, optional): Custom titles for models.
-    - model_threshold (float, optional): Threshold for predictions.
-    - custom_threshold (float, optional): User-defined threshold override.
-    - class_labels (list, optional): Custom labels for the confusion matrix.
+    - model_title (str or list of str, optional): Custom titles for models.
+      If a single string is provided it is converted to a list. If None,
+      defaults to "Model 1", "Model 2", etc.
+    - title (str or None, optional): Plot title. If None, a default title
+      including the applied threshold is used. If "", no title is shown.
+    - model_threshold (float or dict, optional): Decision threshold to apply
+      when converting probabilities to class labels. If a dict is provided,
+      it may map by model title or model class name. Ignored if
+      `custom_threshold` is provided.
+    - custom_threshold (float or None, optional): Explicit threshold override
+      applied to all models. If set, it takes precedence over
+      `model_threshold`.
+    - class_labels (list, optional): Custom class names for axis tick labels
+      and display labels.
     - cmap (str, default="Blues"): Colormap for visualization.
-    - save_plot (bool, default=False): Whether to save plots.
+    - save_plot (bool, default=False): Whether to save plots to disk.
     - image_path_png (str, optional): Path to save PNG images.
     - image_path_svg (str, optional): Path to save SVG images.
-    - text_wrap (int, optional): Max title width before wrapping.
-    - figsize (tuple, default=(8,6)): Figure size for each confusion matrix.
-    - labels (bool, default=True): Whether to display TN, FP, FN, TP labels.
-    - label_fontsize (int, default=12): Font size for axis labels.
+    - text_wrap (int, optional): Maximum width for wrapping long titles.
+    - figsize (tuple, default=(8, 6)): Figure size for each confusion matrix.
+    - labels (bool, default=True): Whether to show TN, FP, FN, TP text
+      labels inside the cells.
+    - label_fontsize (int, default=12): Font size for axis labels and titles.
     - tick_fontsize (int, default=10): Font size for tick labels.
-    - inner_fontsize (int, default=10): Font size for matrix values.
-    - grid (bool, default=False): Whether to display multiple plots in a grid.
-    - score (str, optional): Metric to optimize when selecting a threshold.
-    - class_report (bool, default=False): Whether to print classification reports.
-    - **kwargs: Additional options for plot customization.
+    - inner_fontsize (int, default=10): Font size for numbers inside cells.
+    - grid (bool, default=False): If True, display multiple plots in a grid
+      layout.
+    - score (str, optional): Metric name used by threshold selection when
+      predictions are derived via `get_predictions`.
+    - class_report (bool, default=False): If True, print the scikit-learn
+      classification report for each model.
+    - **kwargs: Additional options.
+        - n_cols (int, optional): Number of columns when `grid=True`.
+        - show_colorbar (bool, optional): Whether to show the colorbar.
 
     Returns:
     - None
+
+    Raises:
+    - ValueError: If neither (`model` and `X`) nor `y_prob` is provided.
     """
-    if not isinstance(model, list):
+
+    if not ((model is not None and X is not None) or y_prob is not None):
+        raise ValueError("You need to provide model and X or y_prob")
+
+    if model is not None and not isinstance(model, list):
         model = [model]
+
+    if isinstance(y_prob, list) and isinstance(y_prob[0], float):
+        y_probs = [y_prob]
+    else:
+        y_probs = y_prob
+
+    num_models = len(model) if model else len(y_probs)
+
+    if y_prob is not None:
+        model = [None] * num_models
 
     # Normalize model_title input
     if model_title is None:
@@ -730,15 +813,26 @@ def show_confusion_matrix(
         else:
             name = extract_model_name(m)
 
-        y_true, _, y_pred, threshold = get_predictions(
-            m,
-            X,
-            y,
-            model_threshold,
-            custom_threshold,
-            score,
-        )
-
+        if X is None:
+            y_true = y
+            y_prob = y_probs[idx]
+            threshold = 0.5
+            if custom_threshold:
+                threshold = custom_threshold
+            if model_threshold:
+                threshold = model_threshold[name]
+            y_pred = (np.asarray(y_prob) > float(threshold)).astype(int)
+        else:
+            print("here")
+            y_true, _, y_pred, threshold = get_predictions(
+                m,
+                X,
+                y,
+                model_threshold,
+                custom_threshold,
+                score,
+            )
+            print(threshold)
         # Compute confusion matrix
         cm = confusion_matrix(y_true, y_pred)
 
@@ -922,9 +1016,10 @@ def show_confusion_matrix(
 
 
 def show_roc_curve(
-    model,
-    X,
-    y,
+    model=None,
+    X=None,
+    y_prob=None,
+    y=None,
     xlabel="False Positive Rate",
     ylabel="True Positive Rate",
     model_title=None,
@@ -958,6 +1053,8 @@ def show_roc_curve(
         `decision_function()`.
     - X: array-like
         Feature data for prediction, typically a pandas DataFrame or NumPy array.
+    - y_prob (array-like or list of array-like, optional): Predicted probabilities.
+      Can be provided instead of model and X.
     - y: array-like
         True binary labels for evaluation,(e.g., a pandas Series or NumPy array).
     - model_title: str or list of str, optional
@@ -1022,14 +1119,23 @@ def show_roc_curve(
             `grid=True` and `group_category` is provided, if `overlay=True` and
             `group_category` is provided, or if `overlay=True` and only one
             model is provided.
-    Notes:
-    - When `group_category` is provided, the legend includes AUC, total count,
-      and positive/negative class counts for each group (e.g., "AUC = 0.XX,
-      Count: Total: X, Pos: Y, Neg: Z").
-    - The random guess line (diagonal line at y=x) is plotted for reference.
-    - Titles can be customized, disabled with `title=""`, or default to
-      "ROC Curve: Model Name" or "ROC Curves: Overlay" if not specified.
     """
+
+    if not ((model is not None and X is not None) or y_prob is not None):
+        raise ValueError("You need to provide model and X or y_pred")
+
+    if model is not None and not isinstance(model, list):
+        model = [model]
+
+    if isinstance(y_prob, list) and isinstance(y_prob[0], float):
+        y_probs = [y_prob]
+    else:
+        y_probs = y_prob
+
+    num_models = len(model) if model else len(y_probs)
+
+    if y_prob is not None:
+        model = [None] * num_models
 
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
@@ -1094,14 +1200,19 @@ def show_roc_curve(
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
-        y_true, y_prob, _, _ = get_predictions(
-            mod,
-            X,
-            y,
-            None,
-            None,
-            None,
-        )
+
+        if X is None:
+            y_true = y
+            y_prob = y_probs[idx]
+        else:
+            y_true, y_prob, _, _ = get_predictions(
+                mod,
+                X,
+                y,
+                None,
+                None,
+                None,
+            )
 
         if group_category is not None:
             fpr = {}
@@ -1294,9 +1405,10 @@ def show_roc_curve(
 
 
 def show_pr_curve(
-    model,
-    X,
-    y,
+    model=None,
+    X=None,
+    y_prob=None,
+    y=None,
     xlabel="Recall",
     ylabel="Precision",
     model_title=None,
@@ -1330,6 +1442,8 @@ def show_pr_curve(
         `decision_function()`.
     - X: array-like
         Feature data for prediction, typically a pandas DataFrame or NumPy array.
+    - y_prob (array-like or list of array-like, optional): Predicted probabilities.
+      Can be provided instead of model and X.
     - y: array-like
         True binary labels for evaluation (e.g., a pandas Series or NumPy array).
     - group_category: array-like, optional
@@ -1390,16 +1504,23 @@ def show_pr_curve(
         - If `legend_metric` is not one of {"ap", "aucpr"}.
     - TypeError:
         - If `model_title` is not a string, list of strings, or None.
-
-    Notes:
-    - When `group_category` is provided, separate PR curves are drawn per group.
-      The legend includes the selected precision metric (AP or AUCPR),
-      total count, and positive/negative class distribution.
-    - A reference baseline is drawn (constant precision equal to the positive
-      class ratio).
-    - Titles can be fully customized or disabled by passing an empty string "".
-    - Output plots can be exported to PNG and/or SVG if `save_plot=True`.
     """
+
+    if not ((model is not None and X is not None) or y_prob is not None):
+        raise ValueError("You need to provide model and X or y_pred")
+
+    if model is not None and not isinstance(model, list):
+        model = [model]
+
+    if isinstance(y_prob, list) and isinstance(y_prob[0], float):
+        y_probs = [y_prob]
+    else:
+        y_probs = y_prob
+
+    num_models = len(model) if model else len(y_probs)
+
+    if y_prob is not None:
+        model = [None] * num_models
 
     # Validate legend_metric
     valid_metrics = ["ap", "aucpr"]
@@ -1457,14 +1578,19 @@ def show_pr_curve(
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
-        y_true, y_prob, _, _ = get_predictions(
-            mod,
-            X,
-            y,
-            None,
-            None,
-            None,
-        )
+
+        if X is None:
+            y_true = y
+            y_prob = y_probs[idx]
+        else:
+            y_true, y_prob, _, _ = get_predictions(
+                mod,
+                X,
+                y,
+                None,
+                None,
+                None,
+            )
 
         counts = {}
         if group_category is not None:
@@ -1683,9 +1809,10 @@ def show_pr_curve(
 
 
 def show_lift_chart(
-    model,
-    X,
-    y,
+    model=None,
+    X=None,
+    y_prob=None,
+    y=None,
     xlabel="Percentage of Sample",
     ylabel="Lift",
     model_title=None,
@@ -1715,6 +1842,8 @@ def show_lift_chart(
     Parameters:
     - model (list or estimator): One or more trained models.
     - X (array-like): Feature matrix.
+    - y_prob (array-like or list of array-like, optional): Predicted probabilities.
+      Can be provided instead of model and X.
     - y (array-like): True labels.
     - xlabel (str, default="Percentage of Sample"): Label for the x-axis.
     - ylabel (str, default="Lift"): Label for the y-axis.
@@ -1741,6 +1870,22 @@ def show_lift_chart(
     Returns:
     - None
     """
+
+    if not ((model is not None and X is not None) or y_prob is not None):
+        raise ValueError("You need to provide model and X or y_pred")
+
+    if model is not None and not isinstance(model, list):
+        model = [model]
+
+    if isinstance(y_prob, list) and isinstance(y_prob[0], float):
+        y_probs = [y_prob]
+    else:
+        y_probs = y_prob
+
+    num_models = len(model) if model else len(y_probs)
+
+    if y_prob is not None:
+        model = [None] * num_models
 
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
@@ -1778,8 +1923,13 @@ def show_lift_chart(
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
-        y_probs = mod.predict_proba(X)[:, 1]
-        sorted_indices = np.argsort(y_probs)[::-1]
+
+        if X is None:
+            y_prob = y_probs[idx]
+        else:
+            y_prob = mod.predict_proba(X)[:, 1]
+
+        sorted_indices = np.argsort(y_prob)[::-1]
         y_true_sorted = np.array(y)[sorted_indices]
 
         cumulative_gains = np.cumsum(y_true_sorted) / np.sum(y_true_sorted)
@@ -1907,9 +2057,10 @@ def show_lift_chart(
 
 
 def show_gain_chart(
-    model,
-    X,
-    y,
+    model=None,
+    X=None,
+    y_prob=None,
+    y=None,
     xlabel="Percentage of Sample",
     ylabel="Cumulative Gain",
     model_title=None,
@@ -1939,6 +2090,8 @@ def show_gain_chart(
     Parameters:
     - model (list or estimator): One or more trained models.
     - X (array-like): Feature matrix.
+    - y_prob (array-like or list of array-like, optional): Predicted probabilities.
+      Can be provided instead of model and X.
     - y (array-like): True labels.
     - xlabel (str, default="Percentage of Sample"): Label for the x-axis.
     - ylabel (str, default="Cumulative Gain"): Label for the y-axis.
@@ -1965,6 +2118,22 @@ def show_gain_chart(
     Returns:
     - None
     """
+
+    if not ((model is not None and X is not None) or y_prob is not None):
+        raise ValueError("You need to provide model and X or y_pred")
+
+    if model is not None and not isinstance(model, list):
+        model = [model]
+
+    if isinstance(y_prob, list) and isinstance(y_prob[0], float):
+        y_probs = [y_prob]
+    else:
+        y_probs = y_prob
+
+    num_models = len(model) if model else len(y_probs)
+
+    if y_prob is not None:
+        model = [None] * num_models
 
     if overlay and grid:
         raise ValueError("`grid` cannot be set to True when `overlay` is True.")
@@ -2002,8 +2171,12 @@ def show_gain_chart(
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
-        y_probs = mod.predict_proba(X)[:, 1]
-        sorted_indices = np.argsort(y_probs)[::-1]
+        if X is None:
+            y_prob = y_probs[idx]
+        else:
+            y_prob = mod.predict_proba(X)[:, 1]
+
+        sorted_indices = np.argsort(y_prob)[::-1]
         y_true_sorted = np.array(y)[sorted_indices]
 
         cumulative_gains = np.cumsum(y_true_sorted) / np.sum(y_true_sorted)
@@ -2132,9 +2305,10 @@ def show_gain_chart(
 
 
 def show_calibration_curve(
-    model,
-    X,
-    y,
+    model=None,
+    X=None,
+    y_prob=None,
+    y=None,
     xlabel="Mean Predicted Probability",
     ylabel="Fraction of Positives",
     model_title=None,
@@ -2170,6 +2344,8 @@ def show_calibration_curve(
     Parameters:
     - model (estimator or list): One or more trained classification models.
     - X (array-like): Feature matrix used for prediction.
+    - y_prob (array-like or list of array-like, optional): Predicted probabilities.
+      Can be provided instead of model and X.
     - y (array-like): True binary target labels.
     - xlabel (str, default="Mean Predicted Probability"): Label for the x-axis.
     - ylabel (str, default="Fraction of Positives"): Label for the y-axis.
@@ -2207,6 +2383,22 @@ def show_calibration_curve(
     Returns:
     - None
     """
+
+    if not ((model is not None and X is not None) or y_prob is not None):
+        raise ValueError("You need to provide model and X or y_pred")
+
+    if model is not None and not isinstance(model, list):
+        model = [model]
+
+    if isinstance(y_prob, list) and isinstance(y_prob[0], float):
+        y_probs = [y_prob]
+    else:
+        y_probs = y_prob
+
+    num_models = len(model) if model else len(y_probs)
+
+    if y_prob is not None:
+        model = [None] * num_models
 
     # Error checks for incompatible display modes
     if overlay and grid:
@@ -2258,15 +2450,18 @@ def show_calibration_curve(
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
-        y_true, y_prob, _, _ = get_predictions(
-            mod,
-            X,
-            y,
-            None,
-            None,
-            None,
-        )
-
+        if X is None:
+            y_true = y
+            y_prob = y_probs[idx]
+        else:
+            y_true, y_prob, _, _ = get_predictions(
+                mod,
+                X,
+                y,
+                None,
+                None,
+                None,
+            )
         # Handle single-column (y_true) DataFrame
         if isinstance(y_true, pd.DataFrame) and y_true.shape[1] == 1:
             y_true = y_true.iloc[:, 0]
@@ -2530,9 +2725,10 @@ def show_calibration_curve(
 
 
 def plot_threshold_metrics(
-    model,
-    X_test,
-    y_test,
+    model=None,
+    X_test=None,
+    y_test=None,
+    y_prob=None,
     title=None,
     text_wrap=None,
     figsize=(8, 6),
@@ -2542,6 +2738,7 @@ def plot_threshold_metrics(
     baseline_thresh=True,
     curve_kwgs=None,
     baseline_kwgs=None,
+    threshold_kwgs=None,
     lookup_kwgs=None,
     save_plot=False,
     image_path_png=None,
@@ -2549,42 +2746,118 @@ def plot_threshold_metrics(
     lookup_metric=None,
     lookup_value=None,
     decimal_places=4,
+    model_threshold=None,
 ):
     """
-    Plot Precision, Recall, F1 Score, and Specificity vs. Thresholds for a model.
-    Allows finding the best threshold for a given precision, recall, F1-score,
-    or specificity.
+    Plot Precision, Recall, F1 Score, and Specificity vs. decision thresholds.
 
-    Parameters:
-    - model: A trained model that supports `predict_proba`.
-    - X_test: Feature matrix for testing.
-    - y_test: True binary labels.
-    - title: Custom title for the plot (default: None).
-    - text_wrap: Maximum width for title text before wrapping (default: None).
-    - figsize: Tuple specifying figure size (default: (10, 6)).
-    - label_fontsize: Font size for axis labels and title (default: 12).
-    - tick_fontsize: Font size for tick labels (default: 10).
-    - gridlines: Boolean flag to display gridlines (default: True).
-    - baseline_thresh: Boolean flag to display baseline threshold on plot.
-    - curve_kwgs: Dictionary of keyword arguments for curve styling
-      (default: None).
-    - baseline_kwgs: Dictionary of keyword arguments for baseline styling
-      (default: None).
-    - lookup_kwgs: Dictionary of keyword arguments for styling the lookup
-      threshold line (e.g., {"linestyle": "--", "color": "orange",
-      "linewidth": 2}). Default is gray dashed line.
-    - save_plot: Boolean flag to save the plot (default: False).
-    - image_path_png: Path to save the plot as a PNG image (default: None).
-    - image_path_svg: Path to save the plot as an SVG image (default: None).
-    - lookup_metric: Metric to find the best threshold for ("precision",
-      "recall", "f1", "specificity").
-    - lookup_value: Desired value for the chosen lookup metric (default: None).
-    - decimal_places: Number of decimal places for numerical outputs except axes
-      (default: 4).
+    This function evaluates threshold-dependent classification metrics
+    (Precision, Recall, F1 Score, Specificity) across the range of possible
+    thresholds, optionally highlighting baseline, model-specified, or custom
+    lookup thresholds.
+
+    Parameters
+    ----------
+    model : estimator, optional
+        A trained model that supports `predict_proba`. Required if `y_prob`
+        is not provided.
+
+    X_test : array-like, optional
+        Feature matrix for testing. Required if `model` is provided.
+
+    y_test : array-like of shape (n_samples,)
+        True binary labels. Required.
+
+    y_prob : array-like, optional
+        Predicted probabilities for the positive class. Can be provided
+        instead of `model` and `X_test`.
+
+    title : str or None, default=None
+        Title for the plot. If None, a default title is shown.
+        If `""`, no title is displayed.
+
+    text_wrap : int, optional
+        Maximum width of the title before wrapping onto multiple lines.
+
+    figsize : tuple, default=(8, 6)
+        Size of the matplotlib figure.
+
+    label_fontsize : int, default=12
+        Font size for axis labels and title.
+
+    tick_fontsize : int, default=10
+        Font size for tick labels.
+
+    gridlines : bool, default=True
+        Whether to display gridlines.
+
+    baseline_thresh : bool, default=True
+        If True, draws a vertical reference line at threshold = 0.5.
+
+    curve_kwgs : dict, optional
+        Keyword arguments passed to all metric curves
+        (e.g., {"linestyle": "-", "linewidth": 1}).
+
+    baseline_kwgs : dict, optional
+        Keyword arguments for styling the baseline threshold line
+        (default: black dotted line).
+
+    threshold_kwgs : dict, optional
+        Keyword arguments for styling the model threshold line when
+        `model_threshold` is provided (default: black dotted line).
+
+    lookup_kwgs : dict, optional
+        Keyword arguments for styling the lookup threshold line when
+        `lookup_metric` and `lookup_value` are provided
+        (default: gray dashed line).
+
+    save_plot : bool, default=False
+        If True, saves the plot to disk.
+
+    image_path_png : str, optional
+        Path to save the plot as a PNG image.
+
+    image_path_svg : str, optional
+        Path to save the plot as an SVG image.
+
+    lookup_metric : {"precision", "recall", "f1", "specificity"}, optional
+        Metric for which to locate the threshold closest to `lookup_value`.
+
+    lookup_value : float, optional
+        Target value of the lookup metric. Must be provided together with
+        `lookup_metric`.
+
+    decimal_places : int, default=4
+        Number of decimal places for reported thresholds.
+
+    model_threshold : float, optional
+        A model-specific threshold to highlight with a vertical line. Useful
+        if the model uses a threshold other than 0.5 for predictions.
+
+    Raises
+    ------
+    ValueError
+        If `y_test` is not provided.
+    ValueError
+        If neither (`model` and `X_test`) nor `y_prob` is provided.
+    ValueError
+        If only one of `lookup_metric` or `lookup_value` is provided.
+
+    Returns
+    -------
+    None
+        Displays the threshold metrics plot and optionally saves it to disk.
     """
 
     curve_kwgs = curve_kwgs or {"linestyle": "-", "linewidth": 1}
     baseline_kwgs = baseline_kwgs or {
+        "linestyle": ":",
+        "linewidth": 1.5,
+        "color": "black",
+        "alpha": 0.7,
+    }
+
+    threshold_kwgs = threshold_kwgs or {
         "linestyle": ":",
         "linewidth": 1.5,
         "color": "black",
@@ -2598,15 +2871,24 @@ def plot_threshold_metrics(
         "alpha": 0.7,
     }
 
-    # Use get_predictions instead of model.predict_proba
-    _, y_pred_probs, _, _ = get_predictions(
-        model,
-        X_test,
-        y_test,
-        None,
-        None,
-        None,
-    )
+    if y_test is None:
+        raise ValueError("y_test is required.")
+    if not (((model is not None) and (X_test is not None)) or (y_prob is not None)):
+        raise ValueError(
+            "Provide model and X_test with y_test, or provide y_prob with y_test."
+        )
+
+    if y_prob is None:
+        _, y_pred_probs, _, _ = get_predictions(
+            model,
+            X_test,
+            y_test,
+            None,
+            None,
+            None,
+        )
+    else:
+        y_pred_probs = y_prob
 
     # Calculate Precision, Recall, and F1 Score for various thresholds
     precision, recall, thresholds = precision_recall_curve(
@@ -2703,6 +2985,13 @@ def plot_threshold_metrics(
             **lookup_kwgs,
         )
 
+    if model_threshold is not None:
+        ax.axvline(
+            x=model_threshold,
+            **threshold_kwgs,
+            label=f"Model Threshold: {round(model_threshold, decimal_places)}",
+        )
+
     # Apply labels, legend, and formatting
     ax.set_xlabel("Thresholds", fontsize=label_fontsize)
     ax.set_ylabel("Metrics", fontsize=label_fontsize)
@@ -2710,15 +2999,18 @@ def plot_threshold_metrics(
     ax.grid(visible=gridlines)
 
     # Apply title with text wrapping if provided
-    if title:
-        if text_wrap:
-            title = "\n".join(textwrap.wrap(title, width=text_wrap))
-        ax.set_title(title, fontsize=label_fontsize)
-    else:
+    if title is None:
         ax.set_title(
             "Precision, Recall, F1 Score, Specificity vs. Thresholds",
             fontsize=label_fontsize,
         )
+    elif title != "":
+        if text_wrap:
+            title_wrapped = "\n".join(textwrap.wrap(title, width=text_wrap))
+            ax.set_title(title_wrapped, fontsize=label_fontsize)
+        else:
+            ax.set_title(title, fontsize=label_fontsize)
+    # if title == "", no title at all
 
     ax.legend(
         loc="upper center",
