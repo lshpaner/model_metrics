@@ -823,7 +823,6 @@ def show_confusion_matrix(
                 threshold = model_threshold[name]
             y_pred = (np.asarray(y_prob) > float(threshold)).astype(int)
         else:
-            print("here")
             y_true, _, y_pred, threshold = get_predictions(
                 m,
                 X,
@@ -832,7 +831,6 @@ def show_confusion_matrix(
                 custom_threshold,
                 score,
             )
-            print(threshold)
         # Compute confusion matrix
         cm = confusion_matrix(y_true, y_pred)
 
