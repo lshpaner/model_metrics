@@ -708,7 +708,7 @@ def show_confusion_matrix(
     label_fontsize=12,
     tick_fontsize=10,
     inner_fontsize=10,
-    subplots=False,  # Added subplots option
+    subplots=False,
     score=None,
     class_report=False,
     **kwargs,
@@ -1030,12 +1030,12 @@ def show_roc_curve(
     text_wrap=None,
     curve_kwgs=None,
     linestyle_kwgs=None,
-    subplots=False,  # Subplot layout option
+    subplots=False,
     n_rows=None,
-    n_cols=2,  # Number of columns for the subplot grid
-    figsize=(8, 6),  # User-defined figure size
-    label_fontsize=12,  # Font size for title and axis labels
-    tick_fontsize=10,  # Font size for tick labels and legend
+    n_cols=2,
+    figsize=(8, 6),
+    label_fontsize=12,
+    tick_fontsize=10,
     gridlines=True,
     group_category=None,
 ):
@@ -1380,7 +1380,7 @@ def show_roc_curve(
             )
         else:
             plt.legend(loc="lower right", fontsize=tick_fontsize)
-        plt.grid()
+        plt.grid(visible=gridlines)
         save_plot_images(
             "overlay_roc_auc_plot",
             save_plot,
@@ -1779,7 +1779,7 @@ def show_pr_curve(
             )
         else:
             plt.legend(loc="lower left", fontsize=tick_fontsize)
-        plt.grid()
+        plt.grid(visible=gridlines)
         save_plot_images(
             "overlay_pr_plot",
             save_plot,
