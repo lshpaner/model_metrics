@@ -708,7 +708,7 @@ def show_confusion_matrix(
     label_fontsize=12,
     tick_fontsize=10,
     inner_fontsize=10,
-    grid=False,  # Added grid option
+    subplots=False,
     score=None,
     class_report=False,
     **kwargs,
@@ -718,7 +718,7 @@ def show_confusion_matrix(
 
     This function computes confusion matrices for classifiers and visualizes
     them with customizable formatting, threshold adjustments, and optional
-    classification reports. Supports both individual and grid-based plots.
+    classification reports. Supports both individual and subplot-based plots.
 
     Parameters:
     - model (estimator or list, optional): A single model or a list of
@@ -754,14 +754,14 @@ def show_confusion_matrix(
     - label_fontsize (int, default=12): Font size for axis labels and titles.
     - tick_fontsize (int, default=10): Font size for tick labels.
     - inner_fontsize (int, default=10): Font size for numbers inside cells.
-    - grid (bool, default=False): If True, display multiple plots in a grid
-      layout.
+    - subplots (bool, default=False): If True, display multiple plots in a
+      subplot layout.
     - score (str, optional): Metric name used by threshold selection when
       predictions are derived via `get_predictions`.
     - class_report (bool, default=False): If True, print the scikit-learn
       classification report for each model.
     - **kwargs: Additional options.
-        - n_cols (int, optional): Number of columns when `grid=True`.
+        - n_cols (int, optional): Number of columns when `subplots=True`.
         - show_colorbar (bool, optional): Whether to show the colorbar.
 
     Returns:
@@ -795,8 +795,8 @@ def show_confusion_matrix(
     elif not isinstance(model_title, list):
         raise TypeError("model_title must be a string, a list of strings, or None.")
 
-    # Setup grid if enabled
-    if grid:
+    # Setup subplots if enabled
+    if subplots:
         n_cols = kwargs.get("n_cols", 2)
         n_rows = (len(model) + n_cols - 1) // n_cols
         _, axes = plt.subplots(
@@ -867,7 +867,7 @@ def show_confusion_matrix(
                 confusion_matrix=cm, display_labels=["0", "1"]
             )
         show_colorbar = kwargs.get("show_colorbar", True)
-        if grid:
+        if subplots:
             if "colorbar" in disp.plot.__code__.co_varnames:
                 disp.plot(cmap=cmap, ax=ax, colorbar=show_colorbar)
             else:
@@ -986,7 +986,7 @@ def show_confusion_matrix(
                     color="white" if luminance < 0.5 else "black",
                 )
 
-        if not grid:
+        if not subplots:
             save_plot_images(
                 f"confusion_matrix_{name}",
                 save_plot,
@@ -995,7 +995,7 @@ def show_confusion_matrix(
             )
             plt.show()
 
-    if grid:
+    if subplots:
         for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
@@ -1030,18 +1030,18 @@ def show_roc_curve(
     text_wrap=None,
     curve_kwgs=None,
     linestyle_kwgs=None,
-    grid=False,  # Grid layout option
+    subplots=False,
     n_rows=None,
-    n_cols=2,  # Number of columns for the grid
-    figsize=(8, 6),  # User-defined figure size
-    label_fontsize=12,  # Font size for title and axis labels
-    tick_fontsize=10,  # Font size for tick labels and legend
+    n_cols=2,
+    figsize=(8, 6),
+    label_fontsize=12,
+    tick_fontsize=10,
     gridlines=True,
     group_category=None,
 ):
     """
     Plot Receiver Operating Characteristic (ROC) curves for models or pipelines
-    with optional styling, grid layout, and grouping by categories, including
+    with optional styling, subplot layout, and grouping by categories, including
     class counts in the legend.
 
     Parameters:
@@ -1071,7 +1071,7 @@ def show_roc_curve(
         Whether to overlay multiple models on a single plot (default: False).
     - title: str, optional
         Custom title for the plot when `overlay=True` or per-model title when
-        `grid=True`. If None, uses a default title; if "", disables the title.
+        `subplots=True`. If None, uses a default title; if "", disables the title.
     - save_plot: bool, optional
         Whether to save the plot to the specified paths (default: False).
     - image_path_png: str, optional
@@ -1089,17 +1089,17 @@ def show_roc_curve(
     - linestyle_kwgs: dict, optional
         Styling for the random guess diagonal line (default: {'color': 'gray',
         'linestyle': '--', 'linewidth': 2}).
-    - grid: bool, optional
-        Whether to organize plots in a grid layout (default: False). Cannot be
+    - subplots: bool, optional
+        Whether to organize plots in a subplot layout (default: False). Cannot be
         True if `overlay=True`.
     - n_rows: int, optional
-        Number of rows in the grid layout. If not specified, calculated
+        Number of rows in the subplot layout. If not specified, calculated
         automatically based on the number of models and `n_cols`.
     - n_cols: int, optional
-        Number of columns in the grid layout (default: 2).
+        Number of columns in the subplot layout (default: 2).
     - figsize: tuple, optional
         Custom figure size (width, height) for the plot(s) (default: None, uses
-        (8, 6) for overlay or calculated size for grid).
+        (8, 6) for overlay or calculated size for subplots).
     - label_fontsize: int, optional
         Font size for titles and axis labels (default: 12).
     - tick_fontsize: int, optional
@@ -1108,14 +1108,14 @@ def show_roc_curve(
         Whether to display grid lines on the plot (default: True).
     - group_category: array-like, optional
         Categorical data (e.g., pandas Series or NumPy array) to group ROC curves
-        by unique values. Cannot be used with `grid=True` or `overlay=True`.
+        by unique values. Cannot be used with `subplots=True` or `overlay=True`.
         If provided, separate ROC curves are plotted for each group, with AUC
         and class counts (Total, Pos, Neg) shown in the legend.
 
     Raises:
-        - ValueError: If `grid=True` and `overlay=True` are both set, if
-            `grid=True` and `group_category` is provided, if `overlay=True` and
-            `group_category` is provided, or if `overlay=True` and only one
+        - ValueError: If `subplots=True` and `overlay=True` are both set, if
+            `subplots=True` and `group_category` is provided, if `overlay=True`
+            and `group_category` is provided, or if `overlay=True` and only one
             model is provided.
     """
 
@@ -1135,13 +1135,13 @@ def show_roc_curve(
     if y_prob is not None:
         model = [None] * num_models
 
-    if overlay and grid:
-        raise ValueError("`grid` cannot be set to True when `overlay` is True.")
+    if overlay and subplots:
+        raise ValueError("`subplots` cannot be set to True when `overlay` is True.")
 
-    if grid and group_category is not None:
+    if subplots and group_category is not None:
         raise ValueError(
-            f"`grid` cannot be set to True when `group_category` is provided. "
-            f"When selecting `group_category`, make sure `grid` and `overlay` "
+            f"`subplots` cannot be set to True when `group_category` is provided. "
+            f"When selecting `group_category`, make sure `subplots` and `overlay` "
             f"are set to `False`."
         )
 
@@ -1155,7 +1155,7 @@ def show_roc_curve(
     if overlay and group_category is not None:
         raise ValueError(
             f"`overlay` cannot be set to True when `group_category` is "
-            f"provided. When selecting `group_category`, make sure `grid` and "
+            f"provided. When selecting `group_category`, make sure `subplots` and "
             f"`overlay` are set to `False`."
         )
 
@@ -1187,7 +1187,7 @@ def show_roc_curve(
     if overlay:
         plt.figure(figsize=figsize or (8, 6))
 
-    if grid and not overlay:
+    if subplots and not overlay:
         if n_rows is None:
             n_rows = math.ceil(len(model) / n_cols)
         _, axes = plt.subplots(
@@ -1244,7 +1244,7 @@ def show_roc_curve(
                 label=f"{name} (AUC = {auc_str})",
                 **curve_style,
             )
-        elif grid:
+        elif subplots:
             ax = axes[idx]
             if group_category is not None:
                 for gr in tpr:
@@ -1380,7 +1380,7 @@ def show_roc_curve(
             )
         else:
             plt.legend(loc="lower right", fontsize=tick_fontsize)
-        plt.grid()
+        plt.grid(visible=gridlines)
         save_plot_images(
             "overlay_roc_auc_plot",
             save_plot,
@@ -1389,7 +1389,7 @@ def show_roc_curve(
         )
         plt.show()
 
-    elif grid:
+    elif subplots:
         for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
@@ -1418,7 +1418,7 @@ def show_pr_curve(
     image_path_svg=None,
     text_wrap=None,
     curve_kwgs=None,
-    grid=False,
+    subplots=False,
     n_rows=None,
     n_cols=2,
     figsize=(8, 6),
@@ -1430,8 +1430,8 @@ def show_pr_curve(
 ):
     """
     Plot Precision-Recall (PR) curves for models or pipelines with optional
-    styling, grid layout, and grouping by categories, including class counts
-    and selected legend metrics.
+    styling, subplot grid layout, and grouping by categories, including class
+    counts and selected legend metrics.
 
     Parameters:
     - model: estimator or list of estimators
@@ -1475,14 +1475,14 @@ def show_pr_curve(
     - curve_kwgs: list or dict, optional
         Styling for PR curves. Can be a list of dicts or a nested dict
         keyed by model title.
-    - grid: bool, optional
+    - subplots: bool, optional
         Whether to organize the PR plots in a subplot grid layout. Cannot be
         used with `overlay=True` or `group_category`.
     - n_rows: int, optional
-        Number of rows in the grid layout. If not specified, calculated
+        Number of rows in the subplot layout. If not specified, calculated
         automatically.
     - n_cols: int, optional
-        Number of columns in the grid layout. Defaults to 2.
+        Number of columns in the subplot layout. Defaults to 2.
     - figsize: tuple, optional
         Figure size in inches (width, height). Defaults to (8, 6).
     - label_fontsize: int, optional
@@ -1497,8 +1497,8 @@ def show_pr_curve(
 
     Raises:
     - ValueError:
-        - If `grid=True` and `overlay=True` are both set.
-        - If `group_category` is used with `grid=True` or `overlay=True`.
+        - If `subplots=True` and `overlay=True` are both set.
+        - If `group_category` is used with `subplots=True` or `overlay=True`.
         - If `legend_metric` is not one of {"ap", "aucpr"}.
     - TypeError:
         - If `model_title` is not a string, list of strings, or None.
@@ -1527,20 +1527,20 @@ def show_pr_curve(
             f"`legend_metric` must be one of {valid_metrics}, got {legend_metric}"
         )
 
-    if overlay and grid:
-        raise ValueError("`grid` cannot be set to True when `overlay` is True.")
+    if overlay and subplots:
+        raise ValueError("`subplots` cannot be set to True when `overlay` is True.")
 
-    if grid and group_category is not None:
+    if subplots and group_category is not None:
         raise ValueError(
-            f"`grid` cannot be set to True when `group_category` is provided. "
-            f"When selecting `group_category`, make sure `grid` and `overlay` "
+            f"`subplots` cannot be set to True when `group_category` is provided. "
+            f"When selecting `group_category`, make sure `subplots` and `overlay` "
             f"are set to `False`."
         )
 
     if overlay and group_category is not None:
         raise ValueError(
             f"`overlay` cannot be set to True when `group_category` is "
-            f"provided. When selecting `group_category`, make sure `grid` and "
+            f"provided. When selecting `group_category`, make sure `subplots` and "
             f"`overlay` are set to `False`."
         )
 
@@ -1565,7 +1565,7 @@ def show_pr_curve(
     if overlay:
         plt.figure(figsize=figsize or (8, 6))
 
-    if grid and not overlay:
+    if subplots and not overlay:
         if n_rows is None:
             n_rows = math.ceil(len(model) / n_cols)
         _, axes = plt.subplots(
@@ -1636,7 +1636,7 @@ def show_pr_curve(
                 label=f"{name} ({metric_label} = {metric_str})",
                 **curve_style,
             )
-        elif grid:
+        elif subplots:
             ax = axes[idx]
             if group_category is not None:
                 for gr in group_category.unique():
@@ -1779,7 +1779,7 @@ def show_pr_curve(
             )
         else:
             plt.legend(loc="lower left", fontsize=tick_fontsize)
-        plt.grid()
+        plt.grid(visible=gridlines)
         save_plot_images(
             "overlay_pr_plot",
             save_plot,
@@ -1788,7 +1788,7 @@ def show_pr_curve(
         )
         plt.show()
 
-    elif grid:
+    elif subplots:
         for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
@@ -1822,7 +1822,7 @@ def show_lift_chart(
     text_wrap=None,
     curve_kwgs=None,
     linestyle_kwgs=None,
-    grid=False,
+    subplots=False,
     n_cols=2,
     n_rows=None,
     figsize=None,
@@ -1835,7 +1835,8 @@ def show_lift_chart(
 
     A Lift chart measures the effectiveness of a predictive model by comparing
     the lift of positive instances in sorted predictions versus random selection.
-    Supports multiple models with overlay or grid layouts and customizable styling.
+    Supports multiple models with overlay or subplots layouts and customizable
+    styling.
 
     Parameters:
     - model (list or estimator): One or more trained models.
@@ -1854,16 +1855,16 @@ def show_lift_chart(
     - text_wrap (int, optional): Maximum title width before wrapping.
     - curve_kwgs (dict or list, optional): Styling options for model curves.
     - linestyle_kwgs (dict, optional): Styling options for the baseline.
-    - grid (bool, default=False): Display multiple plots in a grid layout.
-    - n_cols (int, default=2): Number of columns in the grid layout.
-    - n_rows (int, optional): Number of rows in the grid layout.
+    - subplots (bool, default=False): Display multiple plots in a subplot layout.
+    - n_cols (int, default=2): Number of columns in the subplot layout.
+    - n_rows (int, optional): Number of rows in the subplot layout.
     - figsize (tuple, optional): Figure size.
     - label_fontsize (int, default=12): Font size for axis labels.
     - tick_fontsize (int, default=10): Font size for tick labels.
     - gridlines (bool, default=True): Whether to show grid lines.
 
     Raises:
-    - ValueError: If `grid=True` and `overlay=True` are both set.
+    - ValueError: If `subplots=True` and `overlay=True` are both set.
 
     Returns:
     - None
@@ -1885,8 +1886,8 @@ def show_lift_chart(
     if y_prob is not None:
         model = [None] * num_models
 
-    if overlay and grid:
-        raise ValueError("`grid` cannot be set to True when `overlay` is True.")
+    if overlay and subplots:
+        raise ValueError("`subplots` cannot be set to True when `overlay` is True.")
 
     if not isinstance(model, list):
         model = [model]
@@ -1910,7 +1911,7 @@ def show_lift_chart(
     if overlay:
         plt.figure(figsize=figsize or (8, 6))
 
-    if grid and not overlay:
+    if subplots and not overlay:
         if n_rows is None:
             n_rows = math.ceil(len(model) / n_cols)
         _, axes = plt.subplots(
@@ -1946,7 +1947,7 @@ def show_lift_chart(
                 label=f"{name}",
                 **curve_style,
             )
-        elif grid:
+        elif subplots:
             ax = axes[idx]
             ax.plot(
                 percentages,
@@ -2041,7 +2042,7 @@ def show_lift_chart(
         )
         plt.show()
 
-    elif grid:
+    elif subplots:
         for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
@@ -2070,7 +2071,7 @@ def show_gain_chart(
     text_wrap=None,
     curve_kwgs=None,
     linestyle_kwgs=None,
-    grid=False,
+    subplots=False,
     n_cols=2,
     n_rows=None,
     figsize=None,
@@ -2083,7 +2084,7 @@ def show_gain_chart(
 
     A Gain chart evaluates model effectiveness by comparing the cumulative gain
     of positive instances in sorted predictions versus random selection.
-    Supports multiple models with overlay or grid layouts and customizable styling.
+    Supports multiple models with overlay or subplots layouts and customizable styling.
 
     Parameters:
     - model (list or estimator): One or more trained models.
@@ -2102,16 +2103,16 @@ def show_gain_chart(
     - text_wrap (int, optional): Maximum title width before wrapping.
     - curve_kwgs (dict or list, optional): Styling options for model curves.
     - linestyle_kwgs (dict, optional): Styling options for the baseline.
-    - grid (bool, default=False): Display multiple plots in a grid layout.
-    - n_cols (int, default=2): Number of columns in the grid layout.
-    - n_rows (int, optional): Number of rows in the grid layout.
+    - subplots (bool, default=False): Display multiple plots in a subplot layout.
+    - n_cols (int, default=2): Number of columns in the subplot layout.
+    - n_rows (int, optional): Number of rows in the subplot layout.
     - figsize (tuple, optional): Figure size.
     - label_fontsize (int, default=12): Font size for axis labels.
     - tick_fontsize (int, default=10): Font size for tick labels.
     - gridlines (bool, default=True): Whether to show grid lines.
 
     Raises:
-    - ValueError: If `grid=True` and `overlay=True` are both set.
+    - ValueError: If `subplots=True` and `overlay=True` are both set.
 
     Returns:
     - None
@@ -2133,8 +2134,8 @@ def show_gain_chart(
     if y_prob is not None:
         model = [None] * num_models
 
-    if overlay and grid:
-        raise ValueError("`grid` cannot be set to True when `overlay` is True.")
+    if overlay and subplots:
+        raise ValueError("`subplots` cannot be set to True when `overlay` is True.")
 
     if not isinstance(model, list):
         model = [model]
@@ -2158,7 +2159,7 @@ def show_gain_chart(
     if overlay:
         plt.figure(figsize=figsize or (8, 6))
 
-    if grid and not overlay:
+    if subplots and not overlay:
         if n_rows is None:
             n_rows = math.ceil(len(model) / n_cols)
         _, axes = plt.subplots(
@@ -2187,7 +2188,7 @@ def show_gain_chart(
                 label=f"{name}",
                 **curve_style,
             )
-        elif grid:
+        elif subplots:
             ax = axes[idx]
             ax.plot(
                 percentages,
@@ -2284,7 +2285,7 @@ def show_gain_chart(
         )
         plt.show()
 
-    elif grid:
+    elif subplots:
         for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
@@ -2317,7 +2318,7 @@ def show_calibration_curve(
     image_path_svg=None,
     text_wrap=None,
     curve_kwgs=None,
-    grid=False,
+    subplots=False,
     n_cols=2,
     n_rows=None,
     figsize=None,
@@ -2336,8 +2337,8 @@ def show_calibration_curve(
 
     A calibration curve compares the predicted probabilities of a classifier
     to the actual observed outcomes. This function supports individual, overlay,
-    and grid-based visualization modes, and optionally plots separate curves
-    per subgroup defined by a categorical variable (e.g., race, age group).
+    and subplot grid-based visualization modes, and optionally plots separate
+    curves per subgroup defined by a categorical variable (e.g., race, age group).
 
     Parameters:
     - model (estimator or list): One or more trained classification models.
@@ -2357,9 +2358,9 @@ def show_calibration_curve(
     - image_path_svg (str, optional): Path to save the SVG image.
     - text_wrap (int, optional): Maximum # of characters before wrapping title.
     - curve_kwgs (dict or list, optional): Styling options for model curves.
-    - grid (bool, default=False): Display models in a grid of subplots.
-    - n_cols (int, default=2): Number of columns for the grid layout.
-    - n_rows (int, optional): Number of rows for the grid layout.
+    - subplots (bool, default=False): Display models in a grid of subplots.
+    - n_cols (int, default=2): Number of columns for the subplot layout.
+    - n_rows (int, optional): Number of rows for the subplot layout.
     - figsize (tuple, optional): Custom figure size (width, height).
     - label_fontsize (int, default=12): Font size for axis labels and title.
     - tick_fontsize (int, default=10): Font size for tick marks and legend.
@@ -2373,8 +2374,8 @@ def show_calibration_curve(
       subgroup calibration curves.
 
     Raises:
-    - ValueError: If both `grid=True` and `overlay=True` are set (incompatible).
-    - ValueError: If `group_category` used w/ either `overlay=True` or `grid=True`.
+    - ValueError: If both `subplots=True` and `overlay=True` are set (incompatible).
+    - ValueError: If `group_category` used w/ either `overlay=True` or `subplots=True`.
     - ValueError: If length of `curve_kwgs` does not match number of models.
     - TypeError: If `model_title` is not a string, list, pandas Series, or None.
 
@@ -2399,11 +2400,13 @@ def show_calibration_curve(
         model = [None] * num_models
 
     # Error checks for incompatible display modes
-    if overlay and grid:
-        raise ValueError("`grid` cannot be set to True when `overlay` is True.")
+    if overlay and subplots:
+        raise ValueError("`subplots` cannot be set to True when `overlay` is True.")
 
-    if group_category is not None and (overlay or grid):
-        raise ValueError("`group_category` requires `overlay=False` and `grid=False`.")
+    if group_category is not None and (overlay or subplots):
+        raise ValueError(
+            "`group_category` requires `overlay=False` and `subplots=False`."
+        )
 
     # Ensure model is a list
     if not isinstance(model, list):
@@ -2432,7 +2435,7 @@ def show_calibration_curve(
         raise ValueError("Length of `curve_kwgs` must match the number of models.")
 
     # Grid layout setup if requested
-    if grid:
+    if subplots:
         if n_rows is None:
             n_rows = math.ceil(len(model) / n_cols)
         _, axes = plt.subplots(
@@ -2575,8 +2578,8 @@ def show_calibration_curve(
                 **kwargs,
             )
 
-        # PLOT IN GRID
-        elif grid:
+        # PLOT IN SUBPLOTS
+        elif subplots:
             ax = axes[idx]
             ax.plot(
                 prob_pred,
@@ -2703,8 +2706,8 @@ def show_calibration_curve(
         )
         plt.show()
 
-    # Final grid cleanup (hide unused axes)
-    elif grid:
+    # Final subplot grid cleanup (hide unused axes)
+    elif subplots:
         for ax in axes[len(model) :]:
             ax.axis("off")
         plt.tight_layout()
