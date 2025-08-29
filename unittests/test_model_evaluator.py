@@ -877,7 +877,7 @@ def test_show_confusion_matrix_grid(
     trained_model,
     sample_data,
 ):
-    """Test if show_confusion_matrix correctly handles grid layout."""
+    """Test if show_confusion_matrix correctly handles subplot layout."""
     X, y = sample_data
 
     # Pass a list of models explicitly
@@ -891,7 +891,7 @@ def test_show_confusion_matrix_grid(
             X,
             y,
             save_plot=False,
-            grid=True,
+            subplots=True,
             n_cols=2,
         )
     except TypeError as e:
@@ -984,7 +984,7 @@ def test_show_roc_curve_grid(
     trained_model,
     sample_data,
 ):
-    """Test if show_roc_curve runs correctly with grid enabled."""
+    """Test if show_roc_curve runs correctly with subplots enabled."""
     X, y = sample_data
     model = [trained_model, trained_model]
     try:
@@ -992,7 +992,7 @@ def test_show_roc_curve_grid(
             model,
             X,
             y,
-            grid=True,
+            subplots=True,
             n_cols=2,
             save_plot=False,
         )
@@ -1008,20 +1008,20 @@ def test_show_roc_curve_invalid_overlay_grid(
     sample_data,
 ):
     """
-    Ensure ValueError is raised if both overlay and grid are set to True.
+    Ensure ValueError is raised if both overlay and subplots are set to True.
     """
     X, y = sample_data
     model = [trained_model, trained_model]
     with pytest.raises(
         ValueError,
-        match="`grid` cannot be set to True when `overlay` is True.",
+        match="`subplots` cannot be set to True when `overlay` is True.",
     ):
         show_roc_curve(
             model,
             X,
             y,
             overlay=True,
-            grid=True,
+            subplots=True,
             save_plot=False,
         )
 
@@ -1254,7 +1254,7 @@ def test_show_roc_curve_grid_layout(
     trained_model,
     sample_data,
 ):
-    """Test grid layout with custom rows and columns."""
+    """Test subplot layout with custom rows and columns."""
     X, y = sample_data
     model = [trained_model, trained_model, trained_model]
     try:
@@ -1262,13 +1262,13 @@ def test_show_roc_curve_grid_layout(
             model,
             X,
             y,
-            grid=True,
+            subplots=True,
             n_rows=2,
             n_cols=2,
             save_plot=False,
         )
     except Exception as e:
-        pytest.fail(f"show_roc_curve failed with custom grid layout: {e}")
+        pytest.fail(f"show_roc_curve failed with custom subplots layout: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
@@ -1336,7 +1336,7 @@ def test_show_pr_curve_grid(
     trained_model,
     sample_data,
 ):
-    """Test if show_pr_curve runs correctly with grid enabled."""
+    """Test if show_pr_curve runs correctly with subplots enabled."""
     X, y = sample_data
     model = [trained_model, trained_model]
     try:
@@ -1344,7 +1344,7 @@ def test_show_pr_curve_grid(
             model,
             X,
             y,
-            grid=True,
+            subplots=True,
             n_cols=2,
             save_plot=False,
         )
@@ -1360,15 +1360,15 @@ def test_show_pr_curve_invalid_overlay_grid(
     sample_data,
 ):
     """
-    Ensure ValueError is raised if both overlay and grid are set to True.
+    Ensure ValueError is raised if both overlay and subplots are set to True.
     """
     X, y = sample_data
     model = [trained_model, trained_model]
     with pytest.raises(
         ValueError,
-        match="`grid` cannot be set to True when `overlay` is True.",
+        match="`subplots` cannot be set to True when `overlay` is True.",
     ):
-        show_pr_curve(model, X, y, overlay=True, grid=True, save_plot=False)
+        show_pr_curve(model, X, y, overlay=True, subplots=True, save_plot=False)
 
 
 @patch("matplotlib.pyplot.show")
@@ -1598,7 +1598,7 @@ def test_show_pr_curve_grid_layout(
     sample_data,
 ):
     """
-    Test grid layout with custom rows and columns and corrected labels.
+    Test subplots layout with custom rows and columns and corrected labels.
     """
     X, y = sample_data
     model = [trained_model, trained_model, trained_model]
@@ -1609,13 +1609,13 @@ def test_show_pr_curve_grid_layout(
             X,
             y,
             model_title=model_title,
-            grid=True,
+            subplots=True,
             n_rows=2,
             n_cols=2,
             save_plot=False,
         )
     except Exception as e:
-        pytest.fail(f"show_pr_curve failed with custom grid layout: {e}")
+        pytest.fail(f"show_pr_curve failed with custom subplots layout: {e}")
     assert mock_show.called, "plt.show() was not called."
 
 
@@ -1675,7 +1675,7 @@ def test_show_lift_chart_grid(
     trained_model,
     sample_data,
 ):
-    """Test if show_lift_chart runs correctly with grid enabled."""
+    """Test if show_lift_chart runs correctly with subplots enabled."""
     X, y = sample_data
     model = [trained_model, trained_model]
     try:
@@ -1683,7 +1683,7 @@ def test_show_lift_chart_grid(
             model,
             X,
             y,
-            grid=True,
+            subplots=True,
             n_cols=2,
             save_plot=False,
         )
@@ -1760,11 +1760,11 @@ def test_show_gain_chart_overlay(mock_show, trained_model, sample_data):
 
 @patch("matplotlib.pyplot.show")
 def test_show_gain_chart_grid(mock_show, trained_model, sample_data):
-    """Test if show_gain_chart runs correctly with grid enabled."""
+    """Test if show_gain_chart runs correctly with subplots enabled."""
     X, y = sample_data
     model = [trained_model, trained_model]
     try:
-        show_gain_chart(model, X, y, grid=True, n_cols=2, save_plot=False)
+        show_gain_chart(model, X, y, subplots=True, n_cols=2, save_plot=False)
     except Exception as e:
         pytest.fail(f"show_gain_chart raised an exception: {e}")
 
@@ -1827,26 +1827,26 @@ def test_show_calibration_curve_overlay(trained_model, sample_data):
 
 
 def test_show_calibration_curve_grid(trained_model, sample_data):
-    """Test grid layout with multiple models."""
+    """Test subplots layout with multiple models."""
     X, y = sample_data
     model = [trained_model, trained_model]  # Ensure it's a list
     try:
-        show_calibration_curve(model=model, X=X, y=y, grid=True, n_cols=2)
+        show_calibration_curve(model=model, X=X, y=y, subplots=True, n_cols=2)
     except Exception as e:
-        pytest.fail(f"show_calibration_curve failed on grid layout: {e}")
+        pytest.fail(f"show_calibration_curve failed on subplots layout: {e}")
 
 
 def test_show_calibration_curve_invalid_overlay_grid(
     trained_model,
     sample_data,
 ):
-    """Ensure ValueError is raised if both overlay and grid are set to True."""
+    """Ensure ValueError is raised if both overlay and subplots are set to True."""
     X, y = sample_data
     with pytest.raises(
-        ValueError, match="`grid` cannot be set to True when `overlay` is True."
+        ValueError, match="`subplots` cannot be set to True when `overlay` is True."
     ):
         show_calibration_curve(
-            [trained_model, trained_model], X, y, overlay=True, grid=True
+            [trained_model, trained_model], X, y, overlay=True, subplots=True
         )
 
 
@@ -1878,7 +1878,7 @@ def test_show_calibration_curve_brier_score(trained_model, sample_data):
 
 
 def test_show_calibration_curve_custom_titles(trained_model, sample_data):
-    """Test custom model titles for grid layout."""
+    """Test custom model titles for subplots layout."""
     X, y = sample_data
     model = [trained_model, trained_model]  # Ensure it's a list
     titles = ["Model 1", "Model 2"]  # Titles must match models length
@@ -1888,7 +1888,7 @@ def test_show_calibration_curve_custom_titles(trained_model, sample_data):
             X=X,
             y=y,
             model_title=titles,
-            grid=True,
+            subplots=True,
         )
     except Exception as e:
         pytest.fail(f"show_calibration_curve failed with custom titles: {e}")
@@ -1983,13 +1983,14 @@ def test_show_calibration_curve_invalid_combination_with_group_category(
     sample_data,
 ):
     """
-    Ensure ValueError is raised if group_category is used with overlay or grid.
+    Ensure ValueError is raised if `group_category` is used with `overlay` or `subplots`.
     """
     X, y = sample_data
     group = pd.Series(np.random.choice(["A", "B"], size=len(y)))
 
     with pytest.raises(
-        ValueError, match="`group_category` requires `overlay=False` and `grid=False`."
+        ValueError,
+        match="`group_category` requires `overlay=False` and `subplots=False`.",
     ):
         show_calibration_curve(
             [trained_model],
@@ -2000,14 +2001,15 @@ def test_show_calibration_curve_invalid_combination_with_group_category(
         )
 
     with pytest.raises(
-        ValueError, match="`group_category` requires `overlay=False` and `grid=False`."
+        ValueError,
+        match="`group_category` requires `overlay=False` and `subplots=False`.",
     ):
         show_calibration_curve(
             [trained_model],
             X,
             y,
             group_category=group,
-            grid=True,
+            subplots=True,
         )
 
 
