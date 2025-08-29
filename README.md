@@ -1,12 +1,10 @@
+<picture> <img src="https://raw.githubusercontent.com/lshpaner/model_metrics/refs/heads/main/assets/mm_logo.svg" width="300" style="border: none; outline: none; box-shadow: none;" oncontextmenu="return false;"> </picture>
+
+<br> 
+
 [![PyPI](https://img.shields.io/pypi/v/model_metrics)](https://pypi.org/project/model_metrics/)
 [![Downloads](https://pepy.tech/badge/model_metrics)](https://pepy.tech/project/model_metrics)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/lshpaner/model_metrics/blob/main/LICENSE.md)
-
-<br>
-
-<img src="https://raw.githubusercontent.com/lshpaner/model_metrics/refs/heads/main/assets/mm_logo.svg" width="300" style="border: none; outline: none; box-shadow: none;" oncontextmenu="return false;">
-
-<br> 
 
 # Overview
 The Model Metrics library is designed to facilitate the evaluation and interpretation of machine learning models. It provides functionality for generating predictions, computing model metrics, extracting coefficients, SHAP values, analyzing feature importance, and visualizing performance metrics through confusion matrices, ROC curves, precision-recall curves, and calibration plots.
