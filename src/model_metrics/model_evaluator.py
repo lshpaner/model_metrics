@@ -261,6 +261,11 @@ def summarize_model_performance(
     if model is not None and not isinstance(model, list):
         model = [model]
 
+    # Ensure y_prob is always a list of arrays:
+    # if a single array/Series is passed, wrap it in a list so y_prob[0] works
+    if isinstance(y_prob, np.ndarray):
+        y_prob = [y_prob]
+
     if model_type == "classification":
         if isinstance(y_prob, list) and isinstance(y_prob[0], float):
             y_probs = [y_prob]
@@ -777,6 +782,11 @@ def show_confusion_matrix(
     if model is not None and not isinstance(model, list):
         model = [model]
 
+    # Ensure y_prob is always a list of arrays:
+    # if a single array/Series is passed, wrap it in a list so y_prob[0] works
+    if isinstance(y_prob, np.ndarray):
+        y_prob = [y_prob]
+
     if isinstance(y_prob, list) and isinstance(y_prob[0], float):
         y_probs = [y_prob]
     else:
@@ -1124,6 +1134,11 @@ def show_roc_curve(
 
     if model is not None and not isinstance(model, list):
         model = [model]
+
+    # Ensure y_prob is always a list of arrays:
+    # if a single array/Series is passed, wrap it in a list so y_prob[0] works
+    if isinstance(y_prob, np.ndarray):
+        y_prob = [y_prob]
 
     if isinstance(y_prob, list) and isinstance(y_prob[0], float):
         y_probs = [y_prob]
@@ -1510,6 +1525,11 @@ def show_pr_curve(
     if model is not None and not isinstance(model, list):
         model = [model]
 
+    # Ensure y_prob is always a list of arrays:
+    # if a single array/Series is passed, wrap it in a list so y_prob[0] works
+    if isinstance(y_prob, np.ndarray):
+        y_prob = [y_prob]
+
     if isinstance(y_prob, list) and isinstance(y_prob[0], float):
         y_probs = [y_prob]
     else:
@@ -1876,6 +1896,11 @@ def show_lift_chart(
     if model is not None and not isinstance(model, list):
         model = [model]
 
+    # Ensure y_prob is always a list of arrays:
+    # if a single array/Series is passed, wrap it in a list so y_prob[0] works
+    if isinstance(y_prob, np.ndarray):
+        y_prob = [y_prob]
+
     if isinstance(y_prob, list) and isinstance(y_prob[0], float):
         y_probs = [y_prob]
     else:
@@ -2123,6 +2148,11 @@ def show_gain_chart(
 
     if model is not None and not isinstance(model, list):
         model = [model]
+
+    # Ensure y_prob is always a list of arrays:
+    # if a single array/Series is passed, wrap it in a list so y_prob[0] works
+    if isinstance(y_prob, np.ndarray):
+        y_prob = [y_prob]
 
     if isinstance(y_prob, list) and isinstance(y_prob[0], float):
         y_probs = [y_prob]
@@ -2388,6 +2418,11 @@ def show_calibration_curve(
 
     if model is not None and not isinstance(model, list):
         model = [model]
+
+    # Ensure y_prob is always a list of arrays:
+    # if a single array/Series is passed, wrap it in a list so y_prob[0] works
+    if isinstance(y_prob, np.ndarray):
+        y_prob = [y_prob]
 
     if isinstance(y_prob, list) and isinstance(y_prob[0], float):
         y_probs = [y_prob]
