@@ -2309,3 +2309,88 @@ def test_print_regression_output_format(mock_print, regression_model):
         return_df=False,
     )
     assert mock_print.called
+
+
+@pytest.mark.parametrize("container", ["ndarray", "series", "tuple", "list"])
+@patch("model_metrics.model_evaluator.get_predictions")
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_y_prob_normalization(
+    mock_show, mock_gp, trained_model, sample_data, container
+):
+    X, y = sample_data
+    p = trained_model.predict_proba(X)[:, 1]
+
+    if container == "series":
+        y_prob = pd.Series(p)
+    elif container == "tuple":
+        y_prob = (p,)
+    elif container == "list":
+        y_prob = [p]
+    else:
+        y_prob = p
+
+    # Return the same shapes the helper expects
+    mock_gp.return_value = (
+        y,
+        np.asarray(p),  # y_prob
+        (np.asarray(p) > 0.5).astype(int),  # y_pred
+        0.5,  # threshold
+    )
+
+    # Should not raise regardless of container
+    try:
+        show_roc_curve(trained_model, X, y=y, y_prob=y_prob, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed for container={container}: {e}")
+    assert mock_show.called
+
+
+@patch("model_metrics.model_evaluator.get_predictions")
+@patch("matplotlib.pyplot.show")
+def test_show_calibration_curve_y_prob_ndarray_ok(
+    mock_show, mock_gp, trained_model, sample_data
+):
+    X, y = sample_data
+    p = trained_model.predict_proba(X)[:, 1]
+
+    mock_gp.return_value = (
+        y,
+        np.asarray(p),
+        (np.asarray(p) > 0.5).astype(int),
+        0.5,
+    )
+
+    try:
+        show_calibration_curve(trained_model, X, y=y, y_prob=p, save_plot=False)
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed with ndarray y_prob: {e}")
+    assert mock_show.called
+
+
+@patch("model_metrics.model_evaluator.get_predictions")
+@patch("matplotlib.pyplot.show")
+def test_y_prob_explicit_list_ok(mock_show, mock_gp, trained_model, sample_data):
+    X, y = sample_data
+    p = trained_model.predict_proba(X)[:, 1]
+    models = [trained_model, trained_model]
+    y_probs = [p, p]
+
+    mock_gp.return_value = (
+        y,
+        np.asarray(p),
+        (np.asarray(p) > 0.5).astype(int),
+        0.5,
+    )
+
+    try:
+        show_pr_curve(
+            models,
+            X,
+            y=y,
+            y_prob=y_probs,
+            overlay=True,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed with explicit list y_prob: {e}")
+    assert mock_show.called
