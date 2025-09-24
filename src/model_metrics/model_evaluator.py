@@ -2964,8 +2964,8 @@ def plot_threshold_metrics(
 
             # Print the result
             print(
-                f"Best threshold for {lookup_metric} = "
-                f"{round(lookup_value, decimal_places)} is: "
+                f"Best threshold for target {lookup_metric} of "
+                f"{round(lookup_value, decimal_places)} is "
                 f"{round(best_threshold, decimal_places)}"
             )
         else:
