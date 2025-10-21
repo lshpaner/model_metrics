@@ -73,6 +73,8 @@ single_model_lasso_reg:
 	py_scripts/single_model_regression.py \
 	model_files/single_model_regression_results/ \
 
+run_all_regression_models: single_model_lasso_reg single_model_logistic_reg
+
 ################################################################################
 
 ## Make Logistic Regression
@@ -99,18 +101,21 @@ random_forest:
 	--model-type rf \
 	2>&1 | tee model_files/results/random_forest.txt
 
-all_models: single_model_lasso_reg single_model_logistic_reg \
+run_all_classification_models: single_model_lasso_reg single_model_logistic_reg \
             logistic_regression decision_tree random_forest  
 
 ################################################################################
 ############################## Model Evaluation ################################
 ################################################################################
 
-.PHONY: model_evaluation
-model_evaluation: 
+.PHONY: model_evaluation_classification
+model_evaluation_classification: 
 	$(PYTHON_INTERPRETER) \
 	py_scripts/single_model_evaluation.py \
-	model_files/single_model_lr_results/ \
+	model_files/single_model_classification_results/ \
+
+run_all_models: run_all_regression_models run_all_classification_models
+evaluate_classification_models: model_evaluation_classification 
 
 ################################################################################
 ############################## Model Explanation ###############################
@@ -120,4 +125,4 @@ model_evaluation:
 model_explanation: 
 	$(PYTHON_INTERPRETER) \
 	py_scripts/model_explanation.py \
-	model_files/single_model_lr_results/ \
+	model_files/single_model_classification_results/ \
