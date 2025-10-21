@@ -2090,8 +2090,8 @@ def test_plot_threshold_metrics_lookup_metric(
         )
         mock_print.assert_called()
         assert (
-            f"Best threshold for {lookup_metric}" in mock_print.call_args[0][0]
-        ), f"Expected 'Best threshold for {lookup_metric}' in print output"
+            f"Best threshold for target {lookup_metric}" in mock_print.call_args[0][0]
+        ), f"Expected 'Best threshold for target {lookup_metric}' in print output"
 
 
 @patch("model_metrics.model_evaluator.get_predictions")
@@ -2394,3 +2394,63 @@ def test_y_prob_explicit_list_ok(mock_show, mock_gp, trained_model, sample_data)
     except Exception as e:
         pytest.fail(f"show_pr_curve failed with explicit list y_prob: {e}")
     assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_with_delong(mock_show, trained_model, sample_data):
+    """
+    Test DeLong/Hanley-McNeil AUC comparison when comparing two models.
+    Ensures correct structure and prints expected output.
+    """
+    X, y = sample_data
+    model1 = trained_model
+    model2 = LogisticRegression().fit(X, y)
+
+    # Two models, same data for simplicity
+    models = [model1, model2]
+    model_titles = ["LogReg_1", "LogReg_2"]
+
+    # Get predicted probabilities manually for delong input
+    y_prob1 = model1.predict_proba(X)[:, 1]
+    y_prob2 = model2.predict_proba(X)[:, 1]
+
+    # Run with tuple of y_probs instead of delong=True
+    with patch("builtins.print") as mock_print:
+        show_roc_curve(
+            models,
+            X,
+            y,
+            model_title=model_titles,
+            delong=(y_prob1, y_prob2),  # ✅ this satisfies the function’s expectation
+            save_plot=False,
+        )
+
+    printed = " ".join(
+        [str(arg) for call in mock_print.call_args_list for arg in call[0]]
+    )
+    assert (
+        "Hanley" in printed or "Delong" in printed
+    ), "Expected AUC comparison printout."
+    assert any(
+        k in printed for k in ["p-value", "P-value", "P="]
+    ), "Expected p-value output."
+    assert mock_show.called
+
+
+def test_hanley_mcneil_auc_test_outputs_valid_values(sample_data):
+    """Test direct Hanley & McNeil / DeLong-like AUC comparison function."""
+    from model_metrics.model_evaluator import hanley_mcneil_auc_test
+
+    X, y = sample_data
+    y_scores_1 = np.random.rand(len(y))
+    y_scores_2 = np.random.rand(len(y))
+
+    auc1, auc2, p_val = hanley_mcneil_auc_test(y, y_scores_1, y_scores_2)
+
+    # Check types and value ranges
+    assert isinstance(auc1, float)
+    assert isinstance(auc2, float)
+    assert isinstance(p_val, float)
+    assert 0 <= auc1 <= 1
+    assert 0 <= auc2 <= 1
+    assert 0 <= p_val <= 1
