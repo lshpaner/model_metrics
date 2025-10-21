@@ -11,10 +11,7 @@ import model_metrics
 
 print(model_metrics.__version__)
 
-from sklearn.datasets import make_classification
-from sklearn.linear_model import LogisticRegression
 from model_tuner import Model, loadObjects
-import model_tuner
 
 from eda_toolkit import ensure_directory
 from model_metrics import (
@@ -50,7 +47,12 @@ if __name__ == "__main__":
 
     # Define paths as Path objects
     model_path = Path(
-        os.path.abspath(os.path.join(os.pardir, "model_files/single_model_lr_results"))
+        os.path.abspath(
+            os.path.join(
+                os.pardir,
+                "model_metrics/model_files/single_model_classification_results",
+            )
+        )
     )
     image_path_png = model_path / "images" / "png_images"
     image_path_svg = model_path / "images" / "svg_images"
@@ -89,7 +91,7 @@ if __name__ == "__main__":
         model=pipelines_or_models,
         X=X_test,
         y=y_test,
-        model_titles=model_titles,
+        model_title=model_titles,
         # model_threshold=thresholds,
         return_df=True,
         # custom_threshold=0.7,
@@ -104,7 +106,7 @@ if __name__ == "__main__":
         model=pipelines_or_models,
         X=X_test,
         y=y_test,
-        model_titles=model_titles,
+        model_title=model_titles,
         overlay=False,
         title="Calibration Curves",
         text_wrap=40,
@@ -127,13 +129,13 @@ if __name__ == "__main__":
         model=pipelines_or_models,
         X=X_test,
         y=y_test,
-        model_titles=model_titles,
+        model_title=model_titles,
         cmap="Blues",
         text_wrap=40,
         save_plot=True,
         image_path_png=image_path_png,
         image_path_svg=image_path_svg,
-        grid=False,
+        subplots=False,
         n_cols=3,
         n_rows=1,
         figsize=(4, 4),
@@ -148,11 +150,11 @@ if __name__ == "__main__":
 
     # Plot ROC curves
     show_roc_curve(
-        models=pipelines_or_models,
+        model=pipelines_or_models,
         X=X_test,
         y=y_test,
         overlay=False,
-        model_titles=model_titles,
+        model_title=model_titles,
         decimal_places=3,
         # n_cols=3,
         # n_rows=1,
@@ -162,7 +164,7 @@ if __name__ == "__main__":
         # },
         # linestyle_kwgs={"color": "grey", "linestyle": "--"},
         save_plot=True,
-        grid=False,
+        subplots=False,
         figsize=(4, 4),
         # label_fontsize=16,
         # tick_fontsize=16,
@@ -173,14 +175,14 @@ if __name__ == "__main__":
 
     # Plot PR curves
     show_pr_curve(
-        models=pipelines_or_models,
+        model=pipelines_or_models,
         X=X_test,
         y=y_test,
         # x_label="Hello",
-        model_titles=model_titles,
+        model_title=model_titles,
         decimal_places=3,
         overlay=False,
-        grid=False,
+        subplots=False,
         save_plot=True,
         image_path_png=image_path_png,
         image_path_svg=image_path_svg,
