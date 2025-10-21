@@ -1155,10 +1155,41 @@ def show_confusion_matrix(
 ################################################################################
 
 
-def hanley_mcneil_auc_test(y_true, y_scores_1, y_scores_2):
+def hanley_mcneil_auc_test(
+    y_true,
+    y_scores_1,
+    y_scores_2,
+    model_names=None,
+    verbose=True,
+    return_values=False,
+):
     """
     Hanley & McNeil (1982) large-sample z-test for difference in correlated AUCs.
     Returns (auc1, auc2, p_value).
+
+    Parameters
+    ----------
+    y_true : array-like
+        True binary class labels.
+    y_scores_1 : array-like
+        Predicted probabilities or decision scores from the first model.
+    y_scores_2 : array-like
+        Predicted probabilities or decision scores from the second model.
+    model_names : list or tuple of str, optional
+        Optional names for the models, used for printed output.
+        Defaults to ("Model 1", "Model 2") if not provided.
+    verbose : bool, default=True
+        If True, prints a formatted summary of the comparison, including AUCs
+        and the computed p-value.
+    return_values : bool, default=False
+        If True, returns the tuple (auc1, auc2, p_value) instead of only
+        printing the results. This is useful for programmatic access or when
+        integrating into other functions such as `show_roc_curve()`.
+
+    Returns
+    -------
+    tuple of floats, optional
+        (auc1, auc2, p_value) — only returned if `return_values=True`.
     """
     auc1 = roc_auc_score(y_true, y_scores_1)
     auc2 = roc_auc_score(y_true, y_scores_2)
@@ -1172,7 +1203,20 @@ def hanley_mcneil_auc_test(y_true, y_scores_1, y_scores_2):
     )
     z = (auc1 - auc2) / se
     p = 2 * (1 - norm.cdf(abs(z)))
-    return auc1, auc2, p
+
+    if model_names is None:
+        model_names = ("Model 1", "Model 2")
+
+    if verbose:
+        print(
+            f"\nHanley & McNeil AUC Comparison (Approximation of DeLong's Test):\n"
+            f"  {model_names[0]} AUC = {auc1:.3f}\n"
+            f"  {model_names[1]} AUC = {auc2:.3f}\n"
+            f"  p-value = {p:.4f}\n"
+        )
+
+    if return_values:
+        return auc1, auc2, p
 
 
 def show_roc_curve(
@@ -1436,13 +1480,16 @@ def show_roc_curve(
                 else:
                     name1, name2 = "Model 1", "Model 2"
 
-                auc1, auc2, p_val = hanley_mcneil_auc_test(y_true, y_prob_1, y_prob_2)
-                print(
-                    f"\nHanley & McNeil AUC comparison (Approximation of Delong's Test):\n"
-                    f"  {name1} AUC = {auc1:.3f}\n"
-                    f"  {name2} AUC = {auc2:.3f}\n"
-                    f"  p-value = {p_val:.4f}\n"
+                # Call the helper with verbose=False to avoid duplicate prints
+                hanley_mcneil_auc_test(
+                    y_true,
+                    y_prob_1,
+                    y_prob_2,
+                    model_names=(name1, name2),
+                    return_values=True,
+                    verbose=True,  # prevents double printing
                 )
+
             except Exception as e:
                 print(f"Error running Hanley & McNeil AUC comparison: {e}")
 
