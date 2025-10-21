@@ -417,7 +417,7 @@ def summarize_model_performance(
                         X_with_intercept = sm.add_constant(X)
                         y_pred = model.predict(X_with_intercept)
                     except ValueError:
-                        # If the model doesn’t accept the constant, predict on original X
+                        # If the model doesn't accept the constant, predict on original X
                         y_pred = model.predict(X)
 
                 # Extract coefficients for scikit-learn models
@@ -474,7 +474,7 @@ def summarize_model_performance(
             base_columns = {
                 "Model": name,
                 "Metric": "Overall Metrics",
-                "Variable": "",  # Empty since this isn’t a coefficient
+                "Variable": "",  # Empty since this isn't a coefficient
                 "Coefficient": "",
                 "MAE": round(mae, decimal_places),
                 "MAPE": round(mape, decimal_places) if not pd.isna(mape) else "NaN",
@@ -1277,7 +1277,7 @@ def show_roc_curve(
     - delong: tuple or list of array-like, optional
         Two predicted probability arrays (e.g., [y_prob_model1, y_prob_model2]) to
         perform a Hanley & McNeil AUC comparison, a parametric approximation of
-        DeLong’s test for correlated ROC curves. The test compares two models
+        DeLong's test for correlated ROC curves. The test compares two models
         evaluated on the same samples to determine whether the difference in AUC
         is statistically significant. Cannot be used when `group_category` is
         specified, since AUCs are computed on separate subsets of patients.
