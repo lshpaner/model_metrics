@@ -173,78 +173,59 @@ def summarize_model_performance(
     return_df=False,
     overall_only=False,
     decimal_places=3,
+    group_category=None,
 ):
     """
     Summarize performance metrics for classification or regression models.
 
-    This function computes and displays (or returns) key performance metrics
-    for one or more models. It supports classification and regression tasks,
-    and can operate either from model objects with feature data, or directly
-    from provided predictions/probabilities. Outputs include classification
-    metrics, regression metrics, model thresholds, coefficients, and feature
-    importances where applicable.
+    Computes and displays or returns key metrics for one or more models.
+    Supports classification and regression, operating either from model
+    objects with feature data or directly from predictions/probabilities.
+    Optionally computes group-specific metrics for classification.
 
     Parameters
     ----------
     model : estimator, list of estimators, or None, default=None
-        A single trained model or a list of models/pipelines.
-        If None, `y_prob` or `y_pred` must be provided.
-
+        Trained model or list of models. If None, `y_prob` or `y_pred` must be provided.
     X : array-like or None, default=None
-        Feature matrix used for evaluation. Required if `model` is given
-        without `y_prob`/`y_pred`. Must have column names if feature
-        importance or coefficients are extracted.
-
-    y_prob : array-like, list of arrays, or None, default=None
-        Predicted probabilities for classification models. Can be used
-        instead of `model` and `X`.
-
-    y_pred : array-like, list of arrays, or None, default=None
-        Predicted values for regression models or predicted class labels for
-        classification. Can be used instead of `model` and `X`.
-
+        Feature matrix. Required if `model` is provided without predictions.
+    y_prob : array-like or list, default=None
+        Predicted probabilities for classification models.
+    y_pred : array-like or list, default=None
+        Predicted labels or regression outputs.
     y : array-like
-        Ground truth labels or target values.
-
+        True target values.
     model_type : {"classification", "regression"}, default="classification"
-        Type of task. Determines which metrics are computed.
-
+        Determines which metrics are computed.
     model_threshold : float, dict, or None, default=None
-        Decision threshold(s) for classification models. Can be a single float
-        applied to all models or a dict keyed by model title or class name.
-        Ignored if `custom_threshold` is set.
-
-    model_title : str, list of str, pandas.Series, or None, default=None
-        Custom model names for display. If None, defaults to "Model_1",
-        "Model_2", etc.
-
+        Classification decision threshold(s). Ignored if `custom_threshold` is set.
     custom_threshold : float or None, default=None
-        Overrides `model_threshold` and applies a fixed threshold across all
-        classification models. When set, the "Model Threshold" row is excluded.
-
+        Overrides `model_threshold` across all models.
+    model_title : str, list, or None, default=None
+        Custom model names. Defaults to "Model_1", "Model_2", etc.
     score : str or None, default=None
-        Optional scoring metric used when thresholds are resolved from
-        `get_predictions`.
-
+        Optional scoring metric for threshold resolution.
     return_df : bool, default=False
-        If True, returns results as a pandas DataFrame.
-        If False, prints a formatted table.
-
+        If True, returns a pandas DataFrame; otherwise prints a table.
     overall_only : bool, default=False
-        For regression models only, if True, only overall metrics are returned
-        without coefficients or feature importances.
-
+        For regression only. If True, returns only overall metrics.
     decimal_places : int, default=3
-        Number of decimal places to round results.
+        Number of decimal places for rounding.
+    group_category : str, array-like, or None, default=None
+        Optional grouping variable for classification metrics.
+        Can be a column name in `X` or an array of the same length as `y`.
 
     Returns
     -------
     pandas.DataFrame or None
-        - If `return_df=True`, returns a DataFrame of metrics.
-        - Otherwise, prints metrics to stdout and returns None.
+        If `return_df=True`, returns metrics as a DataFrame:
+        - Classification (no groups): metrics as rows, models as columns.
+        - Classification (grouped): metrics as rows, groups as columns.
+        - Regression: rows for metrics, coefficients, and/or feature importances.
+        If `return_df=False`, prints a formatted table.
 
     Raises
-    ------
+    -------
     ValueError
         - If `model_type` is not "classification" or "regression".
         - If `overall_only=True` is used with classification models.
@@ -341,31 +322,81 @@ def summarize_model_performance(
             # always derive predictions from the resolved threshold
             y_pred = (np.asarray(y_prob) > float(threshold)).astype(int)
 
-            # Compute metrics
-            precision = precision_score(y_true, y_pred)
-            recall = recall_score(y_true, y_pred)  # Sensitivity
-            specificity = recall_score(y_true, y_pred, pos_label=0)
+            # Compute overall metrics
+            precision = precision_score(y_true, y_pred, zero_division=0)
+            recall = recall_score(y_true, y_pred, zero_division=0)  # Sensitivity
+            specificity = recall_score(y_true, y_pred, pos_label=0, zero_division=0)
             auc_roc = roc_auc_score(y_true, y_prob)
             brier = brier_score_loss(y_true, y_prob)
             avg_precision = average_precision_score(y_true, y_prob)
             f1 = f1_score(y_true, y_pred)
 
-            # Append metrics for this model
-            model_metrics = {
-                "Model": name,
-                "Precision/PPV": round(precision, decimal_places),
-                "Average Precision": round(avg_precision, decimal_places),
-                "Sensitivity/Recall": round(recall, decimal_places),
-                "Specificity": round(specificity, decimal_places),
-                "F1-Score": round(f1, decimal_places),
-                "AUC ROC": round(auc_roc, decimal_places),
-                "Brier Score": round(brier, decimal_places),
-                "Model Threshold": (
-                    round(threshold, decimal_places) if threshold is not None else None
-                ),
-            }
+            # Append overall metrics
+            metrics_data.append(
+                {
+                    "Model": name,
+                    "Group": "Overall",
+                    "Precision/PPV": round(precision, decimal_places),
+                    "Average Precision": round(avg_precision, decimal_places),
+                    "Sensitivity/Recall": round(recall, decimal_places),
+                    "Specificity": round(specificity, decimal_places),
+                    "F1-Score": round(f1, decimal_places),
+                    "AUC ROC": round(auc_roc, decimal_places),
+                    "Brier Score": round(brier, decimal_places),
+                    "Model Threshold": round(threshold, decimal_places),
+                }
+            )
 
-            metrics_data.append(model_metrics)
+            if group_category is not None:
+                # Convert group_category to Series aligned with y_true
+                if isinstance(group_category, str) and isinstance(X, pd.DataFrame):
+                    group_series = X[group_category].reset_index(drop=True)
+                else:
+                    group_series = pd.Series(group_category).reset_index(drop=True)
+
+                # Sanity check for length
+                if len(group_series) != len(y_true):
+                    raise ValueError(
+                        f"Length mismatch: group_category ({len(group_series)}) "
+                        f"and y_true ({len(y_true)}) must match."
+                    )
+
+                # Iterate over each unique group and compute metrics
+                for group_name in group_series.unique():
+                    idx = group_series[group_series == group_name].index.to_numpy()
+
+                    y_true_g = np.asarray(y_true)[idx]
+                    y_prob_g = np.asarray(y_prob)[idx]
+                    y_pred_g = np.asarray(y_pred)[idx]
+
+                    # Skip groups with only one class
+                    if len(np.unique(y_true_g)) < 2:
+                        continue
+
+                    precision_g = precision_score(y_true_g, y_pred_g, zero_division=0)
+                    recall_g = recall_score(y_true_g, y_pred_g, zero_division=0)
+                    specificity_g = recall_score(
+                        y_true_g, y_pred_g, pos_label=0, zero_division=0
+                    )
+                    auc_g = roc_auc_score(y_true_g, y_prob_g)
+                    ap_g = average_precision_score(y_true_g, y_prob_g)
+                    f1_g = f1_score(y_true_g, y_pred_g)
+                    brier_g = brier_score_loss(y_true_g, y_prob_g)
+
+                    metrics_data.append(
+                        {
+                            "Model": name,
+                            "Group": str(group_name),
+                            "Precision/PPV": round(precision_g, decimal_places),
+                            "Average Precision": round(ap_g, decimal_places),
+                            "Sensitivity/Recall": round(recall_g, decimal_places),
+                            "Specificity": round(specificity_g, decimal_places),
+                            "F1-Score": round(f1_g, decimal_places),
+                            "AUC ROC": round(auc_g, decimal_places),
+                            "Brier Score": round(brier_g, decimal_places),
+                            "Model Threshold": round(threshold, decimal_places),
+                        }
+                    )
 
         elif model_type == "regression":
 
@@ -528,6 +559,7 @@ def summarize_model_performance(
     if model_type == "classification":
         base_columns = [
             "Model",
+            "Group",
             "Precision/PPV",
             "Average Precision",
             "Sensitivity/Recall",
@@ -602,42 +634,94 @@ def summarize_model_performance(
             metrics_df.index = [""] * len(metrics_df)
 
     # **Manual formatting**
+    # **Manual formatting**
     if not return_df:
         if model_type == "classification":
             # Transpose for classification: metrics as rows, models as columns
             print("Model Performance Metrics (Transposed):")
-            metrics_df = metrics_df.set_index(
-                "Model"
-            ).T  # Transpose the DataFrame for printing
-            col_widths = {
-                col: max(metrics_df[col].astype(str).map(len).max(), len(str(col))) + 2
-                for col in metrics_df.columns
-            }
-            col_widths["Metrics"] = (
-                max(metrics_df.index.astype(str).map(len).max(), len("Metrics")) + 2
-            )
-            separator = "-" * (sum(col_widths.values()) + len(col_widths) * 3)
 
-            # Print header (all columns right-aligned, including "Metrics")
-            print(separator)
-            header = (
-                "Metrics".rjust(col_widths["Metrics"])
-                + " | "
-                + " | ".join(
-                    f"{str(col).rjust(col_widths[col])}" for col in metrics_df.columns
+            # Use group-based layout if group_category is active
+            if group_category is not None and "Group" in metrics_df.columns:
+                # Remove the 'Overall' row if grouping is used
+                metrics_df = metrics_df[metrics_df["Group"] != "Overall"]
+
+                # Pivot: rows=metrics, columns=group names
+                metrics_df = (
+                    metrics_df.melt(
+                        id_vars=["Group", "Model"],
+                        value_vars=[
+                            "Precision/PPV",
+                            "Average Precision",
+                            "Sensitivity/Recall",
+                            "Specificity",
+                            "F1-Score",
+                            "AUC ROC",
+                            "Brier Score",
+                            "Model Threshold",
+                        ],
+                        var_name="Metrics",
+                        value_name="Value",
+                    )
+                    .pivot(index="Metrics", columns="Group", values="Value")
+                    .reset_index()
                 )
-            )
-            print(header)
-            print(separator)
 
-            # Print each metric row with all values right-aligned
-            for metric, row_data in metrics_df.iterrows():
-                row = f"{metric.rjust(col_widths['Metrics'])} | " + " | ".join(
-                    f"{str(row_data[col]).rjust(col_widths[col])}"
+                # Print table neatly
+                col_widths = {
+                    col: max(metrics_df[col].astype(str).map(len).max(), len(str(col)))
+                    + 2
                     for col in metrics_df.columns
+                }
+                separator = "-" * (sum(col_widths.values()) + len(col_widths) * 3)
+
+                print(separator)
+                header = " | ".join(
+                    f"{col.rjust(col_widths[col])}" for col in metrics_df.columns
                 )
-                print(row)
-            print(separator)
+                print(header)
+                print(separator)
+
+                for _, row_data in metrics_df.iterrows():
+                    row = " | ".join(
+                        f"{str(row_data[col]).rjust(col_widths[col])}"
+                        for col in metrics_df.columns
+                    )
+                    print(row)
+                print(separator)
+
+            else:
+                # Default behavior (no grouping)
+                metrics_df = metrics_df.set_index("Model").T  # Transpose the DataFrame
+                col_widths = {
+                    col: max(metrics_df[col].astype(str).map(len).max(), len(str(col)))
+                    + 2
+                    for col in metrics_df.columns
+                }
+                col_widths["Metrics"] = (
+                    max(metrics_df.index.astype(str).map(len).max(), len("Metrics")) + 2
+                )
+                separator = "-" * (sum(col_widths.values()) + len(col_widths) * 3)
+
+                # Print header
+                print(separator)
+                header = (
+                    "Metrics".rjust(col_widths["Metrics"])
+                    + " | "
+                    + " | ".join(
+                        f"{str(col).rjust(col_widths[col])}"
+                        for col in metrics_df.columns
+                    )
+                )
+                print(header)
+                print(separator)
+
+                for metric, row_data in metrics_df.iterrows():
+                    row = f"{metric.rjust(col_widths['Metrics'])} | " + " | ".join(
+                        f"{str(row_data[col]).rjust(col_widths[col])}"
+                        for col in metrics_df.columns
+                    )
+                    print(row)
+                print(separator)
 
         else:
             # Regression formatting with all columns right-aligned
@@ -679,13 +763,60 @@ def summarize_model_performance(
                     else prev_model
                 )
             print(separator)
+
     else:
         if model_type == "classification":
-            metrics_df = metrics_df.set_index("Model").T.reset_index()
-            metrics_df.columns.name = None
-            metrics_df.rename(columns={"index": "Metrics"}, inplace=True)
-        metrics_df.index = [""] * len(metrics_df)
-        return metrics_df
+            # Explicitly check for group_category rather than relying on column presence
+            if group_category is not None:
+                # Remove any "Overall" rows (not useful when grouping)
+                if "Group" in metrics_df.columns:
+                    metrics_df = metrics_df[metrics_df["Group"] != "Overall"]
+
+                # Verify that grouped data exists
+                if "Group" not in metrics_df.columns:
+                    raise ValueError(
+                        "Expected 'Group' column missing in metrics_df. "
+                        "Make sure group metrics were appended above."
+                    )
+
+                # Pivot so that group names (e.g. CKD Stages) become columns
+                metrics_df = (
+                    metrics_df.melt(
+                        id_vars=["Group"],
+                        value_vars=[
+                            "Precision/PPV",
+                            "Average Precision",
+                            "Sensitivity/Recall",
+                            "Specificity",
+                            "F1-Score",
+                            "AUC ROC",
+                            "Brier Score",
+                            "Model Threshold",
+                        ],
+                        var_name="Metrics",
+                        value_name="Value",
+                    )
+                    .pivot(index="Metrics", columns="Group", values="Value")
+                    .reset_index()
+                )
+
+                # Clean up display
+                metrics_df.columns.name = None
+                metrics_df.index = [""] * len(metrics_df)
+                return metrics_df
+
+            else:
+                # Default behavior (no group_category): models as columns
+                metrics_df = metrics_df.set_index("Model").T.reset_index()
+                metrics_df.columns.name = None
+                metrics_df.rename(columns={"index": "Metrics"}, inplace=True)
+                metrics_df.index = [""] * len(metrics_df)
+                return metrics_df
+
+        else:
+            # Regression case (unchanged)
+            metrics_df.index = [""] * len(metrics_df)
+            return metrics_df
 
 
 ################################################################################
