@@ -8,6 +8,7 @@ from tqdm import tqdm
 import textwrap
 
 import statsmodels.api as sm
+from scipy.stats import norm
 from sklearn.pipeline import Pipeline
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import (
@@ -1154,6 +1155,26 @@ def show_confusion_matrix(
 ################################################################################
 
 
+def hanley_mcneil_auc_test(y_true, y_scores_1, y_scores_2):
+    """
+    Hanley & McNeil (1982) large-sample z-test for difference in correlated AUCs.
+    Returns (auc1, auc2, p_value).
+    """
+    auc1 = roc_auc_score(y_true, y_scores_1)
+    auc2 = roc_auc_score(y_true, y_scores_2)
+    n1 = np.sum(y_true)
+    n2 = len(y_true) - n1
+    q1 = auc1 / (2 - auc1)
+    q2 = 2 * auc1**2 / (1 + auc1)
+    se = np.sqrt(
+        (auc1 * (1 - auc1) + (n1 - 1) * (q1 - auc1**2) + (n2 - 1) * (q2 - auc1**2))
+        / (n1 * n2)
+    )
+    z = (auc1 - auc2) / se
+    p = 2 * (1 - norm.cdf(abs(z)))
+    return auc1, auc2, p
+
+
 def show_roc_curve(
     model=None,
     X=None,
@@ -1179,6 +1200,7 @@ def show_roc_curve(
     tick_fontsize=10,
     gridlines=True,
     group_category=None,
+    delong=None,
 ):
     """
     Plot Receiver Operating Characteristic (ROC) curves for models or pipelines
@@ -1252,12 +1274,21 @@ def show_roc_curve(
         by unique values. Cannot be used with `subplots=True` or `overlay=True`.
         If provided, separate ROC curves are plotted for each group, with AUC
         and class counts (Total, Pos, Neg) shown in the legend.
+    - delong: tuple or list of array-like, optional
+        Two predicted probability arrays (e.g., [y_prob_model1, y_prob_model2]) to
+        perform a Hanley & McNeil AUC comparison, a parametric approximation of
+        DeLong’s test for correlated ROC curves. The test compares two models
+        evaluated on the same samples to determine whether the difference in AUC
+        is statistically significant. Cannot be used when `group_category` is
+        specified, since AUCs are computed on separate subsets of patients.
 
     Raises:
         - ValueError: If `subplots=True` and `overlay=True` are both set, if
             `subplots=True` and `group_category` is provided, if `overlay=True`
             and `group_category` is provided, or if `overlay=True` and only one
             model is provided.
+        - ValueError: If `delong` is provided while `group_category` is specified,
+          since AUCs from different groups cannot be compared using this test.
     """
 
     if not ((model is not None and X is not None) or y_prob is not None):
@@ -1303,6 +1334,12 @@ def show_roc_curve(
             f"`overlay` cannot be set to True when `group_category` is "
             f"provided. When selecting `group_category`, make sure `subplots` and "
             f"`overlay` are set to `False`."
+        )
+
+    if delong is not None and group_category is not None:
+        raise ValueError(
+            f"Cannot run DeLong's (Hanley & McNeil comparison) when `group_category` "
+            f"is specified, because AUCs are computed on separate subsets of patients."
         )
 
     # Ensure models is a list
@@ -1382,6 +1419,32 @@ def show_roc_curve(
             auc_str = f"{roc_auc:.{decimal_places}f}"
 
         print(f"AUC for {name}: {roc_auc:.{decimal_places}f}")
+
+        # Optional: Hanley & McNeil AUC comparison if two probability arrays are provided
+        if delong is not None and idx == 0:
+            try:
+                if not isinstance(delong, (tuple, list)) or len(delong) != 2:
+                    raise ValueError(
+                        "`delong` must be a tuple or list containing two y_prob arrays."
+                    )
+
+                y_prob_1, y_prob_2 = delong
+
+                # Resolve model names if available
+                if model_title is not None and len(model_title) >= 2:
+                    name1, name2 = model_title[0], model_title[1]
+                else:
+                    name1, name2 = "Model 1", "Model 2"
+
+                auc1, auc2, p_val = hanley_mcneil_auc_test(y_true, y_prob_1, y_prob_2)
+                print(
+                    f"\nHanley & McNeil AUC comparison (Approximation of Delong's Test):\n"
+                    f"  {name1} AUC = {auc1:.3f}\n"
+                    f"  {name2} AUC = {auc2:.3f}\n"
+                    f"  p-value = {p_val:.4f}\n"
+                )
+            except Exception as e:
+                print(f"Error running Hanley & McNeil AUC comparison: {e}")
 
         if overlay:
             plt.plot(
