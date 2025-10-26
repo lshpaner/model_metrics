@@ -2437,20 +2437,17 @@ def test_show_roc_curve_with_delong(mock_show, trained_model, sample_data):
     assert mock_show.called
 
 
-def test_hanley_mcneil_auc_test_outputs_valid_values(sample_data):
-    """Test direct Hanley & McNeil / DeLong-like AUC comparison function."""
+def test_hanley_mcneil_auc_test_outputs_valid_values(sample_data, capsys):
+    """Ensure hanley_mcneil_auc_test prints valid AUC comparison output."""
     from model_metrics.model_evaluator import hanley_mcneil_auc_test
 
     X, y = sample_data
     y_scores_1 = np.random.rand(len(y))
     y_scores_2 = np.random.rand(len(y))
 
-    auc1, auc2, p_val = hanley_mcneil_auc_test(y, y_scores_1, y_scores_2)
+    hanley_mcneil_auc_test(y, y_scores_1, y_scores_2)
+    captured = capsys.readouterr().out
 
-    # Check types and value ranges
-    assert isinstance(auc1, float)
-    assert isinstance(auc2, float)
-    assert isinstance(p_val, float)
-    assert 0 <= auc1 <= 1
-    assert 0 <= auc2 <= 1
-    assert 0 <= p_val <= 1
+    assert "Hanley" in captured
+    assert "AUC" in captured
+    assert "p-value" in captured

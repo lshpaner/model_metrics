@@ -2598,6 +2598,7 @@ def show_calibration_curve(
     bins=10,
     marker="o",
     show_brier_score=True,
+    brier_decimals=3,
     gridlines=True,
     linestyle_kwgs=None,
     group_category=None,
@@ -2638,6 +2639,8 @@ def show_calibration_curve(
     - bins (int, default=10): # of bins to use for computing calibration curve.
     - marker (str, default="o"): Marker used for each calibration point.
     - show_brier_score (bool, default=True): Whether to show Brier score in legend.
+    - brier_decimals (int, default=3): Number of decimal places to display for
+      the Brier score values in the legend.
     - gridlines (bool, default=True): Whether to display gridlines on the plot.
     - linestyle_kwgs (dict, optional): Styling options for the diagonal
       "perfectly calibrated" line.
@@ -2771,7 +2774,7 @@ def show_calibration_curve(
                 )
                 legend_label = f"{group_val}"
                 if show_brier_score:
-                    legend_label += f" (Brier: {brier:.4f})"
+                    legend_label += f" (Brier: {brier:.{brier_decimals}f})"
 
                 # Plot curve for group
                 plt.plot(
@@ -2841,7 +2844,7 @@ def show_calibration_curve(
         brier_score = brier_score_loss(y_true, y_prob) if show_brier_score else None
         legend_label = f"{name}"
         if show_brier_score:
-            legend_label += f" (Brier: {brier_score:.4f})"
+            legend_label += f" (Brier: {brier_score:.{brier_decimals}f})"
 
         # PLOT IN OVERLAY
         if overlay:
