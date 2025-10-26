@@ -40,7 +40,7 @@ if __name__ == "__main__":
     model_path = argv[0]
 
     ## Define base paths
-    ## `base_path`` represents the parent directory of your current working directory
+    ## `base_path`` represents the parent directory of current working directory
     base_path = os.path.join(os.pardir)
     ## Go up one level from 'notebooks' to the parent directory, then into the
     ## 'results' folder
