@@ -1,18 +1,11 @@
-import pandas as pd
 import numpy as np
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neural_network import MLPClassifier
-from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn.svm import NuSVC
-from sklearn.calibration import CalibratedClassifierCV
-
 
 ################################################################################
 ############################# Path Variables ###################################

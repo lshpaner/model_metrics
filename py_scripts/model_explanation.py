@@ -1,7 +1,6 @@
 from model_tuner import *
 from eda_toolkit import ensure_directory
 import pandas as pd
-import numpy as np
 import os
 from pathlib import Path
 import sys
@@ -9,14 +8,12 @@ import sys
 print(os.path.join(os.pardir, ".."))
 sys.path.append("..")
 
-from sklearn.metrics import classification_report
-from sklearn.metrics import confusion_matrix
 from model_metrics import ModelCalculator
 
 import shap
 
 ## Define base paths
-## `base_path`` represents the parent directory of your current working directory
+## `base_path`` represents the parent directory of current working directory
 base_path = os.path.join(os.pardir)
 ## Go up one level from 'notebooks' to the parent directory, then into the
 ## 'results' folder

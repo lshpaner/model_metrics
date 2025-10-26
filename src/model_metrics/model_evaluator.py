@@ -180,9 +180,9 @@ def summarize_model_performance(
     Summarize performance metrics for classification or regression models.
 
     Computes and displays or returns key metrics for one or more models.
-    Supports classification and regression, operating either from model
-    objects with feature data or directly from predictions/probabilities.
-    Optionally computes group-specific metrics for classification.
+    Supports classification and regression, operating from trained model
+    objects or directly from prediction/probability inputs. Optionally
+    computes group-specific metrics for classification tasks.
 
     Parameters
     ----------
@@ -193,11 +193,11 @@ def summarize_model_performance(
     y_prob : array-like or list, default=None
         Predicted probabilities for classification models.
     y_pred : array-like or list, default=None
-        Predicted labels or regression outputs.
+        Predicted class labels or regression outputs.
     y : array-like
         True target values.
     model_type : {"classification", "regression"}, default="classification"
-        Determines which metrics are computed.
+        Specifies which type of metrics to compute.
     model_threshold : float, dict, or None, default=None
         Classification decision threshold(s). Ignored if `custom_threshold` is set.
     custom_threshold : float or None, default=None
@@ -205,16 +205,16 @@ def summarize_model_performance(
     model_title : str, list, or None, default=None
         Custom model names. Defaults to "Model_1", "Model_2", etc.
     score : str or None, default=None
-        Optional scoring metric for threshold resolution.
+        Optional scoring metric for threshold tuning.
     return_df : bool, default=False
-        If True, returns a pandas DataFrame; otherwise prints a table.
+        If True, returns a pandas DataFrame; otherwise prints a summary table.
     overall_only : bool, default=False
         For regression only. If True, returns only overall metrics.
     decimal_places : int, default=3
-        Number of decimal places for rounding.
+        Number of decimal places to round displayed metrics.
     group_category : str, array-like, or None, default=None
         Optional grouping variable for classification metrics.
-        Can be a column name in `X` or an array of the same length as `y`.
+        Can be a column name in `X` or an array matching `y` in length.
 
     Returns
     -------
@@ -223,16 +223,95 @@ def summarize_model_performance(
         - Classification (no groups): metrics as rows, models as columns.
         - Classification (grouped): metrics as rows, groups as columns.
         - Regression: rows for metrics, coefficients, and/or feature importances.
-        If `return_df=False`, prints a formatted table.
+        If `return_df=False`, prints a formatted summary table.
 
     Raises
-    -------
+    ------
     ValueError
         - If `model_type` is not "classification" or "regression".
         - If `overall_only=True` is used with classification models.
         - If neither (`model` and `X`) nor (`y_prob` or `y_pred`) are provided.
     """
 
+    # --- Helpers ---
+    def compute_classification_metrics(y_true, y_pred, y_prob, threshold):
+        return {
+            "Precision/PPV": round(
+                precision_score(y_true, y_pred, zero_division=0), decimal_places
+            ),
+            "Average Precision": round(
+                average_precision_score(y_true, y_prob), decimal_places
+            ),
+            "Sensitivity/Recall": round(
+                recall_score(y_true, y_pred, zero_division=0), decimal_places
+            ),
+            "Specificity": round(
+                recall_score(y_true, y_pred, pos_label=0, zero_division=0),
+                decimal_places,
+            ),
+            "F1-Score": round(f1_score(y_true, y_pred), decimal_places),
+            "AUC ROC": round(roc_auc_score(y_true, y_prob), decimal_places),
+            "Brier Score": round(brier_score_loss(y_true, y_prob), decimal_places),
+            "Model Threshold": round(float(threshold), decimal_places),
+        }
+
+    def compute_regression_metrics(y_true, y_pred):
+        mae = mean_absolute_error(y_true, y_pred)
+        mse = mean_squared_error(y_true, y_pred)
+        rmse = np.sqrt(mse)
+        exp_var = explained_variance_score(y_true, y_pred)
+        r2 = r2_score(y_true, y_pred)
+        mask = y_true != 0
+        mape = (
+            np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100
+            if np.any(mask)
+            else np.nan
+        )
+        return {
+            "MAE": round(mae, decimal_places),
+            "MAPE": round(mape, decimal_places) if not np.isnan(mape) else "NaN",
+            "MSE": round(mse, decimal_places),
+            "RMSE": round(rmse, decimal_places),
+            "Expl. Var.": round(exp_var, decimal_places),
+            "R^2 Score": round(r2, decimal_places),
+        }
+
+    def has_feature_importances(m):
+        if m is None:
+            return False
+        if hasattr(m, "feature_importances_"):
+            return True
+        from sklearn.pipeline import Pipeline
+
+        return isinstance(m, Pipeline) and hasattr(m[-1], "feature_importances_")
+
+    def get_feature_importances(m, feature_names):
+        from sklearn.pipeline import Pipeline
+
+        if hasattr(m, "feature_importances_"):
+            imps = m.feature_importances_
+        elif isinstance(m, Pipeline) and hasattr(m[-1], "feature_importances_"):
+            imps = m[-1].feature_importances_
+        else:
+            return {}
+        return pd.Series(imps, index=feature_names).round(decimal_places).to_dict()
+
+    def get_coef_and_intercept(m):
+        """
+        Return (coef_, intercept_) from model or final pipeline step if
+        present; else (None, None).
+        """
+        from sklearn.pipeline import Pipeline
+
+        if m is None:
+            return None, None
+        if hasattr(m, "coef_"):
+            return m.coef_, getattr(m, "intercept_", None)
+        if isinstance(m, Pipeline) and hasattr(m[-1], "coef_"):
+            return m[-1].coef_, getattr(m[-1], "intercept_", None)
+        return None, None
+
+    # --- Input validation ---
     if not (
         (model is not None and X is not None)
         or y_prob is not None
@@ -243,196 +322,109 @@ def summarize_model_performance(
     if model is not None and not isinstance(model, list):
         model = [model]
 
-    # Ensure y_prob is always a list of arrays:
-    # if a single array/Series is passed, wrap it in a list so y_prob[0] works
     if isinstance(y_prob, np.ndarray):
         y_prob = [y_prob]
 
-    if model_type == "classification":
-        if isinstance(y_prob, list) and isinstance(y_prob[0], float):
-            y_probs = [y_prob]
-        else:
-            y_probs = y_prob
-    else:
-        if isinstance(y_pred, list) and isinstance(y_pred[0], float):
-            y_preds = [y_pred]
-        else:
-            y_preds = y_pred
-
-    if model:
-        num_models = len(model)
-    elif y_prob:
-        num_models = len(y_probs)
-    else:
-        num_models = len(y_preds)
-
-    if y_prob is not None or y_pred is not None:
-        model = [None] * num_models
-
-    # Check if model is iterable; if not, wrap it in a list
-    try:
-        iter(model)
-        models = model if isinstance(model, list) else [model]
-    except TypeError:
-        models = [model]  # Handle non-iterable objects like a single model
-
     model_type = model_type.lower()
     if model_type not in ["classification", "regression"]:
-        raise ValueError(
-            "Invalid model_type. Must be 'classification' or 'regression'."
-        )
+        raise ValueError("model_type must be 'classification' or 'regression'")
 
     if model_type == "classification" and overall_only:
-        raise ValueError(
-            "The 'overall_only' option is only valid for regression models. "
-            "It cannot be used with classification."
-        )
+        raise ValueError("'overall_only' only applies to regression models")
 
+    models = model if isinstance(model, list) else [model]
     metrics_data = []
 
-    # Normalize model_title input
+    # --- Model titles ---
     if model_title is None:
         model_title = [f"Model_{i+1}" for i in range(len(models))]
     elif isinstance(model_title, str):
         model_title = [model_title]
     elif isinstance(model_title, pd.Series):
         model_title = model_title.tolist()
-    elif not isinstance(model_title, list):
-        raise TypeError(
-            "model_title must be a string, list of strings, Series, or None."
-        )
 
-    for i, model in enumerate(models):
+    # --- Main loop ---
+    for i, m in enumerate(models):
         name = model_title[i]
-        if model_type == "classification":
 
+        if model_type == "classification":
             if X is None:
                 y_true = y
-                y_prob = y_probs[i]
-                threshold = 0.5
-                if custom_threshold:
-                    threshold = custom_threshold
-                if model_threshold:
-                    threshold = model_threshold[name]
-            else:
-                # get y_true and y_prob from your helper, but ignore its threshold
-                y_true, y_prob, _, threshold = get_predictions(
-                    model, X, y, model_threshold, custom_threshold, score
+                y_prob_m = y_prob[i]
+                threshold = custom_threshold or (
+                    model_threshold[name]
+                    if (
+                        model_threshold
+                        and isinstance(model_threshold, dict)
+                        and name in model_threshold
+                    )
+                    else 0.5
                 )
+            else:
+                y_true, y_prob_m, _, threshold = get_predictions(
+                    m, X, y, model_threshold, custom_threshold, score
+                )
+            y_pred_m = (np.asarray(y_prob_m) > float(threshold)).astype(int)
 
-            # always derive predictions from the resolved threshold
-            y_pred = (np.asarray(y_prob) > float(threshold)).astype(int)
-
-            # Compute overall metrics
-            precision = precision_score(y_true, y_pred, zero_division=0)
-            recall = recall_score(y_true, y_pred, zero_division=0)  # Sensitivity
-            specificity = recall_score(y_true, y_pred, pos_label=0, zero_division=0)
-            auc_roc = roc_auc_score(y_true, y_prob)
-            brier = brier_score_loss(y_true, y_prob)
-            avg_precision = average_precision_score(y_true, y_prob)
-            f1 = f1_score(y_true, y_pred)
-
-            # Append overall metrics
-            metrics_data.append(
-                {
-                    "Model": name,
-                    "Group": "Overall",
-                    "Precision/PPV": round(precision, decimal_places),
-                    "Average Precision": round(avg_precision, decimal_places),
-                    "Sensitivity/Recall": round(recall, decimal_places),
-                    "Specificity": round(specificity, decimal_places),
-                    "F1-Score": round(f1, decimal_places),
-                    "AUC ROC": round(auc_roc, decimal_places),
-                    "Brier Score": round(brier, decimal_places),
-                    "Model Threshold": round(threshold, decimal_places),
-                }
+            # overall row
+            overall_row = {"Model": name, "Group": "Overall"}
+            overall_row.update(
+                compute_classification_metrics(
+                    y_true,
+                    y_pred_m,
+                    y_prob_m,
+                    threshold,
+                )
             )
+            metrics_data.append(overall_row)
 
+            # group rows
             if group_category is not None:
-                # Convert group_category to Series aligned with y_true
-                if isinstance(group_category, str) and isinstance(X, pd.DataFrame):
-                    group_series = X[group_category].reset_index(drop=True)
-                else:
-                    group_series = pd.Series(group_category).reset_index(drop=True)
-
-                # Sanity check for length
+                group_series = (
+                    X[group_category].reset_index(drop=True)
+                    if isinstance(group_category, str) and isinstance(X, pd.DataFrame)
+                    else pd.Series(group_category).reset_index(drop=True)
+                )
                 if len(group_series) != len(y_true):
                     raise ValueError(
-                        f"Length mismatch: group_category ({len(group_series)}) "
-                        f"and y_true ({len(y_true)}) must match."
+                        "Length mismatch between group_category and y_true"
                     )
 
-                # Iterate over each unique group and compute metrics
-                for group_name in group_series.unique():
-                    idx = group_series[group_series == group_name].index.to_numpy()
-
+                for g in group_series.unique():
+                    idx = group_series[group_series == g].index.to_numpy()
                     y_true_g = np.asarray(y_true)[idx]
-                    y_prob_g = np.asarray(y_prob)[idx]
-                    y_pred_g = np.asarray(y_pred)[idx]
-
-                    # Skip groups with only one class
+                    # must skip groups with single-class y to avoid AUC/AP errors
                     if len(np.unique(y_true_g)) < 2:
                         continue
-
-                    precision_g = precision_score(y_true_g, y_pred_g, zero_division=0)
-                    recall_g = recall_score(y_true_g, y_pred_g, zero_division=0)
-                    specificity_g = recall_score(
-                        y_true_g, y_pred_g, pos_label=0, zero_division=0
+                    y_prob_g = np.asarray(y_prob_m)[idx]
+                    y_pred_g = np.asarray(y_pred_m)[idx]
+                    g_row = {"Model": name, "Group": str(g)}
+                    g_row.update(
+                        compute_classification_metrics(
+                            y_true_g, y_pred_g, y_prob_g, threshold
+                        )
                     )
-                    auc_g = roc_auc_score(y_true_g, y_prob_g)
-                    ap_g = average_precision_score(y_true_g, y_prob_g)
-                    f1_g = f1_score(y_true_g, y_pred_g)
-                    brier_g = brier_score_loss(y_true_g, y_prob_g)
+                    metrics_data.append(g_row)
 
-                    metrics_data.append(
-                        {
-                            "Model": name,
-                            "Group": str(group_name),
-                            "Precision/PPV": round(precision_g, decimal_places),
-                            "Average Precision": round(ap_g, decimal_places),
-                            "Sensitivity/Recall": round(recall_g, decimal_places),
-                            "Specificity": round(specificity_g, decimal_places),
-                            "F1-Score": round(f1_g, decimal_places),
-                            "AUC ROC": round(auc_g, decimal_places),
-                            "Brier Score": round(brier_g, decimal_places),
-                            "Model Threshold": round(threshold, decimal_places),
-                        }
-                    )
-
-        elif model_type == "regression":
-
-            if model and isinstance(model, sm.OLS):
-                # Always add a constant term for all regression models
-                X_with_intercept = sm.add_constant(X)
-                # For statsmodels OLS, predict and extract coefficients directly
-                y_pred = model.predict(X_with_intercept)
-                coefficients = pd.Series(model.params.round(decimal_places)).to_dict()
+        else:  # regression
+            # predictions
+            if (m is not None) and isinstance(m, sm.OLS):
+                Xc = sm.add_constant(X)
+                y_pred_m = m.predict(Xc)
+                coef_series = pd.Series(m.params.round(decimal_places))
+                coefficients = coef_series.to_dict()
             else:
-                # For scikit-learn models, predict on X_with_intercept, adjusting for intercept
                 if X is None:
-                    y_pred = y_preds[i]
+                    y_pred_m = y_pred[i]
                 else:
                     try:
-                        # Always add a constant term for all regression models
-                        X_with_intercept = sm.add_constant(X)
-                        y_pred = model.predict(X_with_intercept)
-                    except ValueError:
-                        # If the model doesn't accept the constant, predict on original X
-                        y_pred = model.predict(X)
+                        Xc = sm.add_constant(X)
+                        y_pred_m = m.predict(Xc)
+                    except Exception:
+                        y_pred_m = m.predict(X)
 
-                # Extract coefficients for scikit-learn models
-                if hasattr(model, "coef_") or (
-                    type(model) is Pipeline and hasattr(model[-1], "coef_")
-                ):
-
-                    if hasattr(model, "coef_"):
-                        coef_ = model.coef_
-                        intercept_ = model.intercept_
-                    else:
-                        coef_ = model[-1].coef_
-                        intercept_ = model[-1].intercept_
-
-                    # Get feature names from X (excluding const for coef_)
+                coef_, intercept_ = get_coef_and_intercept(m)
+                if coef_ is not None:
                     feature_names = (
                         X.columns if isinstance(X, pd.DataFrame) else range(len(coef_))
                     )
@@ -441,107 +433,69 @@ def summarize_model_performance(
                         .round(decimal_places)
                         .to_dict()
                     )
-                    # Add intercept if it exists
-                    coefficients["const"] = round(intercept_, decimal_places)
+                    if intercept_ is not None:
+                        coefficients["const"] = round(float(intercept_), decimal_places)
                 else:
                     coefficients = {}
 
-            # Ensure y and y_pred are 1D NumPy arrays
-            y = np.asarray(y).ravel()
-            y_pred = np.asarray(y_pred).ravel()
+            # metrics row
+            y_arr = np.asarray(y).ravel()
+            y_pred_arr = np.asarray(y_pred_m).ravel()
+            reg_metrics = compute_regression_metrics(y_arr, y_pred_arr)
 
-            # Compute regression metrics
-            mae = mean_absolute_error(y, y_pred)
-            mse = mean_squared_error(y, y_pred)
-            rmse = np.sqrt(mse)
-            exp_var = explained_variance_score(y, y_pred)
-            r2 = r2_score(y, y_pred)
-            # Handle MAPE safely to avoid division errors
-            nonzero_mask = y != 0  # Avoid division by zero
-            if np.any(nonzero_mask):  # Ensure at least one valid value
-                mape = (
-                    np.mean(
-                        np.abs(
-                            (y[nonzero_mask] - y_pred[nonzero_mask]) / y[nonzero_mask]
-                        )
-                    )
-                    * 100
-                )
-            else:
-                mape = np.nan  # If all y-values are zero, return NaN
-
-            # Base columns for all regression models (without Feat. Imp. initially)
-            base_columns = {
+            base_row = {
                 "Model": name,
                 "Metric": "Overall Metrics",
-                "Variable": "",  # Empty since this isn't a coefficient
+                "Variable": "",
                 "Coefficient": "",
-                "MAE": round(mae, decimal_places),
-                "MAPE": round(mape, decimal_places) if not pd.isna(mape) else "NaN",
-                "MSE": round(mse, decimal_places),
-                "RMSE": round(rmse, decimal_places),
-                "Expl. Var.": round(exp_var, decimal_places),
-                "R^2 Score": round(r2, decimal_places),
+                **reg_metrics,
             }
+            metrics_data.append(base_row)
 
-            # Append overall metrics
-            metrics_data.append(base_columns)
-
-            # Only append coefficients and Feat. Imp. if not overall_only
             if not overall_only:
-                # Determine feature importances
-                feature_importance = {}
-                if has_feature_importances(model):
-                    # Use built-in feature importances for tree-based models (only on original features, not const)
-                    feature_importance = (
-                        pd.Series(model.feature_importances_, index=X.columns)
-                        .round(decimal_places)
-                        .to_dict()
+                # coefficients rows (const first if present)
+                if "const" in coefficients:
+                    metrics_data.append(
+                        {
+                            "Model": name,
+                            "Metric": "Coefficient",
+                            "Variable": "const",
+                            "Coefficient": coefficients["const"],
+                            "MAE": "",
+                            "MAPE": "",
+                            "MSE": "",
+                            "RMSE": "",
+                            "Expl. Var.": "",
+                            "R^2 Score": "",
+                        }
+                    )
+                for var, val in coefficients.items():
+                    if var == "const":
+                        continue
+                    metrics_data.append(
+                        {
+                            "Model": name,
+                            "Metric": "Coefficient",
+                            "Variable": var,
+                            "Coefficient": val,
+                            "MAE": "",
+                            "MAPE": "",
+                            "MSE": "",
+                            "RMSE": "",
+                            "Expl. Var.": "",
+                            "R^2 Score": "",
+                        }
                     )
 
-                # Append coefficient rows for models with coefficients (no P-value)
-                if coefficients:
-                    # Ensure 'const' is first if it exists
-                    if "const" in coefficients:
-                        metrics_data.append(
-                            {
-                                "Model": name,
-                                "Metric": "Coefficient",
-                                "Variable": "const",
-                                "Coefficient": coefficients["const"],
-                                "MAE": "",
-                                "MAPE": "",
-                                "MSE": "",
-                                "RMSE": "",
-                                "Expl. Var.": "",
-                                "R^2 Score": "",
-                            }
-                        )
-                    # Then append the remaining features
-                    for feature in [f for f in coefficients if f != "const"]:
-                        metrics_data.append(
-                            {
-                                "Model": name,
-                                "Metric": "Coefficient",
-                                "Variable": feature,
-                                "Coefficient": coefficients[feature],
-                                "MAE": "",
-                                "MAPE": "",
-                                "MSE": "",
-                                "RMSE": "",
-                                "Expl. Var.": "",
-                                "R^2 Score": "",
-                            }
-                        )
-
-                # Append feature importance only if the model has feature importances
-                if feature_importance and has_feature_importances(model):
-                    for feature in feature_importance:
+                # feature importances (tree models)
+                if has_feature_importances(m) and isinstance(X, pd.DataFrame):
+                    fi = get_feature_importances(m, X.columns)
+                    for var, val in fi.items():
                         metrics_data.append(
                             {
                                 "Model": name,
                                 "Metric": "Feat. Imp.",
-                                "Variable": feature,
+                                "Variable": var,
                                 "Coefficient": "",
                                 "MAE": "",
                                 "MAPE": "",
@@ -549,18 +503,16 @@ def summarize_model_performance(
                                 "RMSE": "",
                                 "Expl. Var.": "",
                                 "R^2 Score": "",
-                                "Feat. Imp.": feature_importance[feature],
+                                "Feat. Imp.": val,
                             }
                         )
 
-    # Check if any model in the list has feature importances
-    has_feature_importances_any = any(has_feature_importances(m) for m in models)
+    # --- Build DataFrame ---
+    metrics_df = pd.DataFrame(metrics_data)
 
-    # Define base columns for classification and regression separately
+    # --- Shape classification output (ordering + grouped vs non-grouped) ---
     if model_type == "classification":
-        base_columns = [
-            "Model",
-            "Group",
+        metric_order = [
             "Precision/PPV",
             "Average Precision",
             "Sensitivity/Recall",
@@ -570,159 +522,87 @@ def summarize_model_performance(
             "Brier Score",
             "Model Threshold",
         ]
-    if model_type == "regression":
-        base_columns = [
-            "Model",
-            "Metric",
-            "Variable",
-            "Coefficient",
-            "MAE",
-            "MAPE",
-            "MSE",
-            "RMSE",
-            "Expl. Var.",
-            "R^2 Score",
-        ]
+        if group_category is not None:
+            # keep only one model's group table for header clarity
+            if "Model" in metrics_df.columns and len(metrics_df["Model"].unique()) > 1:
+                first_model = metrics_df["Model"].iloc[0]
+                metrics_df = metrics_df[metrics_df["Model"] == first_model].copy()
 
-    # Add "Feature Importance" column only if any model has feature importances
-    # and it's regression
-    columns = base_columns.copy()
-    if has_feature_importances_any and model_type == "regression" and not overall_only:
-        columns.insert(4, "Feat. Imp.")  # Insert after "Coefficient"
+            # drop Overall row for grouped display
+            metrics_df = metrics_df[metrics_df["Group"] != "Overall"].copy()
 
-    # Create DataFrame with the determined columns
-    metrics_df = pd.DataFrame(metrics_data, columns=columns)
-
-    # Fill empty values for better printing
-    metrics_df = metrics_df.fillna("").astype(str)
-
-    if model_type == "regression":
-        # Remove "Feature Importance" column if no model has feature importances
-        if not has_feature_importances_any:
-            if "Feat. Imp." in metrics_df.columns:
-                metrics_df = metrics_df.drop(
-                    columns=["Feat. Imp."],
-                    errors="ignore",
-                )
-
-        # Check if any model in the list (or its pipeline's final step) has coef_
-        has_any_coef = any(
-            hasattr(m, "coef_") or (type(m) is Pipeline and hasattr(m[-1], "coef_"))
-            for m in models
-        )
-        # Remove "Coefficient" and "Variable" columns if no model has coef_
-        if not has_any_coef:
-            if "Coefficient" in metrics_df.columns:
-                metrics_df = metrics_df.drop(
-                    columns=["Coefficient", "Variable"],
-                    errors="ignore",
-                )
-
-    if overall_only:
-        if model_type == "regression":
             metrics_df = (
-                metrics_df[metrics_df["Metric"] == "Overall Metrics"]
-                .drop(columns=["Variable", "Coefficient"], errors="ignore")
-                .reset_index(drop=True)
+                metrics_df.melt(
+                    id_vars=["Group"],
+                    value_vars=metric_order,
+                    var_name="Metrics",
+                    value_name="Value",
+                )
+                .pivot(index="Metrics", columns="Group", values="Value")
+                .reset_index()
             )
-
-            if not has_feature_importances_any:
-                if "Feat. Imp." in metrics_df.columns:
-                    metrics_df = metrics_df.drop(
-                        columns=["Feat. Imp."],
-                        errors="ignore",
-                    )
+            # enforce order
+            metrics_df["Metrics"] = pd.Categorical(
+                metrics_df["Metrics"], categories=metric_order, ordered=True
+            )
+            metrics_df = metrics_df.sort_values("Metrics").reset_index(drop=True)
+            metrics_df.columns.name = None
+        else:
+            # non-grouped: drop Group col if present and transpose (models as columns)
+            if "Group" in metrics_df.columns:
+                metrics_df = metrics_df.drop(columns=["Group"], errors="ignore")
+            metrics_df = metrics_df.set_index("Model").T.reset_index()
+            metrics_df.rename(columns={"index": "Metrics"}, inplace=True)
+            metrics_df.columns.name = None
             metrics_df.index = [""] * len(metrics_df)
 
-    # **Manual formatting**
+    # --- Regression: nothing to reshape; preserve rows (incl. Coeff/Feat. Imp.) ---
+    if model_type == "regression":
+        # Keep as-is. Do not wipe coefficient rows.
+        pass
+
     # **Manual formatting**
     if not return_df:
         if model_type == "classification":
-            # Transpose for classification: metrics as rows, models as columns
-            print("Model Performance Metrics (Transposed):")
+            # Handle grouped vs non-grouped separately
+            if "Model" not in metrics_df.columns:
+                # Grouped case — skip transposed printing, just print the table as-is
+                print("Grouped Model Performance Metrics:")
+                print(metrics_df.to_string(index=False))
+                return
 
-            # Use group-based layout if group_category is active
-            if group_category is not None and "Group" in metrics_df.columns:
-                # Remove the 'Overall' row if grouping is used
-                metrics_df = metrics_df[metrics_df["Group"] != "Overall"]
+            # Non-grouped classification: safe to transpose
+            print("Model Performance Metrics:")
+            metrics_print = metrics_df.set_index("Model").T
+            col_widths = {
+                col: max(metrics_print[col].astype(str).map(len).max(), len(str(col)))
+                + 2
+                for col in metrics_print.columns
+            }
+            col_widths["Metrics"] = (
+                max(metrics_print.index.astype(str).map(len).max(), len("Metrics")) + 2
+            )
+            separator = "-" * (sum(col_widths.values()) + len(col_widths) * 3)
 
-                # Pivot: rows=metrics, columns=group names
-                metrics_df = (
-                    metrics_df.melt(
-                        id_vars=["Group", "Model"],
-                        value_vars=[
-                            "Precision/PPV",
-                            "Average Precision",
-                            "Sensitivity/Recall",
-                            "Specificity",
-                            "F1-Score",
-                            "AUC ROC",
-                            "Brier Score",
-                            "Model Threshold",
-                        ],
-                        var_name="Metrics",
-                        value_name="Value",
-                    )
-                    .pivot(index="Metrics", columns="Group", values="Value")
-                    .reset_index()
+            print(separator)
+            header = (
+                "Metrics".rjust(col_widths["Metrics"])
+                + " | "
+                + " | ".join(
+                    f"{str(col).rjust(col_widths[col])}"
+                    for col in metrics_print.columns
                 )
+            )
+            print(header)
+            print(separator)
 
-                # Print table neatly
-                col_widths = {
-                    col: max(metrics_df[col].astype(str).map(len).max(), len(str(col)))
-                    + 2
-                    for col in metrics_df.columns
-                }
-                separator = "-" * (sum(col_widths.values()) + len(col_widths) * 3)
-
-                print(separator)
-                header = " | ".join(
-                    f"{col.rjust(col_widths[col])}" for col in metrics_df.columns
+            for metric, row_data in metrics_print.iterrows():
+                row = f"{metric.rjust(col_widths['Metrics'])} | " + " | ".join(
+                    f"{str(row_data[col]).rjust(col_widths[col])}"
+                    for col in metrics_print.columns
                 )
-                print(header)
-                print(separator)
-
-                for _, row_data in metrics_df.iterrows():
-                    row = " | ".join(
-                        f"{str(row_data[col]).rjust(col_widths[col])}"
-                        for col in metrics_df.columns
-                    )
-                    print(row)
-                print(separator)
-
-            else:
-                # Default behavior (no grouping)
-                metrics_df = metrics_df.set_index("Model").T  # Transpose the DataFrame
-                col_widths = {
-                    col: max(metrics_df[col].astype(str).map(len).max(), len(str(col)))
-                    + 2
-                    for col in metrics_df.columns
-                }
-                col_widths["Metrics"] = (
-                    max(metrics_df.index.astype(str).map(len).max(), len("Metrics")) + 2
-                )
-                separator = "-" * (sum(col_widths.values()) + len(col_widths) * 3)
-
-                # Print header
-                print(separator)
-                header = (
-                    "Metrics".rjust(col_widths["Metrics"])
-                    + " | "
-                    + " | ".join(
-                        f"{str(col).rjust(col_widths[col])}"
-                        for col in metrics_df.columns
-                    )
-                )
-                print(header)
-                print(separator)
-
-                for metric, row_data in metrics_df.iterrows():
-                    row = f"{metric.rjust(col_widths['Metrics'])} | " + " | ".join(
-                        f"{str(row_data[col]).rjust(col_widths[col])}"
-                        for col in metrics_df.columns
-                    )
-                    print(row)
-                print(separator)
+                print(row)
+            print(separator)
 
         else:
             # Regression formatting with all columns right-aligned
@@ -732,7 +612,6 @@ def summarize_model_performance(
             }
             separator = "-" * (sum(col_widths.values()) + len(col_widths) * 3)
 
-            # Print header (all columns right-aligned)
             print("Model Performance Metrics")
             print(separator)
             print(
@@ -742,7 +621,6 @@ def summarize_model_performance(
             )
             print(separator)
 
-            # Track the previous model name for regression models only
             prev_model = None
             for i, (_, row_data) in enumerate(metrics_df.iterrows()):
                 current_model = row_data["Model"] if "Model" in row_data else None
@@ -758,66 +636,21 @@ def summarize_model_performance(
                     for col in metrics_df.columns
                 )
                 print(row)
-                prev_model = (
-                    current_model
-                    if model_type == "regression" and current_model
-                    else prev_model
-                )
+                prev_model = current_model if model_type == "regression" else prev_model
             print(separator)
-
     else:
         if model_type == "classification":
-            # Explicitly check for group_category rather than relying on column presence
-            if group_category is not None:
-                # Remove any "Overall" rows (not useful when grouping)
-                if "Group" in metrics_df.columns:
-                    metrics_df = metrics_df[metrics_df["Group"] != "Overall"]
-
-                # Verify that grouped data exists
-                if "Group" not in metrics_df.columns:
-                    raise ValueError(
-                        "Expected 'Group' column missing in metrics_df. "
-                        "Make sure group metrics were appended above."
-                    )
-
-                # Pivot so that group names (e.g. CKD Stages) become columns
-                metrics_df = (
-                    metrics_df.melt(
-                        id_vars=["Group"],
-                        value_vars=[
-                            "Precision/PPV",
-                            "Average Precision",
-                            "Sensitivity/Recall",
-                            "Specificity",
-                            "F1-Score",
-                            "AUC ROC",
-                            "Brier Score",
-                            "Model Threshold",
-                        ],
-                        var_name="Metrics",
-                        value_name="Value",
-                    )
-                    .pivot(index="Metrics", columns="Group", values="Value")
-                    .reset_index()
-                )
-
-                # Clean up display
-                metrics_df.columns.name = None
+            if "Model" in metrics_df.columns:
+                # non-grouped already shaped above
                 metrics_df.index = [""] * len(metrics_df)
                 return metrics_df
-
             else:
-                # Default behavior (no group_category): models as columns
-                metrics_df = metrics_df.set_index("Model").T.reset_index()
-                metrics_df.columns.name = None
-                metrics_df.rename(columns={"index": "Metrics"}, inplace=True)
+                # grouped already pivoted to (Metrics + group columns)
                 metrics_df.index = [""] * len(metrics_df)
                 return metrics_df
-
         else:
-            # Regression case (unchanged)
-            metrics_df.index = [""] * len(metrics_df)
-            return metrics_df
+            # regression: return as-is (keep coefficient / feat. imp. rows)
+            return metrics_df.reset_index(drop=True)
 
 
 ################################################################################
