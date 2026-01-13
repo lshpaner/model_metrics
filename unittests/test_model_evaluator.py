@@ -2273,3 +2273,734 @@ def test_hanley_mcneil_auc_test_outputs_valid_values(sample_data, capsys):
     assert "Hanley" in captured
     assert "AUC" in captured
     assert "p-value" in captured
+
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_operating_point_single(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test if show_roc_curve runs correctly with operating point for a single model."""
+    X, y = sample_data
+    try:
+        show_roc_curve(
+            trained_model,
+            X,
+            y,
+            show_operating_point=True,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve raised an exception with operating point: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_operating_point_youden(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test operating point with Youden's J method (default)."""
+    X, y = sample_data
+    try:
+        show_roc_curve(
+            trained_model,
+            X,
+            y,
+            show_operating_point=True,
+            operating_point_method="youden",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with Youden operating point: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_operating_point_closest_topleft(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test operating point with closest to top-left method."""
+    X, y = sample_data
+    try:
+        show_roc_curve(
+            trained_model,
+            X,
+            y,
+            show_operating_point=True,
+            operating_point_method="closest_topleft",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with closest_topleft method: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_operating_point_invalid_method(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test that invalid operating_point_method raises ValueError."""
+    X, y = sample_data
+    with pytest.raises(
+        ValueError,
+        match="operating_point_method must be 'youden' or 'closest_topleft'",
+    ):
+        show_roc_curve(
+            trained_model,
+            X,
+            y,
+            show_operating_point=True,
+            operating_point_method="invalid_method",
+            save_plot=False,
+        )
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_operating_point_custom_kwargs(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test operating point with custom marker styling."""
+    X, y = sample_data
+    custom_point_kwgs = {
+        "s": 100,
+        "marker": "^",
+        "facecolor": "blue",
+        "edgecolor": "red",
+    }
+    try:
+        show_roc_curve(
+            trained_model,
+            X,
+            y,
+            show_operating_point=True,
+            operating_point_kwgs=custom_point_kwgs,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with custom operating_point_kwgs: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_operating_point_overlay(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test operating points with overlay mode for multiple models."""
+    X, y = sample_data
+    model = [trained_model, trained_model]
+    try:
+        show_roc_curve(
+            model,
+            X,
+            y,
+            show_operating_point=True,
+            overlay=True,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with operating point in overlay: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_operating_point_subplots(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test operating points with subplots mode for multiple models."""
+    X, y = sample_data
+    model = [trained_model, trained_model]
+    try:
+        show_roc_curve(
+            model,
+            X,
+            y,
+            show_operating_point=True,
+            subplots=True,
+            n_cols=2,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with operating point in subplots: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_operating_point_legend_ordering(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test that operating point appears after Random Guess in legend order."""
+    X, y = sample_data
+    model = [trained_model, trained_model]
+    try:
+        show_roc_curve(
+            model,
+            X,
+            y,
+            show_operating_point=True,
+            subplots=True,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with operating point legend: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_operating_point_overlay_combined_label(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test that overlay mode combines AUC and Op threshold in same legend entry."""
+    X, y = sample_data
+    model = [trained_model, trained_model]
+    model_title = ["Model A", "Model B"]
+    try:
+        show_roc_curve(
+            model,
+            X,
+            y,
+            model_title=model_title,
+            show_operating_point=True,
+            overlay=True,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with combined legend label: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_operating_point_with_group_category(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test operating points work with group_category."""
+    X, y = sample_data
+    y = pd.Series(y)
+    group_category = pd.Series(
+        np.random.choice(
+            ["Group1", "Group2"],
+            size=len(y),
+        )
+    )
+    try:
+        show_roc_curve(
+            trained_model,
+            X,
+            y,
+            group_category=group_category,
+            show_operating_point=True,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with operating point and group_category: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_roc_curve_operating_point_with_legend_loc_bottom(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test operating point with legend at bottom."""
+    X, y = sample_data
+    try:
+        show_roc_curve(
+            trained_model,
+            X,
+            y,
+            show_operating_point=True,
+            legend_loc="bottom",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_roc_curve failed with legend_loc='bottom': {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_legend_loc_custom(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test custom legend location for PR curve."""
+    X, y = sample_data
+    try:
+        show_pr_curve(
+            trained_model,
+            X,
+            y,
+            legend_loc="upper right",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed with custom legend_loc: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_legend_loc_bottom(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test legend at bottom for PR curve."""
+    X, y = sample_data
+    try:
+        show_pr_curve(
+            trained_model,
+            X,
+            y,
+            legend_loc="bottom",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed with legend_loc='bottom': {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_legend_loc_overlay(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test legend location with overlay mode for PR curve."""
+    X, y = sample_data
+    model = [trained_model, trained_model]
+    try:
+        show_pr_curve(
+            model,
+            X,
+            y,
+            overlay=True,
+            legend_loc="upper right",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed with legend_loc in overlay: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_pr_curve_legend_loc_subplots(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test legend location with subplots mode for PR curve."""
+    X, y = sample_data
+    model = [trained_model, trained_model]
+    try:
+        show_pr_curve(
+            model,
+            X,
+            y,
+            subplots=True,
+            n_cols=2,
+            legend_loc="lower right",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_pr_curve failed with legend_loc in subplots: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+@patch("matplotlib.pyplot.show")
+def test_show_calibration_curve_legend_loc_custom(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test custom legend location for calibration curve."""
+    X, y = sample_data
+    try:
+        show_calibration_curve(
+            trained_model,
+            X,
+            y,
+            legend_loc="upper left",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed with custom legend_loc: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_calibration_curve_legend_loc_bottom(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test legend at bottom for calibration curve."""
+    X, y = sample_data
+    try:
+        show_calibration_curve(
+            trained_model,
+            X,
+            y,
+            legend_loc="bottom",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed with legend_loc='bottom': {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_calibration_curve_legend_loc_overlay(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test legend location with overlay mode for calibration curve."""
+    X, y = sample_data
+    model = [trained_model, trained_model]
+    try:
+        show_calibration_curve(
+            model,
+            X,
+            y,
+            overlay=True,
+            legend_loc="lower right",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed with legend_loc in overlay: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_calibration_curve_legend_loc_subplots(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test legend location with subplots mode for calibration curve."""
+    X, y = sample_data
+    model = [trained_model, trained_model]
+    try:
+        show_calibration_curve(
+            model,
+            X,
+            y,
+            subplots=True,
+            n_cols=2,
+            legend_loc="upper right",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed with legend_loc in subplots: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_calibration_curve_legend_loc_with_group_category(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test legend location with group_category for calibration curve."""
+    X, y = sample_data
+    y = pd.Series(y)
+    group_category = pd.Series(
+        np.random.choice(
+            ["Group1", "Group2"],
+            size=len(y),
+        )
+    )
+    try:
+        show_calibration_curve(
+            trained_model,
+            X,
+            y,
+            group_category=group_category,
+            legend_loc="lower left",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_calibration_curve failed with legend_loc and group_category: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+    # ========================================
+# GAIN CHART - GINI COEFFICIENT TESTS
+# ========================================
+
+@patch("matplotlib.pyplot.show")
+def test_show_gain_chart_with_gini(
+    mock_show,
+    trained_model,
+    sample_data,
+    capsys,
+):
+    """Test that Gini coefficient is calculated and displayed for gain chart."""
+    X, y = sample_data
+    try:
+        show_gain_chart(
+            trained_model,
+            X,
+            y,
+            show_gini=True,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_gain_chart failed with show_gini=True: {e}")
+    
+    captured = capsys.readouterr()
+    assert "Gini coefficient for Model 1:" in captured.out, "Gini coefficient was not printed"
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_gain_chart_without_gini(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test gain chart without Gini coefficient in legend."""
+    X, y = sample_data
+    try:
+        show_gain_chart(
+            trained_model,
+            X,
+            y,
+            show_gini=False,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_gain_chart failed with show_gini=False: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_gain_chart_gini_decimal_places(
+    mock_show,
+    trained_model,
+    sample_data,
+    capsys,
+):
+    """Test Gini coefficient with custom decimal places."""
+    X, y = sample_data
+    decimal_places = 4
+    try:
+        show_gain_chart(
+            trained_model,
+            X,
+            y,
+            show_gini=True,
+            decimal_places=decimal_places,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_gain_chart failed with decimal_places={decimal_places}: {e}")
+    
+    captured = capsys.readouterr()
+    assert "Gini coefficient for Model 1:" in captured.out
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_gain_chart_gini_overlay(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test Gini coefficient display in overlay mode."""
+    X, y = sample_data
+    model = [trained_model, trained_model]
+    model_title = ["Model A", "Model B"]
+    try:
+        show_gain_chart(
+            model,
+            X,
+            y,
+            model_title=model_title,
+            show_gini=True,
+            overlay=True,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_gain_chart failed with Gini in overlay mode: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_gain_chart_gini_subplots(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test Gini coefficient display in subplots mode."""
+    X, y = sample_data
+    model = [trained_model, trained_model]
+    try:
+        show_gain_chart(
+            model,
+            X,
+            y,
+            show_gini=True,
+            subplots=True,
+            n_cols=2,
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_gain_chart failed with Gini in subplots mode: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_gain_chart_gini_with_legend_loc(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test Gini coefficient with custom legend location."""
+    X, y = sample_data
+    try:
+        show_gain_chart(
+            trained_model,
+            X,
+            y,
+            show_gini=True,
+            legend_loc="upper right",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_gain_chart failed with Gini and custom legend_loc: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_gain_chart_gini_with_legend_bottom(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test Gini coefficient with legend at bottom."""
+    X, y = sample_data
+    try:
+        show_gain_chart(
+            trained_model,
+            X,
+            y,
+            show_gini=True,
+            legend_loc="bottom",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_gain_chart failed with Gini and legend_loc='bottom': {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+# ========================================
+# LIFT CHART - LEGEND_LOC TESTS
+# ========================================
+
+@patch("matplotlib.pyplot.show")
+def test_show_lift_chart_legend_loc_custom(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test custom legend location for lift chart."""
+    X, y = sample_data
+    try:
+        show_lift_chart(
+            trained_model,
+            X,
+            y,
+            legend_loc="upper left",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_lift_chart failed with custom legend_loc: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_lift_chart_legend_loc_bottom(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test legend at bottom for lift chart."""
+    X, y = sample_data
+    try:
+        show_lift_chart(
+            trained_model,
+            X,
+            y,
+            legend_loc="bottom",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_lift_chart failed with legend_loc='bottom': {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_lift_chart_legend_loc_overlay(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test legend location with overlay mode for lift chart."""
+    X, y = sample_data
+    model = [trained_model, trained_model]
+    try:
+        show_lift_chart(
+            model,
+            X,
+            y,
+            overlay=True,
+            legend_loc="lower right",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_lift_chart failed with legend_loc in overlay: {e}")
+    assert mock_show.called, "plt.show() was not called."
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_lift_chart_legend_loc_subplots(
+    mock_show,
+    trained_model,
+    sample_data,
+):
+    """Test legend location with subplots mode for lift chart."""
+    X, y = sample_data
+    model = [trained_model, trained_model]
+    try:
+        show_lift_chart(
+            model,
+            X,
+            y,
+            subplots=True,
+            n_cols=2,
+            legend_loc="upper right",
+            save_plot=False,
+        )
+    except Exception as e:
+        pytest.fail(f"show_lift_chart failed with legend_loc in subplots: {e}")
+    assert mock_show.called, "plt.show() was not called."
