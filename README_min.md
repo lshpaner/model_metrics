@@ -78,7 +78,7 @@ If you use `model_metrics` in your research or projects, please consider citing 
   month        = feb,
   year         = 2025,
   publisher    = {Zenodo},
-  version      = {0.0.4a10},
+  version      = {0.0.5a1},
   doi          = {10.5281/zenodo.14879819},
   url          = {https://doi.org/10.5281/zenodo.14879819}
 }
