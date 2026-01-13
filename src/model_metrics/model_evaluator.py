@@ -1164,7 +1164,7 @@ def show_roc_curve(
         specified, since AUCs are computed on separate subsets of patients.
     - legend_loc: str, optional
         Location for the legend. Standard matplotlib locations like 'lower right',
-        'upper left', etc., or 'bottom' to place legend below the plot 
+        'upper left', etc., or 'bottom' to place legend below the plot
         (default: 'lower right').
 
     Raises:
@@ -1308,7 +1308,7 @@ def show_roc_curve(
                     scores = tpr - fpr
                     idx_opt = np.argmax(scores)
                 elif operating_point_method == "closest_topleft":
-                    idx_opt = np.argmin((1 - tpr) ** 2 + fpr ** 2)
+                    idx_opt = np.argmin((1 - tpr) ** 2 + fpr**2)
                 else:
                     raise ValueError(
                         "operating_point_method must be 'youden' or 'closest_topleft'"
@@ -1350,12 +1350,12 @@ def show_roc_curve(
                 print(f"Error running Hanley & McNeil AUC comparison: {e}")
 
         if overlay:
-            line, = plt.plot(
+            (line,) = plt.plot(
                 fpr,
                 tpr,
                 **curve_style,
             )
-            
+
             if show_operating_point:
                 point_kwgs = operating_point_kwgs or {
                     "s": 80,
@@ -1363,19 +1363,30 @@ def show_roc_curve(
                     "facecolor": "red",
                     "edgecolor": "black",
                 }
-                
+
                 scatter = plt.scatter(
                     op_fpr,
                     op_tpr,
                     zorder=10,
                     **point_kwgs,
                 )
-                
+
                 # Create combined legend entry with line and marker
                 from matplotlib.lines import Line2D
-                combined_handle = (line, Line2D([0], [0], marker='o', color='w', 
-                                            markerfacecolor='red', markeredgecolor='black', 
-                                            markersize=8, linestyle='None'))
+
+                combined_handle = (
+                    line,
+                    Line2D(
+                        [0],
+                        [0],
+                        marker="o",
+                        color="w",
+                        markerfacecolor="red",
+                        markeredgecolor="black",
+                        markersize=8,
+                        linestyle="None",
+                    ),
+                )
                 line.set_label(f"{name} (AUC = {auc_str}, Op = {op_thresh:.2f})")
             else:
                 line.set_label(f"{name} (AUC = {auc_str})")
@@ -1439,7 +1450,7 @@ def show_roc_curve(
             else:
                 # Get handles and labels for ordering
                 handles, labels = ax.get_legend_handles_labels()
-                
+
                 # Order: AUC curves, then Random Guess, then Operating Points
                 ordered_labels = []
                 for l in labels:
@@ -1451,23 +1462,23 @@ def show_roc_curve(
                 for l in labels:
                     if "Op " in l:
                         ordered_labels.append(l)
-                
+
                 ordered_handles = [handles[labels.index(l)] for l in ordered_labels]
-                
+
                 if legend_loc == "bottom":
                     ax.legend(
                         ordered_handles,
                         ordered_labels,
                         loc="upper center",
                         bbox_to_anchor=(0.5, -0.25),
-                        fontsize=tick_fontsize
+                        fontsize=tick_fontsize,
                     )
                 else:
                     ax.legend(
                         ordered_handles,
                         ordered_labels,
                         loc=legend_loc,
-                        fontsize=tick_fontsize
+                        fontsize=tick_fontsize,
                     )
             ax.grid(visible=gridlines)
         else:
@@ -1751,13 +1762,10 @@ def show_pr_curve(
     - legend_metric: str, optional
         Metric to show in the legend: either "ap" (Average Precision, default)
         or "aucpr" (area under the PR curve).
-    - legend_metric: str, optional
-            Metric to show in the legend: either "ap" (Average Precision, default)
-            or "aucpr" (area under the PR curve).
-        - legend_loc: str, optional
-            Location for the legend. Standard matplotlib locations like 'lower left',
-            'upper right', etc., or 'bottom' to place legend below the plot
-            (default: 'lower left').
+    - legend_loc: str, optional
+        Location for the legend. Standard matplotlib locations like 'lower left',
+        'upper right', etc., or 'bottom' to place legend below the plot
+        (default: 'lower left').
 
     Raises:
     - ValueError:
@@ -1955,7 +1963,7 @@ def show_pr_curve(
                     ax.legend(
                         loc="upper center",
                         bbox_to_anchor=(0.5, -0.25),
-                        fontsize=tick_fontsize
+                        fontsize=tick_fontsize,
                     )
                 else:
                     ax.legend(loc=legend_loc, fontsize=tick_fontsize)
@@ -2012,7 +2020,7 @@ def show_pr_curve(
                     plt.legend(
                         loc="upper center",
                         bbox_to_anchor=(0.5, -0.15),
-                        fontsize=tick_fontsize
+                        fontsize=tick_fontsize,
                     )
                 else:
                     plt.legend(loc=legend_loc, fontsize=tick_fontsize)
@@ -2065,7 +2073,7 @@ def show_pr_curve(
                 plt.legend(
                     loc="upper center",
                     bbox_to_anchor=(0.5, -0.15),
-                    fontsize=tick_fontsize
+                    fontsize=tick_fontsize,
                 )
             else:
                 plt.legend(loc=legend_loc, fontsize=tick_fontsize)
@@ -2153,8 +2161,8 @@ def show_lift_chart(
     - label_fontsize (int, default=12): Font size for axis labels.
     - tick_fontsize (int, default=10): Font size for tick labels.
     - gridlines (bool, default=True): Whether to show grid lines.
-    - legend_loc (str, optional): Location for the legend. Standard matplotlib 
-      locations like 'best', 'upper right', 'lower left', etc., or 'bottom' to 
+    - legend_loc (str, optional): Location for the legend. Standard matplotlib
+      locations like 'best', 'upper right', 'lower left', etc., or 'bottom' to
       place legend below the plot (default: 'best').
 
     Raises:
@@ -2272,12 +2280,12 @@ def show_lift_chart(
 
             if grid_title:  # Only set title if not explicitly disabled
                 ax.set_title(grid_title, fontsize=label_fontsize)
-                
+
             if legend_loc == "bottom":
                 ax.legend(
                     loc="upper center",
                     bbox_to_anchor=(0.5, -0.25),
-                    fontsize=tick_fontsize
+                    fontsize=tick_fontsize,
                 )
             else:
                 ax.legend(loc=legend_loc, fontsize=tick_fontsize)
@@ -2308,12 +2316,12 @@ def show_lift_chart(
 
             if plot_title:  # Only set title if not explicitly disabled
                 plt.title(plot_title, fontsize=label_fontsize)
-           
+
             if legend_loc == "bottom":
                 plt.legend(
                     loc="upper center",
                     bbox_to_anchor=(0.5, -0.15),
-                    fontsize=tick_fontsize
+                    fontsize=tick_fontsize,
                 )
             else:
                 plt.legend(loc=legend_loc, fontsize=tick_fontsize)
@@ -2345,12 +2353,10 @@ def show_lift_chart(
 
         if overlay_title:  # Only set title if not explicitly disabled
             plt.title(overlay_title, fontsize=label_fontsize)
-        
+
         if legend_loc == "bottom":
             plt.legend(
-                loc="upper center",
-                bbox_to_anchor=(0.5, -0.15),
-                fontsize=tick_fontsize
+                loc="upper center", bbox_to_anchor=(0.5, -0.15), fontsize=tick_fontsize
             )
         else:
             plt.legend(loc=legend_loc, fontsize=tick_fontsize)
@@ -2400,7 +2406,7 @@ def show_gain_chart(
     tick_fontsize=10,
     gridlines=True,
     legend_loc="best",
-    show_gini=True,  
+    show_gini=True,
     decimal_places=3,
 ):
     """
@@ -2434,8 +2440,8 @@ def show_gain_chart(
     - label_fontsize (int, default=12): Font size for axis labels.
     - tick_fontsize (int, default=10): Font size for tick labels.
     - gridlines (bool, default=True): Whether to show grid lines.
-    - legend_loc (str, optional): Location for the legend. Standard matplotlib 
-      locations like 'best', 'upper right', 'lower left', etc., or 'bottom' to 
+    - legend_loc (str, optional): Location for the legend. Standard matplotlib
+      locations like 'best', 'upper right', 'lower left', etc., or 'bottom' to
       place legend below the plot (default: 'best').
     - show_gini (bool, default=True): Whether to show Gini coefficient in the legend.
     - decimal_places (int, default=3): Number of decimal places for Gini coefficient.
@@ -2518,7 +2524,7 @@ def show_gain_chart(
         # Calculate Gini coefficient
         augc = auc(percentages, cumulative_gains)
         gini = 2 * augc - 1
-        
+
         # Print Gini coefficient
         print(f"Gini coefficient for {name}: {gini:.{decimal_places}f}")
 
@@ -2572,20 +2578,20 @@ def show_gain_chart(
                 ax.legend(
                     loc="upper center",
                     bbox_to_anchor=(0.5, -0.25),
-                    fontsize=tick_fontsize
+                    fontsize=tick_fontsize,
                 )
             else:
                 ax.legend(loc=legend_loc, fontsize=tick_fontsize)
             ax.grid(visible=gridlines)
         else:
             plt.figure(figsize=figsize or (8, 6))
-            
+
             # For single plots, show Gini in legend
             if show_gini:
                 single_label = f"Gini = {gini:.{decimal_places}f}"
             else:
                 single_label = "Gain Curve"
-            
+
             plt.plot(
                 percentages,
                 cumulative_gains,
@@ -2615,7 +2621,7 @@ def show_gain_chart(
                 plt.legend(
                     loc="upper center",
                     bbox_to_anchor=(0.5, -0.15),
-                    fontsize=tick_fontsize
+                    fontsize=tick_fontsize,
                 )
             else:
                 plt.legend(loc=legend_loc, fontsize=tick_fontsize)
@@ -2650,9 +2656,7 @@ def show_gain_chart(
 
         if legend_loc == "bottom":
             plt.legend(
-                loc="upper center",
-                bbox_to_anchor=(0.5, -0.15),
-                fontsize=tick_fontsize
+                loc="upper center", bbox_to_anchor=(0.5, -0.15), fontsize=tick_fontsize
             )
         else:
             plt.legend(loc=legend_loc, fontsize=tick_fontsize)
@@ -2756,8 +2760,8 @@ def show_calibration_curve(
       "perfectly calibrated" line.
     - group_category (array-like, optional): A categorical series to plot
       subgroup calibration curves.
-    - legend_loc (str, optional): Location for the legend. Standard matplotlib 
-      locations like 'best', 'upper right', 'lower left', etc., or 'bottom' to 
+    - legend_loc (str, optional): Location for the legend. Standard matplotlib
+      locations like 'best', 'upper right', 'lower left', etc., or 'bottom' to
       place legend below the plot (default: 'best').
 
     Raises:
@@ -2934,7 +2938,7 @@ def show_calibration_curve(
                 plt.legend(
                     loc="upper center",
                     bbox_to_anchor=(0.5, -0.15),
-                    fontsize=tick_fontsize
+                    fontsize=tick_fontsize,
                 )
             else:
                 plt.legend(loc=legend_loc, fontsize=tick_fontsize)
@@ -3020,7 +3024,7 @@ def show_calibration_curve(
                 ax.legend(
                     loc="upper center",
                     bbox_to_anchor=(0.5, -0.25),
-                    fontsize=tick_fontsize
+                    fontsize=tick_fontsize,
                 )
             else:
                 ax.legend(loc=legend_loc, fontsize=tick_fontsize)
@@ -3071,7 +3075,7 @@ def show_calibration_curve(
                 plt.legend(
                     loc="upper center",
                     bbox_to_anchor=(0.5, -0.15),
-                    fontsize=tick_fontsize
+                    fontsize=tick_fontsize,
                 )
             else:
                 plt.legend(loc=legend_loc, fontsize=tick_fontsize)
@@ -3111,9 +3115,7 @@ def show_calibration_curve(
             plt.title(overlay_title, fontsize=label_fontsize)
         if legend_loc == "bottom":
             plt.legend(
-                loc="upper center",
-                bbox_to_anchor=(0.5, -0.15),
-                fontsize=tick_fontsize
+                loc="upper center", bbox_to_anchor=(0.5, -0.15), fontsize=tick_fontsize
             )
         else:
             plt.legend(loc=legend_loc, fontsize=tick_fontsize)
