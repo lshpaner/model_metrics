@@ -98,6 +98,86 @@ def apply_legend(
         plt.legend(**kwargs)
 
 
+def _should_show_in_resid_legend(legend_kwgs, item_type):
+    """
+    Determine if a legend item should be shown.
+
+    Parameters
+    ----------
+    legend_kwgs : dict, bool, or None
+        Legend configuration dictionary
+    item_type : str
+        Type of legend item: 'groups', 'clusters', 'centroids', 'het_tests', 'cooks'
+
+    Returns
+    -------
+    bool
+        Whether to show this item type in the legend
+    """
+    # Handle boolean/None cases first
+    if legend_kwgs is None or legend_kwgs is True:
+        return True  # Default: show everything
+    if legend_kwgs is False:
+        return False  # Hide everything
+
+    # Handle dict case
+    if not isinstance(legend_kwgs, dict):
+        return True  # Fallback
+
+    key_map = {
+        "groups": "show_groups",
+        "clusters": "show_clusters",
+        "centroids": "show_centroids",
+        "het_tests": "show_het_tests",
+        "cooks": "show_cooks",
+    }
+
+    return legend_kwgs.get(key_map.get(item_type), True)
+
+
+def _get_resid_legend_formatting_kwgs(legend_kwgs, tick_fontsize):
+    """
+    Extract matplotlib legend formatting kwargs.
+
+    Parameters
+    ----------
+    legend_kwgs : dict or None
+        Legend configuration dictionary
+    tick_fontsize : int
+        Default font size for ticks
+
+    Returns
+    -------
+    dict
+        Kwargs to pass to ax.legend()
+    """
+    if legend_kwgs is None:
+        return {"fontsize": tick_fontsize - 2}
+
+    # Extract formatting parameters
+    formatting_keys = [
+        "fontsize",
+        "frameon",
+        "framealpha",
+        "shadow",
+        "title",
+        "title_fontsize",
+        "ncol",
+        "columnspacing",
+        "labelspacing",
+    ]
+
+    fmt_kwgs = {
+        k: v for k, v in legend_kwgs.items() if k in formatting_keys and v is not None
+    }
+
+    # Set default fontsize if not specified
+    if "fontsize" not in fmt_kwgs:
+        fmt_kwgs["fontsize"] = tick_fontsize - 2
+
+    return fmt_kwgs
+
+
 def setup_subplots(num_models, n_cols=2, n_rows=None, figsize=None):
     """Set up subplot grid for multiple models."""
     if n_rows is None:
