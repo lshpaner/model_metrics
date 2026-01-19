@@ -1,5 +1,7 @@
 from .model_calculator import *
 from .model_evaluator import *
+from .metrics_utils import *
+from .plot_utils import *
 from .partial_dependence import *
 from .logo import *
 
