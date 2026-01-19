@@ -46,6 +46,7 @@ from model_metrics.metrics_utils import (
 from model_metrics.plot_utils import (
     apply_plot_title,
     apply_legend,
+    _should_show_in_resid_legend,
     setup_subplots,
     normalize_curve_styles,
 )
@@ -2846,14 +2847,17 @@ def show_residual_diagnostics(
     suptitle_y=0.995,
     text_wrap=None,
     point_kwgs=None,
+    group_kwgs=None,
     line_kwgs=None,
     show_lowess=False,
     lowess_kwgs=None,
     group_category=None,
     show_centroids=False,
+    centroid_type="clusters",
     n_clusters=None,
     centroid_kwgs=None,
     legend_loc="best",
+    legend_kwgs=None,
     n_cols=None,
     n_rows=None,
     heteroskedasticity_test=None,
@@ -2923,9 +2927,13 @@ def show_residual_diagnostics(
         Maximum width for wrapping titles.
     point_kwgs : dict, optional
         Styling for scatter points (e.g., {'alpha': 0.6, 'color': 'blue'}).
+    group_kwgs : dict, optional
+        Styling for group scatter points when group_category is provided.
+        Can specify colors as a list for each group (e.g., {'color': ['blue', 'red']})
+        or other scatter properties. If colors not specified, uses default colormap.
     line_kwgs : dict, optional
         Styling for reference lines (e.g., {'color': 'red', 'linestyle': '--'}).
-    show_lowess : bool, default=True
+    show_lowess : bool, default=False
         Whether to show the lowess smoothing trend line on residual plots.
     lowess_kwgs : dict, optional
         Styling for lowess smoothing line
@@ -2936,11 +2944,25 @@ def show_residual_diagnostics(
     show_centroids : bool, default=False
         Whether to plot centroids for each group defined by group_category.
         Only applies when group_category is provided.
+    centroid_type : str, default="clusters"
+        Type of centroids to display when show_centroids=True. Options:
+        - "clusters": Use k-means clustering to find data-driven groupings
+        - "groups": Show centroids for each category in group_category
+        When "groups" is specified, group_category must be provided.
+    n_clusters : int, optional
+        Number of clusters for k-means clustering when centroid_type="clusters".
+        If None and show_centroids=True with centroid_type="clusters", defaults
+        to 3 clusters.
     centroid_kwgs : dict, optional
         Styling for centroid markers (e.g., {'marker': 'X', 's': 50, 'color': 'red'}).
     legend_loc : str, default="best"
         Location for the legend. Standard matplotlib locations like 'best',
         'upper right', 'lower left', etc. (default: 'best').
+    legend_kwgs : dict, optional
+        Control legend display for groups, centroids, clusters, and het_tests.
+        Use keys 'groups', 'centroids', 'clusters', 'het_tests' with boolean
+        values to show/hide specific legend entries (e.g.,
+        {'groups': True, 'het_tests': False}).
     n_cols : int, optional
         Number of columns for predictor plots layout. If None, uses automatic
         layout (1-3 predictors: n_cols=n_predictors, 4+: n_cols=3).
@@ -2981,6 +3003,8 @@ def show_residual_diagnostics(
         If both group_category and custom n_clusters are specified.
         If heteroskedasticity_test is not a valid test type.
         If histogram_type is not 'frequency' or 'density'.
+        If show_centroids=True and centroid_type='clusters' but X contains
+        non-numeric columns (k-means clustering requires all numeric features).
     """
 
     # Validate and normalize inputs
@@ -3043,11 +3067,40 @@ def show_residual_diagnostics(
                     f"Invalid plot_type '{pt}'. Must be one of {valid_plot_types}"
                 )
 
+    # Validate centroid_type parameter
+    if centroid_type not in ["clusters", "groups"]:
+        raise ValueError(
+            f"centroid_type must be either 'clusters' or 'groups', got '{centroid_type}'"
+        )
+
+    if centroid_type == "groups" and group_category is None:
+        raise ValueError(
+            "centroid_type='groups' requires group_category to be specified"
+        )
+
+    # Add this validation after the centroid_type validation, around line 240
+    if show_centroids and centroid_type == "clusters":
+        if X is not None and isinstance(X, pd.DataFrame):
+            # Check for non-numeric columns
+            non_numeric_cols = X.select_dtypes(exclude=[np.number]).columns.tolist()
+
+            if non_numeric_cols:
+                raise ValueError(
+                    f"When show_centroids=True and centroid_type='clusters', all columns in X "
+                    f"must be numeric for k-means clustering. "
+                    f"Found non-numeric column(s): {non_numeric_cols}.\n\n"
+                    f"Options:\n"
+                    f"  1. Remove non-numeric columns from X before calling this function\n"
+                    f"  2. Use centroid_type='groups' with group_category parameter instead\n"
+                    f"  3. Encode categorical variables as numeric before passing X"
+                )
+
     # Set default styling
     point_kwgs = point_kwgs or {"alpha": 0.6, "s": 50}
+    group_kwgs = group_kwgs or {}
     line_kwgs = line_kwgs or {"color": "red", "linestyle": "--", "linewidth": 2}
     lowess_kwgs = lowess_kwgs or {"color": "blue", "linewidth": 2}
-    centroid_kwgs = centroid_kwgs or {  # ADD THIS
+    centroid_kwgs = centroid_kwgs or {
         "marker": "X",
         "s": 50,
         "edgecolors": "black",
@@ -3200,47 +3253,56 @@ def show_residual_diagnostics(
 
             # Plot centroids if requested
             if show_centroids:
-                if group_category is not None:
-                    # Option 1: User-provided groups
+                if centroid_type == "groups":
+                    # Option 1: Group-based centroids
                     if isinstance(group_category, str) and isinstance(X, pd.DataFrame):
                         groups = X[group_category]
                     else:
                         groups = pd.Series(group_category)
 
                     unique_groups = groups.unique()
-                    colors = cm.tab10(np.linspace(0, 1, len(unique_groups)))
+                    colors_group = cm.tab10(np.linspace(0, 1, len(unique_groups)))
 
-                    for idx, group_val in enumerate(unique_groups):
+                    for gidx, group_val in enumerate(unique_groups):
                         mask = groups == group_val
                         centroid_x = y_pred_arr[mask].mean()
                         centroid_y = residuals[mask].mean()
                         plot_kwgs = centroid_kwgs.copy()
-                        plot_kwgs["label"] = f"{group_val} (n={mask.sum()})"
 
-                        # Handle color assignment
+                        # Only add label if user wants groups in legend
+                        if _should_show_in_resid_legend(legend_kwgs, "centroids"):
+                            plot_kwgs["label"] = f"{group_val} centroid"
+
+                        # Handle color assignment (convert 'c' to 'color' to avoid warnings)
                         if "c" in plot_kwgs:
                             if isinstance(plot_kwgs["c"], list):
-                                plot_kwgs["c"] = (
-                                    plot_kwgs["c"][idx]
-                                    if idx < len(plot_kwgs["c"])
-                                    else colors[idx]
+                                plot_kwgs["color"] = (
+                                    plot_kwgs["c"][gidx]
+                                    if gidx < len(plot_kwgs["c"])
+                                    else colors_group[gidx]
                                 )
+                            else:
+                                plot_kwgs["color"] = plot_kwgs["c"]
+                            plot_kwgs.pop("c")  # Remove 'c' to avoid conflicts
                         elif "color" not in plot_kwgs:
-                            plot_kwgs["color"] = colors[idx]
+                            plot_kwgs["color"] = colors_group[gidx]
 
                         ax.scatter(centroid_x, centroid_y, **plot_kwgs)
 
-                else:
-                    # Option 2: Automatic K-means clustering (when no group_category provided)
-                    # Set default if not provided
+                else:  # centroid_type == "clusters"
+                    # Option 2: K-means clustering
                     clusters = n_clusters if n_clusters is not None else 3
 
                     # Stack fitted values and residuals for clustering
                     data = np.column_stack([y_pred_arr, residuals])
-                    kmeans = KMeans(n_clusters=clusters, random_state=kmeans_rstate)
+                    kmeans = KMeans(
+                        n_clusters=clusters,
+                        n_init="auto",
+                        random_state=kmeans_rstate,
+                    )
                     cluster_labels = kmeans.fit_predict(data)
 
-                    colors = cm.tab10(np.linspace(0, 1, clusters))
+                    colors_cluster = cm.tab10(np.linspace(0, 1, clusters))
 
                     # Plot centroids for each cluster
                     for cluster_id in range(clusters):
@@ -3248,18 +3310,26 @@ def show_residual_diagnostics(
                         centroid_x = y_pred_arr[mask].mean()
                         centroid_y = residuals[mask].mean()
                         plot_kwgs = centroid_kwgs.copy()
-                        plot_kwgs["label"] = f"Cluster {cluster_id+1} (n={mask.sum()})"
 
-                        # Handle color assignment
+                        # Only add label if user wants clusters in legend
+                        if _should_show_in_resid_legend(legend_kwgs, "clusters"):
+                            plot_kwgs["label"] = (
+                                f"Cluster {cluster_id + 1} (n={mask.sum()})"
+                            )
+
+                        # Handle color assignment (convert 'c' to 'color' to avoid warnings)
                         if "c" in plot_kwgs:
                             if isinstance(plot_kwgs["c"], list):
-                                plot_kwgs["c"] = (
+                                plot_kwgs["color"] = (
                                     plot_kwgs["c"][cluster_id]
                                     if cluster_id < len(plot_kwgs["c"])
-                                    else colors[cluster_id]
+                                    else colors_cluster[cluster_id]
                                 )
+                            else:
+                                plot_kwgs["color"] = plot_kwgs["c"]
+                            plot_kwgs.pop("c")  # Remove 'c' to avoid conflicts
                         elif "color" not in plot_kwgs:
-                            plot_kwgs["color"] = colors[cluster_id]
+                            plot_kwgs["color"] = colors_cluster[cluster_id]
 
                         ax.scatter(centroid_x, centroid_y, **plot_kwgs)
 
@@ -3330,16 +3400,17 @@ def show_residual_diagnostics(
                 )
 
                 # Add test results to legend instead of text annotation
-                for _, result in het_results.items():
-                    if "error" not in result:
-                        label = result["interpretation"]
-                        ax.plot(
-                            [],
-                            [],
-                            linestyle="None",
-                            marker="None",
-                            label=label,
-                        )
+                if _should_show_in_resid_legend(legend_kwgs, "het_tests"):
+                    for _, result in het_results.items():
+                        if "error" not in result:
+                            label = result["interpretation"]
+                            ax.plot(
+                                [],
+                                [],
+                                linestyle="None",
+                                marker="None",
+                                label=label,
+                            )
 
                 # Apply legend with test results
                 apply_legend(legend_loc, fontsize=tick_fontsize - 2, ax=ax)
@@ -3619,14 +3690,45 @@ def show_residual_diagnostics(
                         colors = cm.tab10(np.linspace(0, 1, len(unique_groups)))
 
                         # Plot each group with different color
-                        for gidx, group_val in enumerate(unique_groups):
-                            mask = groups == group_val
-                            plot_kwgs_group = point_kwgs.copy()
-                            plot_kwgs_group["label"] = f"{group_val} (n={mask.sum()})"
-                            plot_kwgs_group["color"] = colors[gidx]
-                            ax.scatter(
-                                X.loc[mask, col], residuals[mask], **plot_kwgs_group
-                            )
+                        if group_category is not None:
+                            for gidx, group_val in enumerate(unique_groups):
+                                mask = groups == group_val
+                                plot_kwgs_group = point_kwgs.copy()
+                                plot_kwgs_group.update(group_kwgs)  # ← Apply group_kwgs
+
+                                if _should_show_in_resid_legend(legend_kwgs, "groups"):
+                                    plot_kwgs_group["label"] = (
+                                        f"{group_val} (n={mask.sum()})"
+                                    )
+
+                                # Handle color assignment
+                                if "color" in group_kwgs or "c" in group_kwgs:
+                                    # User specified colors in group_kwgs
+                                    if "c" in group_kwgs and isinstance(
+                                        group_kwgs["c"], list
+                                    ):
+                                        plot_kwgs_group["color"] = (
+                                            group_kwgs["c"][gidx]
+                                            if gidx < len(group_kwgs["c"])
+                                            else colors[gidx]
+                                        )
+                                        plot_kwgs_group.pop("c", None)
+                                    elif "color" in group_kwgs and isinstance(
+                                        group_kwgs["color"], list
+                                    ):
+                                        plot_kwgs_group["color"] = (
+                                            group_kwgs["color"][gidx]
+                                            if gidx < len(group_kwgs["color"])
+                                            else colors[gidx]
+                                        )
+                                elif "color" not in plot_kwgs_group:
+                                    # Default to tab10 colormap
+                                    plot_kwgs_group["color"] = colors[gidx]
+
+                                ax.scatter(
+                                    X.loc[mask, col], residuals[mask], **plot_kwgs_group
+                                )
+
                         if not show_centroids:
                             handles, labels_legend = ax.get_legend_handles_labels()
                             if labels_legend:
@@ -3648,8 +3750,8 @@ def show_residual_diagnostics(
 
                     # Add centroids if requested
                     if show_centroids:
-                        if group_category is not None:
-                            # Option 1: User-provided groups
+                        if centroid_type == "groups":
+                            # Option 1: Group-based centroids
                             if isinstance(group_category, str) and isinstance(
                                 X, pd.DataFrame
                             ):
@@ -3658,48 +3760,62 @@ def show_residual_diagnostics(
                                 groups = pd.Series(group_category)
 
                             unique_groups = groups.unique()
-                            colors = cm.tab10(np.linspace(0, 1, len(unique_groups)))
+                            colors_group = cm.tab10(
+                                np.linspace(0, 1, len(unique_groups))
+                            )
 
                             for gidx, group_val in enumerate(unique_groups):
                                 mask = groups == group_val
-                                # Handle boolean indexing for both df and arrays
+
                                 # Get centroid x-coordinate from predictor column
                                 if isinstance(X, pd.DataFrame):
                                     centroid_x = X.loc[mask, col].mean()
                                 else:
                                     centroid_x = X[col][mask].mean()
+
                                 centroid_y = residuals[mask].mean()
                                 plot_kwgs = centroid_kwgs.copy()
 
-                                # Add label to ALL subplots
-                                # plot_kwgs["label"] = f"{group_val} (n={mask.sum()})"
+                                # Only add label if user wants groups in legend
+                                if _should_show_in_resid_legend(
+                                    legend_kwgs, "centroids"
+                                ):
+                                    plot_kwgs["label"] = f"{group_val} centroid"
 
-                                # Handle color assignment
+                                # Handle color assignment (convert 'c' to 'color' to avoid warnings)
                                 if "c" in plot_kwgs:
                                     if isinstance(plot_kwgs["c"], list):
-                                        plot_kwgs["c"] = (
+                                        plot_kwgs["color"] = (
                                             plot_kwgs["c"][gidx]
                                             if gidx < len(plot_kwgs["c"])
-                                            else colors[gidx]
+                                            else colors_group[gidx]
                                         )
+                                    else:
+                                        plot_kwgs["color"] = plot_kwgs["c"]
+                                    plot_kwgs.pop("c")  # Remove 'c' to avoid conflicts
                                 elif "color" not in plot_kwgs:
-                                    plot_kwgs["color"] = colors[gidx]
+                                    plot_kwgs["color"] = colors_group[gidx]
 
                                 ax.scatter(centroid_x, centroid_y, **plot_kwgs)
 
-                        else:
-                            # Option 2: Automatic K-means clustering
+                        else:  # centroid_type == "clusters"
+                            # Option 2: K-means clustering
                             clusters = n_clusters if n_clusters is not None else 3
+
+                            # Perform k-means clustering on predictor + residuals
                             data = np.column_stack([X[col], residuals])
                             kmeans = KMeans(
-                                n_clusters=clusters, random_state=kmeans_rstate
+                                n_clusters=clusters,
+                                n_init="auto",
+                                random_state=kmeans_rstate,
                             )
                             cluster_labels = kmeans.fit_predict(data)
 
-                            colors = cm.tab10(np.linspace(0, 1, clusters))
+                            colors_cluster = cm.tab10(np.linspace(0, 1, clusters))
 
                             for cluster_id in range(clusters):
                                 mask = cluster_labels == cluster_id
+
                                 # Get centroid x-coordinate from predictor column
                                 if isinstance(X, pd.DataFrame):
                                     centroid_x = X.loc[mask, col].mean()
@@ -3709,21 +3825,28 @@ def show_residual_diagnostics(
                                 centroid_y = residuals[mask].mean()
                                 plot_kwgs = centroid_kwgs.copy()
 
-                                # Only add label to first subplot
-                                plot_kwgs["label"] = (
-                                    f"Cluster {cluster_id+1} (n={mask.sum()})"
-                                )
+                                # Only add label if user wants clusters in legend
+                                if _should_show_in_resid_legend(
+                                    legend_kwgs, "clusters"
+                                ):
+                                    plot_kwgs["label"] = (
+                                        f"Cluster {cluster_id + 1} (n={mask.sum()})"
+                                    )
 
-                                # Handle color assignment
+                                # Handle color assignment (convert 'c' to 'color' to
+                                # avoid matplotlib warnings)
                                 if "c" in plot_kwgs:
                                     if isinstance(plot_kwgs["c"], list):
-                                        plot_kwgs["c"] = (
+                                        plot_kwgs["color"] = (
                                             plot_kwgs["c"][cluster_id]
                                             if cluster_id < len(plot_kwgs["c"])
-                                            else colors[cluster_id]
+                                            else colors_cluster[cluster_id]
                                         )
+                                    else:
+                                        plot_kwgs["color"] = plot_kwgs["c"]
+                                    plot_kwgs.pop("c")  # Remove 'c' to avoid conflicts
                                 elif "color" not in plot_kwgs:
-                                    plot_kwgs["color"] = colors[cluster_id]
+                                    plot_kwgs["color"] = colors_cluster[cluster_id]
 
                                 ax.scatter(centroid_x, centroid_y, **plot_kwgs)
 
@@ -3749,16 +3872,19 @@ def show_residual_diagnostics(
                         )
 
                         # Add test results to legend
-                        for _, result in het_results.items():
-                            if "error" not in result:
-                                label = result["interpretation"]
-                                ax.plot(
-                                    [],
-                                    [],
-                                    linestyle="None",
-                                    marker="None",
-                                    label=label,
-                                )
+                        if _should_show_in_resid_legend(
+                            legend_kwgs, "het_tests"
+                        ):  # ← ADD THIS
+                            for _, result in het_results.items():
+                                if "error" not in result:
+                                    label = result["interpretation"]
+                                    ax.plot(
+                                        [],
+                                        [],
+                                        linestyle="None",
+                                        marker="None",
+                                        label=label,
+                                    )
 
                     # Ensure legend is shown if we have labels (from groups OR het tests)
                     handles, labels_legend = ax.get_legend_handles_labels()
