@@ -665,11 +665,41 @@ def check_heteroskedasticity(
     """
     results = {}
 
+    # Prepare X by encoding categorical variables if present
+    X_numeric = None
+    if X is not None:
+        try:
+            # Convert to DataFrame if it isn't already
+            if isinstance(X, pd.DataFrame):
+                X_df = X.copy()
+            else:
+                X_df = pd.DataFrame(X)
+
+            # Identify categorical columns
+            cat_cols = X_df.select_dtypes(
+                include=["object", "category"]
+            ).columns.tolist()
+
+            if cat_cols:
+                # Encode categorical columns using label encoding
+                X_encoded = X_df.copy()
+                for col in cat_cols:
+                    X_encoded[col] = pd.Categorical(X_df[col]).codes
+                X_numeric = X_encoded.values
+            else:
+                # No categorical columns, use as-is
+                X_numeric = (
+                    X_df.values if isinstance(X, pd.DataFrame) else np.asarray(X)
+                )
+        except Exception as e:
+            # If encoding fails, try to use X as-is
+            X_numeric = np.asarray(X)
+
     if test_type in ["breusch_pagan", "all"]:
-        if X is not None:
+        if X_numeric is not None:
             try:
                 # Add constant for intercept
-                X_with_const = np.column_stack([np.ones(len(X)), X])
+                X_with_const = np.column_stack([np.ones(len(X_numeric)), X_numeric])
                 lm_stat, lm_pval, f_stat, f_pval = het_breuschpagan(
                     residuals, X_with_const
                 )
@@ -690,10 +720,10 @@ def check_heteroskedasticity(
                 results["breusch_pagan"] = {"error": str(e)}
 
     if test_type in ["white", "all"]:
-        if X is not None:
+        if X_numeric is not None:
             try:
                 # Add constant for intercept
-                X_with_const = np.column_stack([np.ones(len(X)), X])
+                X_with_const = np.column_stack([np.ones(len(X_numeric)), X_numeric])
                 lm_stat, lm_pval, f_stat, f_pval = het_white(residuals, X_with_const)
 
                 het_status = "heteroskedastic" if lm_pval < 0.05 else "homoskedastic"
@@ -712,13 +742,13 @@ def check_heteroskedasticity(
                 results["white"] = {"error": str(e)}
 
     if test_type in ["goldfeld_quandt", "all"]:
-        if X is not None and y_pred is not None:
+        if X_numeric is not None and y_pred is not None:
             try:
                 # Goldfeld-Quandt needs to sort by a predictor variable
                 # Sort by predicted values (or first predictor if X has multiple columns)
-                if hasattr(X, "ndim"):
-                    if X.ndim == 1:
-                        sort_variable = X
+                if hasattr(X_numeric, "ndim"):
+                    if X_numeric.ndim == 1:
+                        sort_variable = X_numeric
                     else:
                         sort_variable = y_pred
                 else:
@@ -729,7 +759,7 @@ def check_heteroskedasticity(
 
                 # Need X matrix for GQ test
                 # Convert to numpy array first to handle DataFrame indexing issues
-                X_array = np.asarray(X)
+                X_array = np.asarray(X_numeric)
 
                 if X_array.ndim == 1:
                     X_sorted = X_array[sort_idx].reshape(-1, 1)

@@ -4,6 +4,30 @@ import math
 import numpy as np
 
 
+def apply_axis_limits(ax, xlim=None, ylim=None):
+    """
+    Apply axis limits to a plot.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axes object to apply limits to.
+    xlim : tuple, optional
+        X-axis limits as (min, max).
+    ylim : tuple, optional
+        Y-axis limits as (min, max).
+
+    Examples
+    --------
+    apply_axis_limits(ax, xlim=(0, 100), ylim=(-10, 10))
+    apply_axis_limits(ax, ylim=(0, 1))  # Only set y-limits
+    """
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+
 def apply_plot_title(
     title,
     default_title,
@@ -79,9 +103,19 @@ def apply_legend(
 ):
     """Apply legend with standardized positioning."""
     if legend_loc == "bottom":
+        # Resize figure ONCE (check if already resized to avoid doing it multiple times)
+        if ax is not None:
+            fig = ax.get_figure()
+
+            # Only resize if not already done (check a flag we set)
+            if not hasattr(fig, "_resized_for_bottom_legend"):
+                current_height = fig.get_figheight()
+                fig.set_figheight(current_height + 2)
+                fig._resized_for_bottom_legend = True  # Set flag to prevent re-resizing
+
         kwargs = {
             "loc": "upper center",
-            "bbox_to_anchor": (0.5, -0.15 if ax is None else -0.25),
+            "bbox_to_anchor": (0.5, -0.2),
             "fontsize": fontsize,
             **legend_kwargs,
         }
