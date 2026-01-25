@@ -44,9 +44,11 @@ from model_metrics.metrics_utils import (
 )
 
 from model_metrics.plot_utils import (
+    apply_axis_limits,
     apply_plot_title,
     apply_legend,
     _should_show_in_resid_legend,
+    _get_resid_legend_formatting_kwgs,
     setup_subplots,
     normalize_curve_styles,
 )
@@ -525,7 +527,7 @@ def show_confusion_matrix(
     image_path_png=None,
     image_path_svg=None,
     text_wrap=None,
-    figsize=(8, 6),
+    figsize=(5, 5),
     labels=True,
     label_fontsize=12,
     tick_fontsize=10,
@@ -2782,25 +2784,21 @@ def plot_threshold_metrics(
     ax.grid(visible=gridlines)
 
     # Apply title with text wrapping if provided
-    if title is None:
-        ax.set_title(
-            "Precision, Recall, F1 Score, Specificity vs. Thresholds",
-            fontsize=label_fontsize,
-        )
-    elif title != "":
-        if text_wrap:
-            title_wrapped = "\n".join(textwrap.wrap(title, width=text_wrap))
-            ax.set_title(title_wrapped, fontsize=label_fontsize)
-        else:
-            ax.set_title(title, fontsize=label_fontsize)
-    # if title == "", no title at all
+    apply_plot_title(
+        title,
+        default_title="Precision, Recall, F1 Score, Specificity vs. Thresholds",
+        text_wrap=text_wrap,
+        fontsize=label_fontsize,
+        ax=ax,
+    )
 
-    ax.legend(
-        loc="upper center",
-        bbox_to_anchor=(0.5, -0.15),  # Push further down to ensure it's outside
-        ncol=3,
+    apply_legend(
+        legend_loc="bottom",
         fontsize=tick_fontsize,
+        ax=ax,
+        ncol=3,
         frameon=False,
+        bbox_to_anchor=(0.5, -0.1),
     )
 
     if lookup_metric:
@@ -2846,6 +2844,8 @@ def show_residual_diagnostics(
     suptitle=None,
     suptitle_y=0.995,
     text_wrap=None,
+    xlim=None,
+    ylim=None,
     point_kwgs=None,
     group_kwgs=None,
     line_kwgs=None,
@@ -2925,6 +2925,12 @@ def show_residual_diagnostics(
         custom figsize to prevent title overlap with subplots.
     text_wrap : int, optional
         Maximum width for wrapping titles.
+    xlim : tuple, optional
+        X-axis limits as (min, max). Applied to all plots for consistent scaling
+        across multiple models.
+    ylim : tuple, optional
+        Y-axis limits as (min, max). Applied to all plots for consistent scaling
+        across multiple models.
     point_kwgs : dict, optional
         Styling for scatter points (e.g., {'alpha': 0.6, 'color': 'blue'}).
     group_kwgs : dict, optional
@@ -2964,11 +2970,10 @@ def show_residual_diagnostics(
         values to show/hide specific legend entries (e.g.,
         {'groups': True, 'het_tests': False}).
     n_cols : int, optional
-        Number of columns for predictor plots layout. If None, uses automatic
-        layout (1-3 predictors: n_cols=n_predictors, 4+: n_cols=3).
+        Number of columns for subplot layout. If None, uses automatic layout.
     n_rows : int, optional
-        Number of rows for predictor plots layout. If None, automatically
-        calculated based on n_predictors and n_cols.
+        Number of rows for subplot layout. If None, automatically calculated
+        based on n_cols.
     heteroskedasticity_test : str, optional
         Test for heteroskedasticity. Options: "breusch_pagan", "white",
         "goldfeld_quandt", "spearman", "all", or None (default: None, no test).
@@ -2992,8 +2997,9 @@ def show_residual_diagnostics(
 
     Returns
     -------
-    None
-        Displays the diagnostic plots.
+    None or dict
+        If return_diagnostics=True, returns dictionary of diagnostic statistics.
+        Otherwise, displays the diagnostic plots.
 
     Raises
     ------
@@ -3078,7 +3084,7 @@ def show_residual_diagnostics(
             "centroid_type='groups' requires group_category to be specified"
         )
 
-    # Add this validation after the centroid_type validation, around line 240
+    # Validate clustering requirements
     if show_centroids and centroid_type == "clusters":
         if X is not None and isinstance(X, pd.DataFrame):
             # Check for non-numeric columns
@@ -3108,6 +3114,69 @@ def show_residual_diagnostics(
         "zorder": 10,
     }
 
+    # Determine which plots to make (excluding "predictors" which is handled separately)
+    if "all" in plot_types:
+        plots_to_make = [
+            "fitted",
+            "qq",
+            "scale_location",
+            "leverage",
+            "influence",
+            "histogram",
+        ]
+    elif "predictors" in plot_types:
+        plots_to_make = []  # Predictors handled separately
+    else:
+        plots_to_make = [pt for pt in plot_types if pt != "predictors"]
+
+    # Calculate total subplots for all models
+    total_subplots = num_models * len(plots_to_make) if plots_to_make else 0
+
+    # Create figure ONCE for all models (if we're making plots)
+    fig = None
+    axes = None
+    global_plot_idx = 0
+
+    if total_subplots > 0 and show_plots:
+        # Determine layout
+        if n_rows is None and n_cols is None:
+            # Default layouts
+            if "all" in plot_types:
+                if num_models == 1:
+                    cols, rows = 3, 2  # Single model: 3×2 grid
+                else:
+                    # Multiple models: one row per model
+                    cols = len(plots_to_make)  # 6 plots
+                    rows = num_models  # 1 row per model
+            else:
+                # For custom plot selection
+                cols = min(len(plots_to_make), 3)
+                rows = math.ceil(total_subplots / cols)
+        elif n_rows is None:
+            cols = n_cols
+            rows = math.ceil(total_subplots / cols)
+        elif n_cols is None:
+            rows = n_rows
+            cols = math.ceil(total_subplots / rows)
+        else:
+            rows, cols = n_rows, n_cols
+
+        # Determine figsize
+        if figsize is None:
+            default_figsize = (cols * 5, rows * 5)
+        else:
+            default_figsize = figsize
+
+        fig, axes = setup_subplots(
+            num_models=total_subplots,
+            n_cols=cols,
+            n_rows=rows,
+            figsize=default_figsize,
+        )
+
+    # Store all diagnostics for potential return
+    all_diagnostics = {}
+
     # Process each model
     for idx, (mod, name) in enumerate(zip(model, model_title)):
         # Get predictions
@@ -3128,7 +3197,7 @@ def show_residual_diagnostics(
 
         # Calculate leverage and Cook's distance
         leverage, cooks_d, n, p = None, None, None, None
-        if X is not None:  # ← Remove the plot_types check
+        if X is not None:
             leverage, cooks_d, n, p = compute_leverage_and_cooks_distance(
                 X, standardized_residuals
             )
@@ -3169,485 +3238,457 @@ def show_residual_diagnostics(
         # Add heteroskedasticity test results
         if het_results:
             diagnostics["heteroskedasticity_tests"] = het_results
+
+        # Store diagnostics
+        all_diagnostics[name] = diagnostics
+
         # Show table if requested
         if show_diagnostics_table:
             print_resid_diagnostics_table(diagnostics, decimals=decimal_places)
 
-        # Only do plotting if show_plots is True
+        # Skip plotting if show_plots is False
         if not show_plots:
-            if return_diagnostics:
-                return diagnostics
-            continue  # Skip to next model
+            continue
 
-        # Determine subplot layout
-        if "all" in plot_types:
-            plots_to_make = [
-                "fitted",
-                "qq",
-                "scale_location",
-                "leverage",
-                "influence",
-                "histogram",
-            ]
-            n_plots = len(plots_to_make)
+        # Add model name prefix for subplot titles when multiple models
+        plot_title_prefix = f"{name}: " if num_models > 1 else ""
 
-            # Use user-specified layout or default to 2x3
-            if n_rows is None and n_cols is None:
-                rows, cols = 2, 3  # Default layout for "all"
-            elif n_rows is None:
-                rows = math.ceil(n_plots / n_cols)
-                cols = n_cols
-            elif n_cols is None:
-                cols = math.ceil(n_plots / n_rows)
-                rows = n_rows
-            else:
-                rows, cols = n_rows, n_cols
+        # Plot each requested plot type for this model
+        for plot_name in plots_to_make:
+            ax = axes[global_plot_idx]
 
-            fig, axes = setup_subplots(
-                num_models=n_plots,
-                n_cols=cols,
-                n_rows=rows,
-                figsize=figsize or (cols * 5, rows * 5),
-            )
+            # 1. Residuals vs Fitted
+            if plot_name == "fitted":
+                ax.scatter(y_pred_arr, residuals, **point_kwgs)
+                ax.axhline(y=0, **line_kwgs)
 
-        elif "predictors" in plot_types:
-            # For predictors, skip main grid - will create separate figure later
-            plots_to_make = []  # Don't process any plots in main loop
-        else:
-            n_plots = len(plot_types)
-            cols = 2 if n_plots > 1 else 1
-            rows = math.ceil(n_plots / cols) if n_plots > 1 else 1
+                # Add lowess smooth line
+                if show_lowess:
+                    try:
+                        smoothed = lowess(residuals, y_pred_arr, frac=0.3)
+                        ax.plot(smoothed[:, 0], smoothed[:, 1], **lowess_kwgs)
+                    except:
+                        pass
 
-            # Determine default figsize based on number of plots
-            if figsize is None:
-                if n_plots > 1:
-                    default_figsize = (12, 6 * rows)
-                else:
-                    default_figsize = (8, 6)
-            else:
-                default_figsize = figsize
+                # Plot centroids if requested
+                if show_centroids:
+                    if centroid_type == "groups":
+                        # Group-based centroids
+                        if isinstance(group_category, str) and isinstance(
+                            X, pd.DataFrame
+                        ):
+                            groups = X[group_category]
+                        else:
+                            groups = pd.Series(group_category)
 
-            fig, axes = setup_subplots(
-                num_models=n_plots,
-                n_cols=cols,
-                n_rows=rows,
-                figsize=default_figsize,
-            )
-            plots_to_make = plot_types
+                        unique_groups = groups.unique()
+                        colors_group = cm.tab10(np.linspace(0, 1, len(unique_groups)))
 
-        plot_idx = 0
+                        for gidx, group_val in enumerate(unique_groups):
+                            mask = groups == group_val
+                            centroid_x = y_pred_arr[mask].mean()
+                            centroid_y = residuals[mask].mean()
+                            plot_kwgs = centroid_kwgs.copy()
 
-        # 1. Residuals vs Fitted
-        if "fitted" in plots_to_make:
-            ax = axes[plot_idx]
-            ax.scatter(y_pred_arr, residuals, **point_kwgs)
-            ax.axhline(y=0, **line_kwgs)
+                            if _should_show_in_resid_legend(legend_kwgs, "centroids"):
+                                plot_kwgs["label"] = f"{group_val} centroid"
 
-            # Add lowess smooth line
-            if show_lowess:
-                try:
-                    smoothed = lowess(residuals, y_pred_arr, frac=0.3)
-                    ax.plot(smoothed[:, 0], smoothed[:, 1], **lowess_kwgs)
-                except:
-                    pass
+                            # Handle color assignment
+                            if "c" in plot_kwgs:
+                                if isinstance(plot_kwgs["c"], list):
+                                    plot_kwgs["color"] = (
+                                        plot_kwgs["c"][gidx]
+                                        if gidx < len(plot_kwgs["c"])
+                                        else colors_group[gidx]
+                                    )
+                                else:
+                                    plot_kwgs["color"] = plot_kwgs["c"]
+                                plot_kwgs.pop("c")
+                            elif "color" not in plot_kwgs:
+                                plot_kwgs["color"] = colors_group[gidx]
 
-            # Plot centroids if requested
-            if show_centroids:
-                if centroid_type == "groups":
-                    # Option 1: Group-based centroids
-                    if isinstance(group_category, str) and isinstance(X, pd.DataFrame):
-                        groups = X[group_category]
-                    else:
-                        groups = pd.Series(group_category)
+                            ax.scatter(centroid_x, centroid_y, **plot_kwgs)
 
-                    unique_groups = groups.unique()
-                    colors_group = cm.tab10(np.linspace(0, 1, len(unique_groups)))
+                    else:  # centroid_type == "clusters"
+                        clusters = n_clusters if n_clusters is not None else 3
+                        data = np.column_stack([y_pred_arr, residuals])
+                        kmeans = KMeans(
+                            n_clusters=clusters,
+                            n_init="auto",
+                            random_state=kmeans_rstate,
+                        )
+                        cluster_labels = kmeans.fit_predict(data)
+                        colors_cluster = cm.tab10(np.linspace(0, 1, clusters))
 
-                    for gidx, group_val in enumerate(unique_groups):
-                        mask = groups == group_val
-                        centroid_x = y_pred_arr[mask].mean()
-                        centroid_y = residuals[mask].mean()
-                        plot_kwgs = centroid_kwgs.copy()
+                        for cluster_id in range(clusters):
+                            mask = cluster_labels == cluster_id
+                            centroid_x = y_pred_arr[mask].mean()
+                            centroid_y = residuals[mask].mean()
+                            plot_kwgs = centroid_kwgs.copy()
 
-                        # Only add label if user wants groups in legend
-                        if _should_show_in_resid_legend(legend_kwgs, "centroids"):
-                            plot_kwgs["label"] = f"{group_val} centroid"
-
-                        # Handle color assignment (convert 'c' to 'color' to avoid warnings)
-                        if "c" in plot_kwgs:
-                            if isinstance(plot_kwgs["c"], list):
-                                plot_kwgs["color"] = (
-                                    plot_kwgs["c"][gidx]
-                                    if gidx < len(plot_kwgs["c"])
-                                    else colors_group[gidx]
+                            if _should_show_in_resid_legend(legend_kwgs, "clusters"):
+                                plot_kwgs["label"] = (
+                                    f"Cluster {cluster_id + 1} (n={mask.sum()})"
                                 )
-                            else:
-                                plot_kwgs["color"] = plot_kwgs["c"]
-                            plot_kwgs.pop("c")  # Remove 'c' to avoid conflicts
-                        elif "color" not in plot_kwgs:
-                            plot_kwgs["color"] = colors_group[gidx]
 
-                        ax.scatter(centroid_x, centroid_y, **plot_kwgs)
+                            # Handle color assignment
+                            if "c" in plot_kwgs:
+                                if isinstance(plot_kwgs["c"], list):
+                                    plot_kwgs["color"] = (
+                                        plot_kwgs["c"][cluster_id]
+                                        if cluster_id < len(plot_kwgs["c"])
+                                        else colors_cluster[cluster_id]
+                                    )
+                                else:
+                                    plot_kwgs["color"] = plot_kwgs["c"]
+                                plot_kwgs.pop("c")
+                            elif "color" not in plot_kwgs:
+                                plot_kwgs["color"] = colors_cluster[cluster_id]
 
-                else:  # centroid_type == "clusters"
-                    # Option 2: K-means clustering
-                    clusters = n_clusters if n_clusters is not None else 3
+                            ax.scatter(centroid_x, centroid_y, **plot_kwgs)
 
-                    # Stack fitted values and residuals for clustering
-                    data = np.column_stack([y_pred_arr, residuals])
-                    kmeans = KMeans(
-                        n_clusters=clusters,
-                        n_init="auto",
-                        random_state=kmeans_rstate,
+                    # Add legend if there are labeled artists
+                    handles, labels = ax.get_legend_handles_labels()
+                    if labels:
+                        apply_legend(legend_loc, fontsize=tick_fontsize - 2, ax=ax)
+
+                # Label outliers
+                if show_outliers:
+                    outlier_indices = np.argsort(np.abs(residuals))[-n_outliers:]
+                    for i in outlier_indices:
+                        ax.annotate(
+                            str(i),
+                            (y_pred_arr[i], residuals[i]),
+                            fontsize=tick_fontsize - 2,
+                            alpha=0.7,
+                        )
+
+                ax.set_xlabel("Fitted Values", fontsize=label_fontsize)
+                ax.set_ylabel("Residuals", fontsize=label_fontsize)
+                apply_plot_title(
+                    None,
+                    f"{plot_title_prefix}Residuals vs Fitted",
+                    text_wrap=text_wrap,
+                    fontsize=label_fontsize,
+                    ax=ax,
+                )
+                ax.grid(visible=gridlines, alpha=0.3)
+                ax.tick_params(labelsize=tick_fontsize)
+                apply_axis_limits(ax, xlim=xlim, ylim=ylim)
+
+            # 2. Q-Q Plot
+            elif plot_name == "qq":
+                stats.probplot(residuals, dist="norm", plot=ax)
+                ax.get_lines()[0].set_markerfacecolor(point_kwgs.get("color", "blue"))
+                ax.get_lines()[0].set_alpha(point_kwgs.get("alpha", 0.6))
+                ax.get_lines()[0].set_markersize(6)
+                ax.get_lines()[1].set_color("red")
+                ax.get_lines()[1].set_linewidth(2)
+                apply_plot_title(
+                    None,
+                    f"{plot_title_prefix}Normal Q-Q Plot",
+                    text_wrap=text_wrap,
+                    fontsize=label_fontsize,
+                    ax=ax,
+                )
+                ax.set_xlabel("Theoretical Quantiles", fontsize=label_fontsize)
+                ax.set_ylabel("Sample Quantiles", fontsize=label_fontsize)
+                ax.grid(visible=gridlines, alpha=0.3)
+                ax.tick_params(labelsize=tick_fontsize)
+                apply_axis_limits(ax, xlim=xlim, ylim=ylim)
+
+            # 3. Scale-Location Plot
+            elif plot_name == "scale_location":
+                sqrt_abs_resid = np.sqrt(np.abs(standardized_residuals))
+                ax.scatter(y_pred_arr, sqrt_abs_resid, **point_kwgs)
+
+                # Add lowess smooth line
+                if show_lowess:
+                    try:
+                        smoothed = lowess(sqrt_abs_resid, y_pred_arr, frac=0.3)
+                        ax.plot(smoothed[:, 0], smoothed[:, 1], **lowess_kwgs)
+                    except:
+                        pass
+
+                # Test for heteroskedasticity
+                if heteroskedasticity_test and het_results:
+                    # Add test results to legend
+                    if _should_show_in_resid_legend(legend_kwgs, "het_tests"):
+                        for test_name, result in het_results.items():
+                            if "error" not in result:
+                                label = result["interpretation"]
+                                ax.plot(
+                                    [],
+                                    [],
+                                    linestyle="None",
+                                    marker="None",
+                                    label=label,
+                                )
+
+                    # Get legend formatting kwargs
+                    legend_fmt_kwgs = _get_resid_legend_formatting_kwgs(
+                        legend_kwgs, tick_fontsize
                     )
-                    cluster_labels = kmeans.fit_predict(data)
 
-                    colors_cluster = cm.tab10(np.linspace(0, 1, clusters))
+                    # Apply legend with proper formatting
+                    apply_legend(legend_loc=legend_loc, ax=ax, **legend_fmt_kwgs)
 
-                    # Plot centroids for each cluster
-                    for cluster_id in range(clusters):
-                        mask = cluster_labels == cluster_id
-                        centroid_x = y_pred_arr[mask].mean()
-                        centroid_y = residuals[mask].mean()
-                        plot_kwgs = centroid_kwgs.copy()
+                # Label outliers
+                if show_outliers:
+                    outlier_indices = np.argsort(sqrt_abs_resid)[-n_outliers:]
+                    for i in outlier_indices:
+                        ax.annotate(
+                            str(i),
+                            (y_pred_arr[i], sqrt_abs_resid[i]),
+                            fontsize=tick_fontsize - 2,
+                            alpha=0.7,
+                        )
 
-                        # Only add label if user wants clusters in legend
-                        if _should_show_in_resid_legend(legend_kwgs, "clusters"):
-                            plot_kwgs["label"] = (
-                                f"Cluster {cluster_id + 1} (n={mask.sum()})"
+                ax.set_xlabel("Fitted Values", fontsize=label_fontsize)
+                ax.set_ylabel(
+                    r"$\sqrt{|\mathrm{Std.\ Residuals}|}$",
+                    fontsize=label_fontsize,
+                )
+                apply_plot_title(
+                    None,
+                    f"{plot_title_prefix}Scale-Location Plot",
+                    fontsize=label_fontsize,
+                    text_wrap=text_wrap,
+                    ax=ax,
+                )
+                ax.grid(visible=gridlines, alpha=0.3)
+                ax.tick_params(labelsize=tick_fontsize)
+                apply_axis_limits(ax, xlim=xlim, ylim=ylim)
+
+            # 4. Residuals vs Leverage
+            elif plot_name == "leverage":
+                if leverage is not None and cooks_d is not None:
+                    ax.scatter(leverage, standardized_residuals, **point_kwgs)
+                    ax.axhline(y=0, **line_kwgs)
+
+                    # Add Cook's distance contours
+                    x_range = np.linspace(0.001, max(leverage) * 1.1, 100)
+                    cook_levels = [0.5, 1.0]
+                    colors_cook = ["orange", "red"]
+
+                    for d, color in zip(cook_levels, colors_cook):
+                        y_pos = np.sqrt(d * p * (1 - x_range) / x_range)
+                        y_neg = -y_pos
+                        ax.plot(
+                            x_range,
+                            y_pos,
+                            "--",
+                            color=color,
+                            alpha=0.5,
+                            linewidth=1.5,
+                            label=f"Cook's d = {d}",
+                        )
+                        ax.plot(
+                            x_range, y_neg, "--", color=color, alpha=0.5, linewidth=1.5
+                        )
+
+                    # Label high leverage points
+                    if show_outliers:
+                        outlier_indices = np.argsort(cooks_d)[-n_outliers:]
+                        for i in outlier_indices:
+                            ax.annotate(
+                                str(i),
+                                (leverage[i], standardized_residuals[i]),
+                                fontsize=tick_fontsize - 2,
+                                alpha=0.7,
                             )
 
-                        # Handle color assignment (convert 'c' to 'color' to avoid warnings)
-                        if "c" in plot_kwgs:
-                            if isinstance(plot_kwgs["c"], list):
-                                plot_kwgs["color"] = (
-                                    plot_kwgs["c"][cluster_id]
-                                    if cluster_id < len(plot_kwgs["c"])
-                                    else colors_cluster[cluster_id]
-                                )
-                            else:
-                                plot_kwgs["color"] = plot_kwgs["c"]
-                            plot_kwgs.pop("c")  # Remove 'c' to avoid conflicts
-                        elif "color" not in plot_kwgs:
-                            plot_kwgs["color"] = colors_cluster[cluster_id]
-
-                        ax.scatter(centroid_x, centroid_y, **plot_kwgs)
-
-                # Only add legend if there are labeled artists
-                handles, labels = ax.get_legend_handles_labels()
-                if labels:
                     apply_legend(legend_loc, fontsize=tick_fontsize - 2, ax=ax)
 
-            # Label outliers
-            if show_outliers:
-                outlier_indices = np.argsort(np.abs(residuals))[-n_outliers:]
-                for i in outlier_indices:
-                    ax.annotate(
-                        str(i),
-                        (y_pred_arr[i], residuals[i]),
-                        fontsize=tick_fontsize - 2,
-                        alpha=0.7,
+                else:
+                    ax.text(
+                        0.5,
+                        0.5,
+                        "Leverage calculation requires\nfeature matrix X",
+                        ha="center",
+                        va="center",
+                        transform=ax.transAxes,
+                        fontsize=label_fontsize,
                     )
 
-            # These should always run
-            ax.set_xlabel("Fitted Values", fontsize=label_fontsize)
-            ax.set_ylabel("Residuals", fontsize=label_fontsize)
-            apply_plot_title(
-                None, "Residuals vs Fitted", fontsize=label_fontsize, ax=ax
-            )
-            ax.grid(visible=gridlines, alpha=0.3)
-            ax.tick_params(labelsize=tick_fontsize)
-            plot_idx += 1
-
-        # 2. Q-Q Plot
-        if "qq" in plots_to_make:
-            ax = axes[plot_idx]
-            stats.probplot(residuals, dist="norm", plot=ax)
-            ax.get_lines()[0].set_markerfacecolor(point_kwgs.get("color", "blue"))
-            ax.get_lines()[0].set_alpha(point_kwgs.get("alpha", 0.6))
-            ax.get_lines()[0].set_markersize(6)
-            ax.get_lines()[1].set_color("red")
-            ax.get_lines()[1].set_linewidth(2)
-            apply_plot_title(None, "Normal Q-Q Plot", fontsize=label_fontsize, ax=ax)
-            ax.set_xlabel("Theoretical Quantiles", fontsize=label_fontsize)
-            ax.set_ylabel("Sample Quantiles", fontsize=label_fontsize)
-            ax.grid(visible=gridlines, alpha=0.3)
-            ax.tick_params(labelsize=tick_fontsize)
-            plot_idx += 1
-
-        # 3. Scale-Location Plot
-        if "scale_location" in plots_to_make:
-            ax = axes[plot_idx]
-            sqrt_abs_resid = np.sqrt(np.abs(standardized_residuals))
-            ax.scatter(y_pred_arr, sqrt_abs_resid, **point_kwgs)
-
-            # Add lowess smooth line
-            if show_lowess:
-                try:
-                    smoothed = lowess(sqrt_abs_resid, y_pred_arr, frac=0.3)
-                    ax.plot(smoothed[:, 0], smoothed[:, 1], **lowess_kwgs)
-                except:
-                    pass
-
-            # Test for heteroskedasticity
-            if heteroskedasticity_test:
-                het_results = check_heteroskedasticity(
-                    residuals,
-                    X=X,
-                    y_pred=y_pred_arr,
-                    test_type=heteroskedasticity_test,
-                    decimals=decimal_places,
+                ax.set_xlabel("Leverage", fontsize=label_fontsize)
+                ax.set_ylabel("Standardized Residuals", fontsize=label_fontsize)
+                apply_plot_title(
+                    None,
+                    f"{plot_title_prefix}Residuals vs Leverage",
+                    text_wrap=text_wrap,
+                    fontsize=label_fontsize,
+                    ax=ax,
                 )
+                ax.grid(visible=gridlines, alpha=0.3)
+                ax.tick_params(labelsize=tick_fontsize)
+                apply_axis_limits(ax, xlim=xlim, ylim=ylim)
 
-                # Add test results to legend instead of text annotation
-                if _should_show_in_resid_legend(legend_kwgs, "het_tests"):
-                    for _, result in het_results.items():
-                        if "error" not in result:
-                            label = result["interpretation"]
-                            ax.plot(
-                                [],
-                                [],
-                                linestyle="None",
-                                marker="None",
-                                label=label,
+            # 5. Influence Plot
+            elif plot_name == "influence":
+                if leverage is not None and cooks_d is not None:
+                    # Calculate studentized residuals
+                    studentized_resid = standardized_residuals * np.sqrt(
+                        (n - p - 1) / (n - p - standardized_residuals**2)
+                    )
+
+                    # Bubble sizes proportional to Cook's distance
+                    bubble_size = cooks_d * 5000
+
+                    ax.scatter(
+                        leverage,
+                        studentized_resid,
+                        s=bubble_size,
+                        alpha=0.5,
+                        edgecolors="black",
+                        linewidths=0.5,
+                    )
+
+                    ax.axhline(y=0, **line_kwgs)
+
+                    # Reference lines for studentized residuals
+                    for threshold in [2, -2]:
+                        ax.axhline(
+                            y=threshold, color="orange", linestyle=":", alpha=0.5
+                        )
+                    for threshold in [3, -3]:
+                        ax.axhline(y=threshold, color="red", linestyle=":", alpha=0.5)
+
+                    # Label influential points
+                    if show_outliers:
+                        outlier_indices = np.argsort(cooks_d)[-n_outliers:]
+                        for i in outlier_indices:
+                            ax.annotate(
+                                str(i),
+                                (leverage[i], studentized_resid[i]),
+                                fontsize=tick_fontsize - 2,
+                                alpha=0.7,
                             )
 
-                # Apply legend with test results
-                apply_legend(legend_loc, fontsize=tick_fontsize - 2, ax=ax)
-
-            # Label outliers
-            if show_outliers:
-                outlier_indices = np.argsort(sqrt_abs_resid)[-n_outliers:]
-                for i in outlier_indices:
-                    ax.annotate(
-                        str(i),
-                        (y_pred_arr[i], sqrt_abs_resid[i]),
-                        fontsize=tick_fontsize - 2,
-                        alpha=0.7,
+                    ax.set_xlabel("Leverage (H Leverage)", fontsize=label_fontsize)
+                    ax.set_ylabel("Studentized Residuals", fontsize=label_fontsize)
+                    apply_plot_title(
+                        None,
+                        f"{plot_title_prefix}Influence Plot",
+                        text_wrap=text_wrap,
+                        fontsize=label_fontsize,
+                        ax=ax,
                     )
 
-            ax.set_xlabel("Fitted Values", fontsize=label_fontsize)
-            ax.set_ylabel("Residual Spread (Standardized)", fontsize=label_fontsize)
-            apply_plot_title(
-                None, "Scale-Location Plot", fontsize=label_fontsize, ax=ax
-            )
-            ax.grid(visible=gridlines, alpha=0.3)
-            ax.tick_params(labelsize=tick_fontsize)
-            plot_idx += 1
+                else:
+                    ax.text(
+                        0.5,
+                        0.5,
+                        "Influence plot requires\nfeature matrix X",
+                        ha="center",
+                        va="center",
+                        transform=ax.transAxes,
+                        fontsize=label_fontsize,
+                    )
 
-        # 4. Residuals vs Leverage
-        if "leverage" in plots_to_make:
-            ax = axes[plot_idx]
-            if leverage is not None and cooks_d is not None:
-                # Plot everything
-                ax.scatter(leverage, standardized_residuals, **point_kwgs)
-                ax.axhline(y=0, **line_kwgs)
+                ax.grid(visible=gridlines, alpha=0.3)
+                ax.tick_params(labelsize=tick_fontsize)
+                apply_axis_limits(ax, xlim=xlim, ylim=ylim)
 
-                # Add Cook's distance contours with legend
-                x_range = np.linspace(0.001, max(leverage) * 1.1, 100)
-                cook_levels = [0.5, 1.0]
-                colors_cook = ["orange", "red"]
+            # 6. Histogram
+            elif plot_name == "histogram":
+                if histogram_type == "density":
+                    ax.hist(
+                        residuals, bins=30, edgecolor="black", alpha=0.7, density=True
+                    )
+                    ax.axvline(x=0, **line_kwgs)
 
-                for d, color in zip(cook_levels, colors_cook):
-                    y_pos = np.sqrt(d * p * (1 - x_range) / x_range)
-                    y_neg = -y_pos
-
-                    # Plot contours with labels for legend
+                    # Add normal distribution overlay
+                    mu, sigma = residuals.mean(), residuals.std()
+                    x = np.linspace(residuals.min(), residuals.max(), 100)
                     ax.plot(
-                        x_range,
-                        y_pos,
-                        "--",
-                        color=color,
-                        alpha=0.5,
-                        linewidth=1.5,
-                        label=f"Cook's d = {d}",
+                        x,
+                        stats.norm.pdf(x, mu, sigma),
+                        color="red",
+                        linewidth=2,
+                        label="Normal Distribution",
                     )
-                    ax.plot(x_range, y_neg, "--", color=color, alpha=0.5, linewidth=1.5)
 
-                # Label high leverage points
-                if show_outliers:
-                    outlier_indices = np.argsort(cooks_d)[-n_outliers:]
-                    for i in outlier_indices:
-                        ax.annotate(
-                            str(i),
-                            (leverage[i], standardized_residuals[i]),
-                            fontsize=tick_fontsize - 2,
-                            alpha=0.7,
-                        )
+                    ax.set_xlabel("Residuals", fontsize=label_fontsize)
+                    ax.set_ylabel("Density", fontsize=label_fontsize)
+                    apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
 
-                # Add legend to show Cook's distance levels
-                apply_legend(legend_loc, fontsize=tick_fontsize - 2, ax=ax)
+                else:  # histogram_type == "frequency"
+                    ax.hist(residuals, bins=30, edgecolor="black", alpha=0.7)
+                    ax.axvline(x=0, **line_kwgs)
 
-            else:
-                # Show error message ONLY
-                ax.text(
-                    0.5,
-                    0.5,
-                    "Leverage calculation requires\nfeature matrix X",
-                    ha="center",
-                    va="center",
-                    transform=ax.transAxes,
+                    # No overlay - keep it simple
+                    ax.set_xlabel("Residuals", fontsize=label_fontsize)
+                    ax.set_ylabel("Frequency", fontsize=label_fontsize)
+
+                apply_plot_title(
+                    None,
+                    f"{plot_title_prefix}Histogram of Residuals",
+                    text_wrap=text_wrap,
                     fontsize=label_fontsize,
+                    ax=ax,
                 )
+                ax.grid(visible=gridlines, alpha=0.3)
+                ax.tick_params(labelsize=tick_fontsize)
+                apply_axis_limits(ax, xlim=xlim, ylim=ylim)
 
-            ax.set_xlabel("Leverage", fontsize=label_fontsize)
-            ax.set_ylabel("Standardized Residuals", fontsize=label_fontsize)
-            apply_plot_title(
-                None, "Residuals vs Leverage", fontsize=label_fontsize, ax=ax
+            global_plot_idx += 1
+
+    # Finalize main figure (if created)
+    if fig is not None and show_plots:
+        # Hide unused subplots
+        for i in range(global_plot_idx, len(axes)):
+            axes[i].axis("off")
+
+        # Overall figure title
+        if num_models > 1:
+            default_title = "Residual Diagnostics: Multiple Models"
+        else:
+            default_title = f"Residual Diagnostics: {model_title[0]}"
+
+        apply_plot_title(
+            suptitle,
+            default_title=default_title,
+            fontsize=label_fontsize + 2,
+            fig=fig,
+            suptitle_y=suptitle_y,
+        )
+        plt.tight_layout()
+
+        if save_plot:
+            plot_type_str = (
+                "_".join(plots_to_make)
+                if len(plots_to_make) > 1
+                else (plots_to_make[0] if plots_to_make else "all")
             )
-            ax.grid(visible=gridlines, alpha=0.3)
-            ax.tick_params(labelsize=tick_fontsize)
-            plot_idx += 1
+            save_plot_images(
+                f"residuals_{plot_type_str}",
+                save_plot,
+                image_path_png,
+                image_path_svg,
+            )
 
-        # 5. Influence Plot
-        if "influence" in plots_to_make:
-            ax = axes[plot_idx]
-            if leverage is not None and cooks_d is not None:
-                # Calculate studentized residuals
-                studentized_resid = standardized_residuals * np.sqrt(
-                    (n - p - 1) / (n - p - standardized_residuals**2)
-                )
+        plt.show()
 
-                # Bubble sizes proportional to Cook's distance
-                bubble_size = cooks_d * 5000  # Scale for visibility
-
-                # Create bubble plot
-                scatter = ax.scatter(
-                    leverage,
-                    studentized_resid,
-                    s=bubble_size,
-                    alpha=0.5,
-                    edgecolors="black",
-                    linewidths=0.5,
-                )
-
-                ax.axhline(y=0, **line_kwgs)
-
-                # Reference lines for studentized residuals (±2, ±3)
-                for threshold in [2, -2]:
-                    ax.axhline(y=threshold, color="orange", linestyle=":", alpha=0.5)
-                for threshold in [3, -3]:
-                    ax.axhline(y=threshold, color="red", linestyle=":", alpha=0.5)
-
-                # Label influential points
-                if show_outliers:
-                    outlier_indices = np.argsort(cooks_d)[-n_outliers:]
-                    for i in outlier_indices:
-                        ax.annotate(
-                            str(i),
-                            (leverage[i], studentized_resid[i]),
-                            fontsize=tick_fontsize - 2,
-                            alpha=0.7,
-                        )
-
-                ax.set_xlabel("Leverage (H Leverage)", fontsize=label_fontsize)
-                ax.set_ylabel("Studentized Residuals", fontsize=label_fontsize)
-                apply_plot_title(None, "Influence Plot", fontsize=label_fontsize, ax=ax)
-
+    # Handle "predictors" plot type separately (creates separate figure per model)
+    if (
+        "predictors" in plot_types
+        and X is not None
+        and isinstance(X, pd.DataFrame)
+        and show_plots
+    ):
+        for idx, (mod, name) in enumerate(zip(model, model_title)):
+            # Get predictions
+            if y_pred is None:
+                y_pred_m = mod.predict(X)
             else:
-                ax.text(
-                    0.5,
-                    0.5,
-                    "Influence plot requires\nfeature matrix X",
-                    ha="center",
-                    va="center",
-                    transform=ax.transAxes,
-                    fontsize=label_fontsize,
-                )
+                y_pred_m = y_pred[idx]
 
-            ax.grid(visible=gridlines, alpha=0.3)
-            ax.tick_params(labelsize=tick_fontsize)
-            plot_idx += 1
+            # Calculate residuals
+            y_true = np.asarray(y).ravel()
+            y_pred_arr = np.asarray(y_pred_m).ravel()
+            residuals = y_true - y_pred_arr
 
-        # 6. Histogram
-        if "histogram" in plots_to_make:
-            ax = axes[plot_idx]
-
-            if histogram_type == "density":
-                # Density scale with normal distribution overlay
-                ax.hist(residuals, bins=30, edgecolor="black", alpha=0.7, density=True)
-                ax.axvline(x=0, **line_kwgs)
-
-                # Add normal distribution overlay
-                mu, sigma = residuals.mean(), residuals.std()
-                x = np.linspace(residuals.min(), residuals.max(), 100)
-                ax.plot(
-                    x,
-                    stats.norm.pdf(x, mu, sigma),
-                    color="red",
-                    linewidth=2,
-                    label="Normal Distribution",
-                )
-
-                ax.set_xlabel("Residuals", fontsize=label_fontsize)
-                ax.set_ylabel("Density", fontsize=label_fontsize)
-                ax.legend(fontsize=tick_fontsize)
-
-            else:  # histogram_type == "frequency"
-                # Frequency histogram with scaled normal overlay
-                ax.hist(residuals, bins=30, edgecolor="black", alpha=0.7)
-                ax.axvline(x=0, **line_kwgs)
-
-                # Add scaled normal distribution overlay
-                mu, sigma = residuals.mean(), residuals.std()
-                x = np.linspace(residuals.min(), residuals.max(), 100)
-                bin_width = (residuals.max() - residuals.min()) / 30
-                ax.plot(
-                    x,
-                    stats.norm.pdf(x, mu, sigma) * len(residuals) * bin_width,
-                    color="red",
-                    linewidth=2,
-                    label="Normal Distribution",
-                )
-
-                ax.set_xlabel("Residuals", fontsize=label_fontsize)
-                ax.set_ylabel("Frequency", fontsize=label_fontsize)
-                ax.legend(fontsize=tick_fontsize)
-
-            apply_plot_title(
-                None, "Histogram of Residuals", fontsize=label_fontsize, ax=ax
-            )
-            ax.grid(visible=gridlines, alpha=0.3)
-            ax.tick_params(labelsize=tick_fontsize)
-            plot_idx += 1
-
-        # Hide unused subplots (only if we created a grid)
-        if plots_to_make:  # Only hide if we actually made plots
-            for i in range(plot_idx, len(axes)):
-                axes[i].axis("off")
-
-        # Only show main grid if we created one
-        if plots_to_make:
-            # Overall figure title
-            apply_plot_title(
-                suptitle,  # Use suptitle parameter, not title
-                default_title=f"Residual Diagnostics: {name}",
-                text_wrap=text_wrap,
-                fontsize=label_fontsize + 2,
-                fig=fig,
-                suptitle_y=suptitle_y,
-            )
-            plt.tight_layout()
-
-            # Save plot
-            if save_plot:
-                name_clean = name.lower().replace(" ", "_")
-                plot_type_str = (
-                    "_".join(plots_to_make)
-                    if len(plots_to_make) > 1
-                    else plots_to_make[0]
-                )
-                save_plot_images(
-                    f"{name_clean}_residuals_{plot_type_str}",
-                    save_plot,
-                    image_path_png,
-                    image_path_svg,
-                )
-
-            plt.show()
-
-        # If "predictors" was specifically requested, create individual plots
-        if "predictors" in plot_types and X is not None and isinstance(X, pd.DataFrame):
             # Exclude group_category column from predictors if it's a column name
             if isinstance(group_category, str) and group_category in X.columns:
                 predictor_cols = [col for col in X.columns if col != group_category]
@@ -3656,7 +3697,7 @@ def show_residual_diagnostics(
 
             n_predictors = len(predictor_cols)
 
-            # Determine layout - user override or smart defaults
+            # Determine layout
             if n_cols is not None:
                 cols = n_cols
             elif n_predictors <= 3:
@@ -3689,45 +3730,41 @@ def show_residual_diagnostics(
                         unique_groups = groups.unique()
                         colors = cm.tab10(np.linspace(0, 1, len(unique_groups)))
 
-                        # Plot each group with different color
-                        if group_category is not None:
-                            for gidx, group_val in enumerate(unique_groups):
-                                mask = groups == group_val
-                                plot_kwgs_group = point_kwgs.copy()
-                                plot_kwgs_group.update(group_kwgs)  # ← Apply group_kwgs
+                        for gidx, group_val in enumerate(unique_groups):
+                            mask = groups == group_val
+                            plot_kwgs_group = point_kwgs.copy()
+                            plot_kwgs_group.update(group_kwgs)
 
-                                if _should_show_in_resid_legend(legend_kwgs, "groups"):
-                                    plot_kwgs_group["label"] = (
-                                        f"{group_val} (n={mask.sum()})"
-                                    )
-
-                                # Handle color assignment
-                                if "color" in group_kwgs or "c" in group_kwgs:
-                                    # User specified colors in group_kwgs
-                                    if "c" in group_kwgs and isinstance(
-                                        group_kwgs["c"], list
-                                    ):
-                                        plot_kwgs_group["color"] = (
-                                            group_kwgs["c"][gidx]
-                                            if gidx < len(group_kwgs["c"])
-                                            else colors[gidx]
-                                        )
-                                        plot_kwgs_group.pop("c", None)
-                                    elif "color" in group_kwgs and isinstance(
-                                        group_kwgs["color"], list
-                                    ):
-                                        plot_kwgs_group["color"] = (
-                                            group_kwgs["color"][gidx]
-                                            if gidx < len(group_kwgs["color"])
-                                            else colors[gidx]
-                                        )
-                                elif "color" not in plot_kwgs_group:
-                                    # Default to tab10 colormap
-                                    plot_kwgs_group["color"] = colors[gidx]
-
-                                ax.scatter(
-                                    X.loc[mask, col], residuals[mask], **plot_kwgs_group
+                            if _should_show_in_resid_legend(legend_kwgs, "groups"):
+                                plot_kwgs_group["label"] = (
+                                    f"{group_val} (n={mask.sum()})"
                                 )
+
+                            # Handle color assignment
+                            if "color" in group_kwgs or "c" in group_kwgs:
+                                if "c" in group_kwgs and isinstance(
+                                    group_kwgs["c"], list
+                                ):
+                                    plot_kwgs_group["color"] = (
+                                        group_kwgs["c"][gidx]
+                                        if gidx < len(group_kwgs["c"])
+                                        else colors[gidx]
+                                    )
+                                    plot_kwgs_group.pop("c", None)
+                                elif "color" in group_kwgs and isinstance(
+                                    group_kwgs["color"], list
+                                ):
+                                    plot_kwgs_group["color"] = (
+                                        group_kwgs["color"][gidx]
+                                        if gidx < len(group_kwgs["color"])
+                                        else colors[gidx]
+                                    )
+                            elif "color" not in plot_kwgs_group:
+                                plot_kwgs_group["color"] = colors[gidx]
+
+                            ax.scatter(
+                                X.loc[mask, col], residuals[mask], **plot_kwgs_group
+                            )
 
                         if not show_centroids:
                             handles, labels_legend = ax.get_legend_handles_labels()
@@ -3736,10 +3773,10 @@ def show_residual_diagnostics(
                                     legend_loc, fontsize=tick_fontsize - 2, ax=ax
                                 )
                     else:
-                        # Regular scatter without grouping
                         ax.scatter(X[col], residuals, **point_kwgs)
 
                     ax.axhline(y=0, **line_kwgs)
+
                     # Add lowess smooth
                     if show_lowess:
                         try:
@@ -3751,7 +3788,6 @@ def show_residual_diagnostics(
                     # Add centroids if requested
                     if show_centroids:
                         if centroid_type == "groups":
-                            # Option 1: Group-based centroids
                             if isinstance(group_category, str) and isinstance(
                                 X, pd.DataFrame
                             ):
@@ -3767,7 +3803,6 @@ def show_residual_diagnostics(
                             for gidx, group_val in enumerate(unique_groups):
                                 mask = groups == group_val
 
-                                # Get centroid x-coordinate from predictor column
                                 if isinstance(X, pd.DataFrame):
                                     centroid_x = X.loc[mask, col].mean()
                                 else:
@@ -3776,13 +3811,12 @@ def show_residual_diagnostics(
                                 centroid_y = residuals[mask].mean()
                                 plot_kwgs = centroid_kwgs.copy()
 
-                                # Only add label if user wants groups in legend
                                 if _should_show_in_resid_legend(
                                     legend_kwgs, "centroids"
                                 ):
                                     plot_kwgs["label"] = f"{group_val} centroid"
 
-                                # Handle color assignment (convert 'c' to 'color' to avoid warnings)
+                                # Handle color assignment
                                 if "c" in plot_kwgs:
                                     if isinstance(plot_kwgs["c"], list):
                                         plot_kwgs["color"] = (
@@ -3792,17 +3826,14 @@ def show_residual_diagnostics(
                                         )
                                     else:
                                         plot_kwgs["color"] = plot_kwgs["c"]
-                                    plot_kwgs.pop("c")  # Remove 'c' to avoid conflicts
+                                    plot_kwgs.pop("c")
                                 elif "color" not in plot_kwgs:
                                     plot_kwgs["color"] = colors_group[gidx]
 
                                 ax.scatter(centroid_x, centroid_y, **plot_kwgs)
 
                         else:  # centroid_type == "clusters"
-                            # Option 2: K-means clustering
                             clusters = n_clusters if n_clusters is not None else 3
-
-                            # Perform k-means clustering on predictor + residuals
                             data = np.column_stack([X[col], residuals])
                             kmeans = KMeans(
                                 n_clusters=clusters,
@@ -3810,13 +3841,11 @@ def show_residual_diagnostics(
                                 random_state=kmeans_rstate,
                             )
                             cluster_labels = kmeans.fit_predict(data)
-
                             colors_cluster = cm.tab10(np.linspace(0, 1, clusters))
 
                             for cluster_id in range(clusters):
                                 mask = cluster_labels == cluster_id
 
-                                # Get centroid x-coordinate from predictor column
                                 if isinstance(X, pd.DataFrame):
                                     centroid_x = X.loc[mask, col].mean()
                                 else:
@@ -3825,7 +3854,6 @@ def show_residual_diagnostics(
                                 centroid_y = residuals[mask].mean()
                                 plot_kwgs = centroid_kwgs.copy()
 
-                                # Only add label if user wants clusters in legend
                                 if _should_show_in_resid_legend(
                                     legend_kwgs, "clusters"
                                 ):
@@ -3833,8 +3861,7 @@ def show_residual_diagnostics(
                                         f"Cluster {cluster_id + 1} (n={mask.sum()})"
                                     )
 
-                                # Handle color assignment (convert 'c' to 'color' to
-                                # avoid matplotlib warnings)
+                                # Handle color assignment
                                 if "c" in plot_kwgs:
                                     if isinstance(plot_kwgs["c"], list):
                                         plot_kwgs["color"] = (
@@ -3844,19 +3871,18 @@ def show_residual_diagnostics(
                                         )
                                     else:
                                         plot_kwgs["color"] = plot_kwgs["c"]
-                                    plot_kwgs.pop("c")  # Remove 'c' to avoid conflicts
+                                    plot_kwgs.pop("c")
                                 elif "color" not in plot_kwgs:
                                     plot_kwgs["color"] = colors_cluster[cluster_id]
 
                                 ax.scatter(centroid_x, centroid_y, **plot_kwgs)
 
-                        # Add legend to ALL subplots
+                        # Add legend
                         handles, labels_legend = ax.get_legend_handles_labels()
                         if labels_legend:
                             apply_legend(legend_loc, fontsize=tick_fontsize - 2, ax=ax)
 
                     if heteroskedasticity_test:
-                        # Create single-column X for this predictor
                         X_single = (
                             X[[col]].values
                             if isinstance(X, pd.DataFrame)
@@ -3871,10 +3897,7 @@ def show_residual_diagnostics(
                             decimals=decimal_places,
                         )
 
-                        # Add test results to legend
-                        if _should_show_in_resid_legend(
-                            legend_kwgs, "het_tests"
-                        ):  # ← ADD THIS
+                        if _should_show_in_resid_legend(legend_kwgs, "het_tests"):
                             for _, result in het_results.items():
                                 if "error" not in result:
                                     label = result["interpretation"]
@@ -3886,7 +3909,7 @@ def show_residual_diagnostics(
                                         label=label,
                                     )
 
-                    # Ensure legend is shown if we have labels (from groups OR het tests)
+                    # Ensure legend is shown
                     handles, labels_legend = ax.get_legend_handles_labels()
                     if labels_legend:
                         apply_legend(legend_loc, fontsize=tick_fontsize - 2, ax=ax)
@@ -3894,7 +3917,6 @@ def show_residual_diagnostics(
                     ax.set_xlabel(col, fontsize=label_fontsize)
                     ax.set_ylabel("Residuals", fontsize=label_fontsize)
 
-                    # Apply text wrap to subplot title if needed
                     apply_plot_title(
                         None,
                         default_title=f"Residuals vs {col}",
@@ -3905,16 +3927,16 @@ def show_residual_diagnostics(
 
                     ax.grid(visible=gridlines, alpha=0.3)
                     ax.tick_params(labelsize=tick_fontsize)
+                    apply_axis_limits(ax, xlim=xlim, ylim=ylim)
 
             # Hide unused subplots
             for i in range(n_predictors, len(axes)):
                 axes[i].axis("off")
 
-            # Add overall figure title for predictor plots
+            # Add overall figure title
             apply_plot_title(
                 suptitle,
                 default_title=f"Residual Diagnostics: {name}",
-                text_wrap=text_wrap,
                 fontsize=label_fontsize + 2,
                 fig=fig,
                 suptitle_y=suptitle_y,
@@ -3931,3 +3953,10 @@ def show_residual_diagnostics(
                     image_path_svg,
                 )
             plt.show()
+
+    # Return diagnostics if requested
+    if return_diagnostics:
+        if num_models == 1:
+            return all_diagnostics[model_title[0]]
+        else:
+            return all_diagnostics
