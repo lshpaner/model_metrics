@@ -785,20 +785,6 @@ def plot_3d_pdp(
         else:
             ax.tick_params(axis="x", labelsize=tick_fontsize)
 
-        # ---- Apply custom category labels (Matplotlib) ----
-        if x_label_map is not None:
-            ax.set_yticks(range(len(x_label_map)))
-            ax.set_yticklabels(x_label_map, fontsize=tick_fontsize)
-
-        if y_label_map is not None:
-            ax.set_xticks(range(len(y_label_map)))
-            ax.set_xticklabels(
-                y_label_map,
-                rotation=35,
-                ha="right",
-                fontsize=tick_fontsize,
-            )
-
         if wireframe_color:
             ax.plot_wireframe(
                 YY_plot, XX_plot, ZZ, color=wireframe_color, linewidth=0.5
