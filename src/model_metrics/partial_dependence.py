@@ -2,6 +2,7 @@
 ############################### Library Imports ################################
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from matplotlib.ticker import MaxNLocator
 from sklearn.inspection import partial_dependence, PartialDependenceDisplay
 import os
 import numpy as np
@@ -241,6 +242,8 @@ def plot_3d_pdp(
     x_label=None,
     y_label=None,
     z_label=None,
+    x_label_map=None,
+    y_label_map=None,
     title=None,
     save_plots=None,  # "html", "static", "both", or None
     html_file_path=None,
@@ -484,13 +487,68 @@ def plot_3d_pdp(
             pdp_results["grid_values"][0], pdp_results["grid_values"][1]
         )
 
+    # =========================================================
+    # Convert categorical PDP grids to numeric positions
+    # (required for Matplotlib 3D when using string categories)
+    # =========================================================
+
+    x_vals = XX[0]
+    y_vals = YY[:, 0]
+
+    # =========================================================
+    # Detect categorical vs numeric grids properly
+    # =========================================================
+
+    def _is_categorical(arr):
+        arr = np.asarray(arr)
+
+        # pandas categorical dtype
+        if hasattr(arr, "dtype") and str(arr.dtype) == "category":
+            return True
+
+        # object/string types → categorical
+        if arr.dtype.kind in {"O", "U", "S"}:
+            return True
+
+        # numeric types → continuous
+        if np.issubdtype(arr.dtype, np.number):
+            return False
+
+        return False
+
+    x_is_categorical = _is_categorical(x_vals)
+    y_is_categorical = _is_categorical(y_vals)
+
+    x_positions = np.arange(len(x_vals)) if x_is_categorical else x_vals
+    y_positions = np.arange(len(y_vals)) if y_is_categorical else y_vals
+
+    # numeric mesh for plotting
+    XX_plot, YY_plot = np.meshgrid(x_positions, y_positions)
+
     ZZ = pdp_results["average"][0].T
 
-    if not x_label:
+    # Extract grid category values
+    x_vals = XX[0]
+    y_vals = YY[:, 0]
+
+    # Apply mapping dictionaries if provided
+    if x_label_map:
+        x_tick_labels = [x_label_map.get(v, v) for v in x_vals]
+    else:
+        x_tick_labels = x_vals
+
+    if y_label_map:
+        y_tick_labels = [y_label_map.get(v, v) for v in y_vals]
+    else:
+        y_tick_labels = y_vals
+
+    if x_label is None:
         x_label = feature_names[0]
-    if not y_label:
+
+    if y_label is None:
         y_label = feature_names[1]
-    if not z_label:
+
+    if z_label is None:
         z_label = "Partial Dependence"
 
     ## Define full_html_file_path early to avoid UnboundLocalError
@@ -504,23 +562,62 @@ def plot_3d_pdp(
     if plot_type in ["both", "interactive"]:
 
         # Manually wrap the title text
-        wrapped_title = "<br>".join(textwrap.wrap(title, width=text_wrap))
-
-        hover_template = (
-            f"<b>{x_label}</b>: %{{x:.2f}}<br>"
-            f"<b>{y_label}</b>: %{{y:.2f}}<br>"
-            f"<b>{z_label}</b>: %{{z:.2f}}<br>"
-            "<extra></extra>"
+        wrapped_title = (
+            "<br>".join(textwrap.wrap(title, width=text_wrap)) if title else ""
         )
 
-        # Plotly Interactive Plot
+        # Conditional hover template based on whether axes are numeric or categorical
+
+        # Detect categorical axes (already computed earlier but safe here)
+        x_is_categorical = not np.issubdtype(x_vals.dtype, np.number)
+        y_is_categorical = not np.issubdtype(y_vals.dtype, np.number)
+
+        # ---------------------------------------------------------
+        # Use numeric surface grids when categorical
+        # (this is what makes static & interactive match)
+        # ---------------------------------------------------------
+        X_surface = XX_plot if x_is_categorical else XX
+        Y_surface = YY_plot if y_is_categorical else YY
+
+        # ---------------------------------------------------------
+        # Build hover labels
+        # ---------------------------------------------------------
+        if x_is_categorical or y_is_categorical:
+            # create label grids for hover display
+            x_label_grid = np.tile(np.asarray(x_tick_labels), (len(y_positions), 1))
+            y_label_grid = np.tile(
+                np.asarray(y_tick_labels).reshape(-1, 1),
+                (1, len(x_positions)),
+            )
+
+            customdata = np.dstack([x_label_grid, y_label_grid])
+
+            hover_template = (
+                f"<b>{x_label}</b>: %{{customdata[0]}}<br>"
+                f"<b>{y_label}</b>: %{{customdata[1]}}<br>"
+                f"<b>{z_label}</b>: %{{z:.2f}}<br>"
+                "<extra></extra>"
+            )
+        else:
+            customdata = None
+            hover_template = (
+                f"<b>{x_label}</b>: %{{x:.2f}}<br>"
+                f"<b>{y_label}</b>: %{{y:.2f}}<br>"
+                f"<b>{z_label}</b>: %{{z:.2f}}<br>"
+                "<extra></extra>"
+            )
+
+        # ---------------------------------------------------------
+        # Plotly Interactive Surface
+        # ---------------------------------------------------------
         plotly_fig = go.Figure(
             data=[
                 go.Surface(
                     z=ZZ,
-                    x=XX,
-                    y=YY,
+                    x=X_surface,
+                    y=Y_surface,
                     colorscale=plotly_colormap,
+                    customdata=customdata,
                     hovertemplate=hover_template,
                     colorbar=dict(
                         len=0.65,
@@ -542,9 +639,9 @@ def plot_3d_pdp(
                 "yanchor": "top",
             },
             scene=dict(
-                xaxis_title=x_label,
-                yaxis_title=y_label,
-                zaxis_title=z_label,
+                xaxis_title=x_label if x_label != "" else "",
+                yaxis_title=y_label if y_label != "" else "",
+                zaxis_title=z_label if z_label != "" else "",
                 camera=dict(
                     eye=dict(
                         x=horizontal * zoom_out_factor,
@@ -553,16 +650,20 @@ def plot_3d_pdp(
                     )
                 ),
                 xaxis=dict(
+                    tickmode="array" if x_is_categorical else "auto",
+                    tickvals=x_positions if x_is_categorical else None,
+                    ticktext=x_tick_labels if x_is_categorical else None,
                     showgrid=True,
                     gridcolor="darkgrey",
                     gridwidth=2,
-                    title=dict(text=x_label),
                 ),
                 yaxis=dict(
+                    tickmode="array" if y_is_categorical else "auto",
+                    tickvals=y_positions if y_is_categorical else None,
+                    ticktext=y_tick_labels if y_is_categorical else None,
                     showgrid=True,
                     gridcolor="darkgrey",
                     gridwidth=2,
-                    title=dict(text=y_label),
                 ),
                 zaxis=dict(
                     showgrid=True,
@@ -591,18 +692,41 @@ def plot_3d_pdp(
             ),
         }
 
-        try:
-            # Try using iplot (works in Jupyter Notebooks)
-            pyo.iplot(plotly_fig, config=config)
-        except ImportError:
-            # If running in a script or pytest, fallback to plot()
-            print("Warning: `iplot` is not available. Falling back to `plot()`.")
-            pyo.plot(
-                plotly_fig,
-                filename=full_html_file_path,
-                auto_open=False,
-                config=config,
+    # Save interactive HTML only when an interactive figure exists
+    if (
+        save_plots in ["html", "both"]
+        and plot_type in ["interactive", "both"]
+        and plotly_fig is not None
+    ):
+
+        if not html_file_path or not html_file_name:
+            raise ValueError(
+                "To save an HTML plot, provide html_file_path and html_file_name."
             )
+
+        if not html_file_name.lower().endswith(".html"):
+            html_file_name += ".html"
+
+        html_dir = os.path.abspath(html_file_path)
+        os.makedirs(html_dir, exist_ok=True)
+
+        full_html_file_path = os.path.join(html_dir, html_file_name)
+
+        # save file
+        pyo.plot(
+            plotly_fig,
+            filename=full_html_file_path,
+            auto_open=False,
+            config=config,
+        )
+
+        print(f"Saved interactive HTML to: {full_html_file_path}")
+
+        # display in notebook if available
+        try:
+            pyo.iplot(plotly_fig, config=config)
+        except Exception:
+            pass
 
     if plot_type in ["both", "static"]:
         # Prepare custom colormap
@@ -620,23 +744,66 @@ def plot_3d_pdp(
         ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
         ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
         ax.zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
-        ax.set_xlabel(y_label, fontsize=label_fontsize, labelpad=-1)
-        ax.set_ylabel(x_label, fontsize=label_fontsize, labelpad=1)
-        ax.set_zlabel(z_label, fontsize=label_fontsize, labelpad=-1)
+        if y_label != "":
+            ax.set_xlabel(y_label, fontsize=label_fontsize, labelpad=-1)
+
+        if x_label != "":
+            ax.set_ylabel(x_label, fontsize=label_fontsize, labelpad=1)
+
+        if z_label != "":
+            ax.set_zlabel(z_label, fontsize=label_fontsize, labelpad=-1)
         ax.xaxis.line.set_color("gray")
         ax.yaxis.line.set_color("gray")
         ax.zaxis.line.set_color("gray")
         ax.view_init(*view_angle)
 
-        ax.set_ylim(XX.max(), XX.min())
+        # Set limits safely for numeric grid
+        if len(x_positions) > 1:
+            ax.set_ylim(x_positions[-1], x_positions[0])
 
         for e in ax.get_yticklabels() + ax.get_xticklabels() + ax.get_zticklabels():
             e.set_fontsize(tick_fontsize)
 
-        surf = ax.plot_surface(YY, XX, ZZ, cmap=matplotlib_colormap, shade=False)
+        surf = ax.plot_surface(
+            YY_plot, XX_plot, ZZ, cmap=matplotlib_colormap, shade=False
+        )
+
+        # Only force ticks for categorical axes
+        if x_is_categorical:
+            ax.set_yticks(x_positions)
+            ax.set_yticklabels(x_tick_labels, fontsize=tick_fontsize)
+        else:
+            ax.tick_params(axis="y", labelsize=tick_fontsize)
+
+        if y_is_categorical:
+            ax.set_xticks(y_positions)
+            ax.set_xticklabels(
+                y_tick_labels,
+                rotation=35,
+                ha="right",
+                fontsize=tick_fontsize,
+            )
+        else:
+            ax.tick_params(axis="x", labelsize=tick_fontsize)
+
+        # ---- Apply custom category labels (Matplotlib) ----
+        if x_label_map is not None:
+            ax.set_yticks(range(len(x_label_map)))
+            ax.set_yticklabels(x_label_map, fontsize=tick_fontsize)
+
+        if y_label_map is not None:
+            ax.set_xticks(range(len(y_label_map)))
+            ax.set_xticklabels(
+                y_label_map,
+                rotation=35,
+                ha="right",
+                fontsize=tick_fontsize,
+            )
 
         if wireframe_color:
-            ax.plot_wireframe(YY, XX, ZZ, color=wireframe_color, linewidth=0.5)
+            ax.plot_wireframe(
+                YY_plot, XX_plot, ZZ, color=wireframe_color, linewidth=0.5
+            )
 
         if show_cbar:
             cbar = fig.colorbar(surf, shrink=0.6, aspect=20, pad=0.02)
@@ -667,13 +834,568 @@ def plot_3d_pdp(
                     bbox_inches="tight",
                 )
 
-        if save_plots in ["html", "both"] and full_html_file_path:
-            os.makedirs(full_html_file_path, exist_ok=True)
+        # Save interactive HTML (always handled independently)
+        if save_plots in ["html", "both"] and plotly_fig is not None:
+
+            if not html_file_name.lower().endswith(".html"):
+                html_file_name += ".html"
+
+            os.makedirs(html_file_path, exist_ok=True)
+
+            full_html_file_path = os.path.join(html_file_path, html_file_name)
+
             pyo.plot(
                 plotly_fig,
-                filename=os.path.join(html_file_path, "plot_3d_pdp.html"),
+                filename=full_html_file_path,
                 auto_open=False,
                 config=config,
             )
-
         plt.show()
+
+
+# def plot_3d_pdp(
+#     model,
+#     dataframe,
+#     feature_names,
+#     x_label=None,
+#     y_label=None,
+#     z_label=None,
+#     title=None,
+#     save_plots=None,
+#     html_file_path=None,
+#     html_file_name=None,
+#     plot_type="both",
+#     matplotlib_colormap=None,
+#     plotly_colormap="Viridis",
+#     zoom_out_factor=None,
+#     wireframe_color=None,
+#     view_angle=(22, 70),
+#     figsize=(7, 4.5),
+#     text_wrap=50,
+#     horizontal=-1.25,
+#     depth=1.25,
+#     vertical=1.25,
+#     cbar_x=1.05,
+#     cbar_thickness=25,
+#     title_x=0.5,
+#     title_y=0.95,
+#     top_margin=100,
+#     bottom_margin=65,
+#     image_path_png=None,
+#     image_path_svg=None,
+#     filename=None,
+#     output_dir=None,
+#     show_cbar=True,
+#     grid_resolution=20,
+#     left_margin=20,
+#     right_margin=65,
+#     label_fontsize=8,
+#     tick_fontsize=6,
+#     enable_zoom=True,
+#     show_modebar=True,
+#     readable_labels=False,
+#     label_replacements=None,
+#     label_replacements_regex=False,
+#     label_wrap_width=14,
+#     label_max_words=3,
+#     label_rotation=35,
+# ):
+#     """
+#     Generate 3D partial dependence plots (PDP) for two features of a trained
+#     machine learning model.
+
+#     This function creates 3D partial dependence plots using both static
+#     (Matplotlib) and interactive (Plotly) visualizations. It is compatible with
+#     various versions of scikit-learn, supporting both newer and older versions.
+
+#     Parameters
+#     ----------
+#     model : estimator object
+#         A trained machine learning model that implements the `predict`,
+#         `predict_proba`, or `decision_function` method.
+#     dataframe : pandas.DataFrame or numpy.ndarray
+#         The dataset on which the model was trained or a representative sample.
+#         If a DataFrame is provided, `feature_names` should correspond to
+#         the column names. If a numpy array is provided, `feature_names`
+#         should correspond to the indices of the columns.
+#     feature_names : list of str
+#         A list of two feature names or indices for which partial dependence
+#         plots are generated.
+#     x_label : str, optional
+#         Label for the x-axis in the plots. Defaults to the first feature in
+#         `feature_names`.
+#     y_label : str, optional
+#         Label for the y-axis in the plots. Defaults to the second feature in
+#         `feature_names`.
+#     z_label : str, optional
+#         Label for the z-axis in the plots. Defaults to "Partial Dependence".
+#     title : str, optional
+#         Title for the plots. If not provided, no title is displayed.
+#     save_plots : {"html", "static", "both", None}, optional
+#         Specifies whether and how to save the generated plots.
+#         - `"static"`: Saves only the Matplotlib (PNG/SVG) plot.
+#         - `"html"`: Saves only the Plotly interactive plot as an HTML file.
+#         - `"both"`: Saves both static (PNG/SVG) and interactive (HTML) plots.
+#         - `None`: Does not save any plots.
+#     html_file_path : str, optional
+#         Directory path to save the interactive Plotly HTML file.
+#         Required if `save_plots="html"` or `save_plots="both"`.
+#     html_file_name : str, optional
+#         Name of the HTML file to save the interactive Plotly plot. Required if
+#         `plot_type` is "interactive" or "both".
+#     plot_type : {"static", "interactive", "both"}, optional, default="both"
+#         Specifies the type of plot to generate.
+#         - `"static"`: Generates only a Matplotlib 3D plot.
+#         - `"interactive"`: Generates only an interactive Plotly 3D plot.
+#         - `"both"`: Generates both static and interactive plots.
+
+#         **Note**: If `plot_type="static"`, an interactive plot is **not**
+#         created, and attempting to save an HTML file will raise an error.
+
+#     matplotlib_colormap : matplotlib.colors.Colormap, optional
+#         Custom colormap for the Matplotlib plot. If not provided, a
+#         default colormap is used.
+#     plotly_colormap : str, optional, default="Viridis"
+#         Colormap for the Plotly plot.
+#     zoom_out_factor : float, optional
+#         Factor to adjust the zoom level of the Plotly plot.
+#     wireframe_color : str, optional
+#         Color for the wireframe in the Matplotlib plot. If `None`, no
+#         wireframe is plotted.
+#     view_angle : tuple, optional, default=(22, 70)
+#         Elevation and azimuthal angles for the Matplotlib plot view.
+#     figsize : tuple, optional, default=(7, 4.5)
+#         Figure size for the Matplotlib plot.
+#     text_wrap : int, optional, default=50
+#         Maximum width of the title text before wrapping.
+#     horizontal : float, optional, default=-1.25
+#         Horizontal camera position for the Plotly plot.
+#     depth : float, optional, default=1.25
+#         Depth camera position for the Plotly plot.
+#     vertical : float, optional, default=1.25
+#         Vertical camera position for the Plotly plot.
+#     cbar_x : float, optional, default=1.05
+#         Position of the color bar along the x-axis in the Plotly plot.
+#     cbar_thickness : int, optional, default=25
+#         Thickness of the color bar in the Plotly plot.
+#     title_x : float, optional, default=0.5
+#         Horizontal position of the title in the Plotly plot.
+#     title_y : float, optional, default=0.95
+#         Vertical position of the title in the Plotly plot.
+#     top_margin : int, optional, default=100
+#         Top margin for the Plotly plot layout.
+#     image_path_png : str, optional
+#         Directory path to save the PNG file of the Matplotlib plot.
+#     image_path_svg : str, optional
+#         Directory path to save the SVG file of the Matplotlib plot.
+#     show_cbar : bool, optional, default=True
+#         Whether to display the color bar in the Matplotlib plot.
+#     grid_resolution : int, optional, default=20
+#         The resolution of the grid for computing partial dependence.
+#     left_margin : int, optional, default=20
+#         Left margin for the Plotly plot layout.
+#     right_margin : int, optional, default=65
+#         Right margin for the Plotly plot layout.
+#     label_fontsize : int, optional, default=8
+#         Font size for axis labels in the Matplotlib plot.
+#     tick_fontsize : int, optional, default=6
+#         Font size for tick labels in the Matplotlib plot.
+#     enable_zoom : bool, optional, default=True
+#         Whether to enable zooming in the Plotly plot.
+#     show_modebar : bool, optional, default=True
+#         Whether to display the mode bar in the Plotly plot.
+#     readable_labels : bool, optional, default=False
+#         If True, formats categorical axis labels to improve readability.
+#     label_wrap_width : int, optional, default=14
+#         Maximum character length before labels are wrapped.
+#     label_max_words : int, optional, default=3
+#         Maximum number of words shown before truncation with ellipsis.
+#     label_rotation : int, optional, default=35
+#         Rotation angle for axis tick labels.
+
+#     Raises
+#     ------
+#     ValueError
+#         If `plot_type` is not one of "static", "interactive", or "both".
+#         If `plot_type` is "interactive" or "both" and `html_file_path` or
+#         `html_file_name` are not provided.
+
+#     Notes
+#     -----
+#     - This function handles warnings related to scikit-learn's
+#       `partial_dependence` function, specifically a `FutureWarning` related to
+#       non-tuple sequences for multidimensional indexing. This warning is
+#       suppressed as it stems from the internal workings of scikit-learn in
+#       Python versions like 3.7.4.
+#     - To maintain compatibility with different versions of scikit-learn, the
+#       function attempts to use `"values"` for grid extraction in newer versions
+#       and falls back to `"grid_values"` for older versions.
+#     """
+
+#     def _apply_label_replacements(val):
+#         """
+#         Apply user-provided label replacements to a single label value.
+#         Supports dict OR list of tuples.
+#         """
+#         s = "" if val is None else str(val)
+#         if label_replacements:
+#             if isinstance(label_replacements, dict):
+#                 items = label_replacements.items()
+#             else:
+#                 items = label_replacements
+
+#             if label_replacements_regex:
+#                 import re
+
+#                 for pat, repl in items:
+#                     s = re.sub(pat, repl, s)
+#             else:
+#                 for old, new in items:
+#                     s = s.replace(str(old), str(new))
+#         return s
+
+#     warnings.filterwarnings(
+#         "ignore",
+#         category=FutureWarning,
+#         module="sklearn",
+#     )
+
+#     # Validate `save_plots` input
+#     if save_plots not in [None, "html", "static", "both"]:
+#         raise ValueError(
+#             f"Invalid `save_plots` value: {save_plots}. "
+#             f"Choose from 'html', 'static', 'both', or None."
+#         )
+
+#     # Validate that paths are provided if required
+#     if save_plots in ["static", "both"] and not (image_path_png or image_path_svg):
+#         raise ValueError(
+#             f"To save static plots, provide either `image_path_png` "
+#             f"or `image_path_svg`."
+#         )
+
+#     # Check if the plot_type is valid
+#     if plot_type not in ["static", "interactive", "both"]:
+#         raise ValueError(
+#             "Invalid `plot_type`. Choose from 'static', 'interactive', or 'both'."
+#         )
+
+#     if zoom_out_factor is None:
+#         zoom_out_factor = 1.1
+
+#     if isinstance(dataframe, np.ndarray):
+#         feature_indices = [feature_names.index(name) for name in feature_names]
+#     else:
+#         feature_indices = [
+#             list(dataframe.columns).index(feature_names[0]),
+#             list(dataframe.columns).index(feature_names[1]),
+#         ]
+
+#     def _resolve_output_paths():
+#         """
+#         Build output paths using priority:
+
+#         1) Explicit paths provided by user
+#         2) filename + output_dir
+#         3) filename in current directory
+#         """
+
+#         html_path = None
+#         image_png = None
+#         image_svg = None
+
+#         # ---------- HTML ----------
+#         if html_file_name:
+#             name = html_file_name
+#             if not name.lower().endswith(".html"):
+#                 name += ".html"
+
+#             html_path = os.path.join(html_file_path or "", name)
+
+#         elif filename:
+#             base = os.path.join(output_dir or "", filename)
+#             html_path = base + ".html"
+
+#         # ---------- STATIC ----------
+#         if image_path_png or image_path_svg:
+#             image_png = image_path_png
+#             image_svg = image_path_svg
+
+#         elif filename:
+#             base = os.path.join(output_dir or "", filename)
+#             image_png = base + ".png"
+#             image_svg = base + ".svg"
+
+#         # ---------- ensure directories exist ----------
+#         for path in (html_path, image_png, image_svg):
+#             if path:
+#                 directory = os.path.dirname(path)
+#                 if directory:
+#                     os.makedirs(directory, exist_ok=True)
+
+#         return html_path, image_png, image_svg
+
+#     def _format_label(text):
+#         """
+#         Format categorical labels for readability.
+#         Wraps and truncates long labels.
+#         """
+#         text = str(text)
+#         if len(text) > label_wrap_width:
+#             words = text.split()
+#             if len(words) > label_max_words:
+#                 text = "<br>".join(words[:label_max_words]) + "…"
+#             else:
+#                 text = "<br>".join(words)
+#         return text
+
+#     pdp_results = partial_dependence(
+#         model,
+#         X=dataframe,
+#         features=[(feature_indices[0], feature_indices[1])],
+#         grid_resolution=grid_resolution,
+#         kind="average",
+#     )
+
+#     try:
+#         x_vals = np.asarray(pdp_results["values"][0])
+#         y_vals = np.asarray(pdp_results["values"][1])
+#     except KeyError:
+#         x_vals = np.asarray(pdp_results["grid_values"][0])
+#         y_vals = np.asarray(pdp_results["grid_values"][1])
+
+#     ZZ = pdp_results["average"][0].T
+#     ZZ = np.where(np.isfinite(ZZ), ZZ, np.nan)
+
+#     XX_lbl, YY_lbl = np.meshgrid(x_vals, y_vals)
+
+#     x_is_numeric = np.issubdtype(x_vals.dtype, np.number)
+#     y_is_numeric = np.issubdtype(y_vals.dtype, np.number)
+
+#     if x_is_numeric and y_is_numeric:
+#         XX_num, YY_num = np.meshgrid(x_vals.astype(float), y_vals.astype(float))
+#         x_tick_pos = x_vals.astype(float)
+#         y_tick_pos = y_vals.astype(float)
+#         x_tick_lab = [str(v) for v in x_vals]
+#         y_tick_lab = [str(v) for v in y_vals]
+#     else:
+#         x_tick_pos = np.arange(len(x_vals), dtype=float)
+#         y_tick_pos = np.arange(len(y_vals), dtype=float)
+#         XX_num, YY_num = np.meshgrid(x_tick_pos, y_tick_pos)
+#         x_tick_lab = [str(v) for v in x_vals]
+#         y_tick_lab = [str(v) for v in y_vals]
+
+#     x_tick_lab = [_apply_label_replacements(v) for v in x_tick_lab]
+#     y_tick_lab = [_apply_label_replacements(v) for v in y_tick_lab]
+
+#     if x_label is None:
+#         x_label = feature_names[0]
+#     if y_label is None:
+#         y_label = feature_names[1]
+#     if z_label is None:
+#         z_label = "Partial Dependence"
+
+#     html_out, image_path_png, image_path_svg = _resolve_output_paths()
+#     plotly_fig = None
+
+#     if plot_type in ["both", "interactive"] or save_plots in ["both", "html"]:
+#         wrapped_title = None
+#         if title:
+#             wrapped_title = "<br>".join(textwrap.wrap(title, width=text_wrap))
+
+#         # --- CONDITIONAL HOVER LOGIC ---
+#         if x_is_numeric and y_is_numeric:
+#             # Standard numeric hover
+#             hover_template = (
+#                 f"<b>{x_label}</b>: %{{x:.2f}}<br>"
+#                 f"<b>{y_label}</b>: %{{y:.2f}}<br>"
+#                 f"<b>{z_label}</b>: %{{z:.2f}}<br>"
+#                 "<extra></extra>"
+#             )
+#         else:
+#             # Categorical/String hover
+#             hover_template = (
+#                 "<b>%{x}</b><br>"
+#                 "<b>%{y}</b><br>"
+#                 f"{z_label}: %{{z:.2f}}"
+#                 "<extra></extra>"
+#             )
+
+#         plotly_fig = go.Figure(
+#             data=[
+#                 go.Surface(
+#                     z=ZZ,
+#                     x=XX_lbl,
+#                     y=YY_lbl,
+#                     colorscale=plotly_colormap,
+#                     hovertemplate=hover_template,
+#                     colorbar=dict(
+#                         len=0.65,
+#                         thickness=cbar_thickness,
+#                         yanchor="middle",
+#                         x=cbar_x,
+#                         y=0.5,
+#                     ),
+#                 )
+#             ]
+#         )
+
+#         plotly_fig.update_layout(
+#             title={
+#                 "text": wrapped_title,
+#                 "y": title_y,
+#                 "x": title_x,
+#                 "xanchor": "center",
+#                 "yanchor": "top",
+#             },
+#             scene=dict(
+#                 xaxis_title=x_label,
+#                 yaxis_title=y_label,
+#                 zaxis_title=z_label,
+#                 camera=dict(
+#                     eye=dict(
+#                         x=horizontal * zoom_out_factor,
+#                         y=depth * zoom_out_factor,
+#                         z=vertical * zoom_out_factor,
+#                     )
+#                 ),
+#                 xaxis=dict(
+#                     showgrid=True,
+#                     gridcolor="darkgrey",
+#                     gridwidth=2,
+#                     title=dict(text=x_label),
+#                 ),
+#                 yaxis=dict(
+#                     showgrid=True,
+#                     gridcolor="darkgrey",
+#                     gridwidth=2,
+#                     title=dict(text=y_label),
+#                 ),
+#                 zaxis=dict(
+#                     showgrid=True,
+#                     gridcolor="darkgrey",
+#                     gridwidth=2,
+#                     title=dict(text=z_label),
+#                 ),
+#             ),
+#             autosize=False,
+#             width=900,
+#             height=750,
+#             margin=dict(l=left_margin, r=right_margin, b=bottom_margin, t=top_margin),
+#         )
+
+#         if readable_labels:
+#             plotly_fig.update_scenes(
+#                 xaxis=dict(
+#                     tickmode="array",
+#                     tickvals=x_tick_pos if not x_is_numeric else x_vals,
+#                     ticktext=[_format_label(v) for v in x_tick_lab],
+#                     tickangle=label_rotation,
+#                 ),
+#                 yaxis=dict(
+#                     tickmode="array",
+#                     tickvals=y_tick_pos if not y_is_numeric else y_vals,
+#                     ticktext=[_format_label(v) for v in y_tick_lab],
+#                     tickangle=label_rotation,
+#                 ),
+#             )
+
+#         config = {
+#             "displayModeBar": show_modebar,
+#             "scrollZoom": enable_zoom,
+#             "displaylogo": False,
+#             "modeBarButtonsToRemove": (
+#                 ["zoomIn3d", "zoomOut3d"] if not enable_zoom else []
+#             ),
+#         }
+
+#         # Only SAVE if requested
+#         # --- PLOTLY SAVE/SHOW SECTION ---
+#         if save_plots in ["html", "both"] and html_out:
+#             pyo.plot(
+#                 plotly_fig,
+#                 filename=html_out,
+#                 auto_open=False,
+#                 config=config,
+#             )
+
+#         if plot_type in ["both", "interactive"]:
+#             pyo.iplot(plotly_fig, config=config)
+
+#     # --- MATPLOTLIB SECTION ---
+#     if plot_type in ["both", "static"]:
+#         from matplotlib.ticker import MaxNLocator
+
+#         if matplotlib_colormap is None:
+#             N = 256
+#             vals = np.ones((N, 4))
+#             vals[:, 0], vals[:, 1] = np.linspace(1, 0, N), np.linspace(0, 1, N)
+#             matplotlib_colormap = ListedColormap(vals)
+
+#         fig = plt.figure(figsize=figsize)
+#         ax = fig.add_subplot(111, projection="3d")
+
+#         # Visual cleanup
+#         for axis in [ax.xaxis, ax.yaxis, ax.zaxis]:
+#             axis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+#             axis.line.set_color("gray")
+
+#         ax.set_ylim(XX_num.max(), XX_num.min())
+#         ax.view_init(*view_angle)
+#         surf = ax.plot_surface(
+#             YY_num, XX_num, ZZ, cmap=matplotlib_colormap, shade=False
+#         )
+
+#         # Labels and Ticks
+#         ax.xaxis.set_major_locator(MaxNLocator(nbins=6))
+#         ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
+
+#         if readable_labels or not (x_is_numeric and y_is_numeric):
+#             ax.set_xticks(x_tick_pos)
+#             ax.set_xticklabels(x_tick_lab, rotation=label_rotation)
+#             ax.set_yticks(y_tick_pos)
+#             ax.set_yticklabels(y_tick_lab, rotation=label_rotation)
+
+#         # Formatting (Labelpad at 2 as requested)
+#         ax.set_xlabel(y_label, fontsize=label_fontsize, labelpad=-1)
+#         ax.set_ylabel(x_label, fontsize=label_fontsize, labelpad=-1)
+#         ax.set_zlabel(z_label, fontsize=label_fontsize, labelpad=-1)
+
+#         # This prevents the 3D plot from expanding into the label area
+
+#         for e in ax.get_yticklabels() + ax.get_xticklabels() + ax.get_zticklabels():
+#             e.set_fontsize(tick_fontsize)
+
+#         if wireframe_color:
+#             ax.plot_wireframe(YY_num, XX_num, ZZ, color=wireframe_color, linewidth=0.5)
+
+#         if show_cbar:
+#             fig.colorbar(surf, shrink=0.6, aspect=20, pad=0.02)
+
+#         if title:
+#             ax.set_title(
+#                 textwrap.fill(title, text_wrap),
+#                 fontsize=label_fontsize,
+#                 pad=18,
+#             )
+
+#         # CRITICAL FIX FOR TRUNCATION:
+#         # We set a manual bottom margin and REMOVE bbox_inches="tight" in savefig
+#         plt.subplots_adjust(left=0.2, right=0.80, top=0.9, bottom=0.1)
+
+#         # --- MATPLOTLIB SAVE SECTION ---
+#         if save_plots in ["static", "both"]:
+#             if image_path_png:
+#                 os.makedirs(image_path_png, exist_ok=True)
+#                 plt.savefig(
+#                     os.path.join(image_path_png, "plot_3d_pdp.png"),
+#                     bbox_inches="tight",
+#                 )
+#             if image_path_svg:
+#                 os.makedirs(image_path_svg, exist_ok=True)
+#                 plt.savefig(
+#                     os.path.join(image_path_svg, "plot_3d_pdp.svg"),
+#                     bbox_inches="tight",
+#                 )
+
+#         plt.show()
