@@ -567,10 +567,6 @@ def plot_3d_pdp(
 
         # Conditional hover template based on whether axes are numeric or categorical
 
-        # Detect categorical axes (already computed earlier but safe here)
-        x_is_categorical = not np.issubdtype(x_vals.dtype, np.number)
-        y_is_categorical = not np.issubdtype(y_vals.dtype, np.number)
-
         # ---------------------------------------------------------
         # Use numeric surface grids when categorical
         # (this is what makes static & interactive match)
@@ -581,31 +577,37 @@ def plot_3d_pdp(
         # ---------------------------------------------------------
         # Build hover labels
         # ---------------------------------------------------------
+        # ---------------------------------------------------------
+        # Build hover labels aligned with ZZ orientation
+        # ---------------------------------------------------------
+
+        customdata = None
+
         if x_is_categorical or y_is_categorical:
-            # create label grids for hover display
-            x_label_grid = np.tile(np.asarray(x_tick_labels), (len(y_positions), 1))
-            y_label_grid = np.tile(
-                np.asarray(y_tick_labels).reshape(-1, 1),
-                (1, len(x_positions)),
+
+            # Build label grid matching surface orientation
+            x_grid_labels, y_grid_labels = np.meshgrid(
+                x_tick_labels,
+                y_tick_labels,
             )
 
-            customdata = np.dstack([x_label_grid, y_label_grid])
+            # transpose to match ZZ orientation
+            customdata = np.dstack((x_grid_labels.T, y_grid_labels.T))
 
             hover_template = (
-                f"<b>{x_label}</b>: %{{customdata[0]}}<br>"
-                f"<b>{y_label}</b>: %{{customdata[1]}}<br>"
-                f"<b>{z_label}</b>: %{{z:.2f}}<br>"
+                f"<b>{x_label}</b>%{{customdata[0]}}<br>"
+                f"<b>{y_label}</b>%{{customdata[1]}}<br>"
+                f"<b>{z_label}</b> %{{z:.2f}}"
                 "<extra></extra>"
             )
+
         else:
-            customdata = None
             hover_template = (
-                f"<b>{x_label}</b>: %{{x:.2f}}<br>"
-                f"<b>{y_label}</b>: %{{y:.2f}}<br>"
-                f"<b>{z_label}</b>: %{{z:.2f}}<br>"
+                f"<b>{x_label}</b> %{{x:.2f}}<br>"
+                f"<b>{y_label}</b> %{{y:.2f}}<br>"
+                f"<b>{z_label}</b> %{{z:.2f}}"
                 "<extra></extra>"
             )
-
         # ---------------------------------------------------------
         # Plotly Interactive Surface
         # ---------------------------------------------------------
@@ -743,14 +745,14 @@ def plot_3d_pdp(
         ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
         ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
         ax.zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
-        if y_label != "":
-            ax.set_xlabel(y_label, fontsize=label_fontsize, labelpad=-1)
+        if y_label is not None:
+            ax.set_ylabel(y_label, fontsize=label_fontsize)
 
-        if x_label != "":
-            ax.set_ylabel(x_label, fontsize=label_fontsize, labelpad=1)
+        if x_label is not None:
+            ax.set_xlabel(x_label, fontsize=label_fontsize)
 
         if z_label != "":
-            ax.set_zlabel(z_label, fontsize=label_fontsize, labelpad=-1)
+            ax.set_zlabel(z_label, fontsize=label_fontsize)
         ax.xaxis.line.set_color("gray")
         ax.yaxis.line.set_color("gray")
         ax.zaxis.line.set_color("gray")
@@ -770,17 +772,14 @@ def plot_3d_pdp(
         # Only force ticks for categorical axes
         if x_is_categorical:
             ax.set_yticks(x_positions)
-            ax.set_yticklabels(x_tick_labels, fontsize=tick_fontsize)
-        else:
-            ax.tick_params(axis="y", labelsize=tick_fontsize)
+            ax.set_yticklabels(
+                x_tick_labels, fontsize=tick_fontsize, rotation=0, ha="right"
+            )
 
         if y_is_categorical:
             ax.set_xticks(y_positions)
             ax.set_xticklabels(
-                y_tick_labels,
-                rotation=35,
-                ha="right",
-                fontsize=tick_fontsize,
+                y_tick_labels, fontsize=tick_fontsize, rotation=55, ha="right"
             )
         else:
             ax.tick_params(axis="x", labelsize=tick_fontsize)
