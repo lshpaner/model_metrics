@@ -217,16 +217,17 @@ def test_plot_3d_pdp_interactive_missing_path(trained_model_and_data):
 
 def test_plot_3d_pdp_save_html(tmp_path, trained_model_and_data):
     model, X_df, feature_names = trained_model_and_data
-    expected_file = tmp_path / "plot_3d_pdp.html"  # function hardcodes this
+
+    expected_file = tmp_path / "ignored.html"
 
     plot_3d_pdp(
         model=model,
         dataframe=X_df,
         feature_names=[feature_names[0], feature_names[1]],
-        plot_type="both",  # ensure saving logic executes
+        plot_type="both",
         save_plots="html",
         html_file_path=str(tmp_path),
-        html_file_name="ignored.html",  # ignored by implementation
+        html_file_name="ignored.html",
         title="Test Save HTML",
     )
 
