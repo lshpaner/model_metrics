@@ -273,6 +273,7 @@ def plot_3d_pdp(
     tick_fontsize=6,
     enable_zoom=True,
     show_modebar=True,
+    modebar_image_format="png",
 ):
     """
     Generate 3D partial dependence plots (PDP) for two features of a trained
@@ -389,6 +390,10 @@ def plot_3d_pdp(
         Whether to enable zooming in the Plotly plot.
     show_modebar : bool, optional, default=True
         Whether to display the mode bar in the Plotly plot.
+    modebar_image_format : str, optional, default="png"
+        Image format for the modebar download button in the Plotly plot.
+        Accepted values are ``"png"``, ``"svg"``, ``"jpeg"``, and ``"webp"``.
+        Only one format can be active at a time.
 
     Raises
     ------
@@ -403,6 +408,8 @@ def plot_3d_pdp(
         ``"both"``.
         If `plot_type` is ``"interactive"`` or ``"both"`` and either
         `html_file_path` or `html_file_name` is not provided.
+        If `modebar_image_format` is not one of ``"png"``, ``"svg"``,
+        ``"jpeg"``, or ``"webp"``.
 
     Notes
     -----
@@ -435,6 +442,12 @@ def plot_3d_pdp(
         category=FutureWarning,
         module="sklearn",
     )
+
+    if modebar_image_format not in ["png", "svg", "jpeg", "webp"]:
+        raise ValueError(
+            f"Invalid `modebar_image_format`: {modebar_image_format}. "
+            f"Choose from 'png', 'svg', 'jpeg', or 'webp'."
+        )
 
     # Validate `save_plots` input
     if save_plots not in [None, "html", "static", "both"]:
@@ -703,49 +716,46 @@ def plot_3d_pdp(
         )
 
         config = {
-            "displayModeBar": show_modebar,  # Toggle the mode bar
-            "scrollZoom": enable_zoom,  # Toggle zoom on or off
+            "displayModeBar": show_modebar,
+            "scrollZoom": enable_zoom,
             "displaylogo": False,
             "modeBarButtonsToRemove": (
                 ["zoomIn3d", "zoomOut3d"] if not enable_zoom else []
             ),
+            "toImageButtonOptions": {
+                "format": modebar_image_format,
+                "filename": "plot_3d_pdp",
+                "height": 750,
+                "width": 900,
+                "scale": 1,
+            },
         }
 
-    # Save interactive HTML only when an interactive figure exists
-    if (
-        save_plots in ["html", "both"]
-        and plot_type in ["interactive", "both"]
-        and plotly_fig is not None
-    ):
-
-        if not html_file_path or not html_file_name:
-            raise ValueError(
-                "To save an HTML plot, provide html_file_path and html_file_name."
-            )
-
-        if not html_file_name.lower().endswith(".html"):
-            html_file_name += ".html"
-
-        html_dir = os.path.abspath(html_file_path)
-        os.makedirs(html_dir, exist_ok=True)
-
-        full_html_file_path = os.path.join(html_dir, html_file_name)
-
-        # save file
-        pyo.plot(
-            plotly_fig,
-            filename=full_html_file_path,
-            auto_open=False,
-            config=config,
-        )
-
-        print(f"Saved interactive HTML to: {full_html_file_path}")
-
-        # display in notebook if available
+        # Always display in notebook, regardless of save_plots
         try:
             pyo.iplot(plotly_fig, config=config)
         except Exception:
             pass
+
+        # Save interactive HTML if requested
+        if save_plots in ["html", "both"]:
+
+            if not html_file_name.lower().endswith(".html"):
+                html_file_name += ".html"
+
+            html_dir = os.path.abspath(html_file_path)
+            os.makedirs(html_dir, exist_ok=True)
+
+            full_html_file_path = os.path.join(html_dir, html_file_name)
+
+            pyo.plot(
+                plotly_fig,
+                filename=full_html_file_path,
+                auto_open=False,
+                config=config,
+            )
+
+            print(f"Saved interactive HTML to: {full_html_file_path}")
 
     if plot_type in ["both", "static"]:
         # Prepare custom colormap
@@ -836,20 +846,4 @@ def plot_3d_pdp(
                     bbox_inches="tight",
                 )
 
-        # Save interactive HTML (always handled independently)
-        if save_plots in ["html", "both"] and plotly_fig is not None:
-
-            if not html_file_name.lower().endswith(".html"):
-                html_file_name += ".html"
-
-            os.makedirs(html_file_path, exist_ok=True)
-
-            full_html_file_path = os.path.join(html_file_path, html_file_name)
-
-            pyo.plot(
-                plotly_fig,
-                filename=full_html_file_path,
-                auto_open=False,
-                config=config,
-            )
         plt.show()
