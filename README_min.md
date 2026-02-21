@@ -46,7 +46,7 @@ https://lshpaner.github.io/model_metrics_docs
 
 ## 🌐 Author's Website
 
-1. [Leonid Shpaner](https://www.leonshpaner.com)
+1. [Leon Shpaner](https://www.leonshpaner.com)
 
 ## 🙏 Acknowledgements
 
@@ -78,7 +78,7 @@ If you use `model_metrics` in your research or projects, please consider citing 
   month        = feb,
   year         = 2025,
   publisher    = {Zenodo},
-  version      = {0.0.5a3},
+  version      = {0.0.5a4},
   doi          = {10.5281/zenodo.14879819},
   url          = {https://doi.org/10.5281/zenodo.14879819}
 }
