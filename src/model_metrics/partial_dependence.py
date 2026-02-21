@@ -303,6 +303,16 @@ def plot_3d_pdp(
         `feature_names`.
     z_label : str, optional
         Label for the z-axis in the plots. Defaults to "Partial Dependence".
+    x_label_map : dict, optional
+        A dictionary mapping raw x-axis values to display labels. Useful for
+        converting numeric or encoded category values to human-readable strings.
+        For example, ``{0: "No", 1: "Yes"}``. If not provided, raw values are
+        used as tick labels.
+    y_label_map : dict, optional
+        A dictionary mapping raw y-axis values to display labels. Useful for
+        converting numeric or encoded category values to human-readable strings.
+        For example, ``{0: "Low", 1: "Medium", 2: "High"}``. If not provided,
+        raw values are used as tick labels.
     title : str, optional
         Title for the plots. If not provided, no title is displayed.
     save_plots : {"html", "static", "both", None}, optional
@@ -316,7 +326,8 @@ def plot_3d_pdp(
         Required if `save_plots="html"` or `save_plots="both"`.
     html_file_name : str, optional
         Name of the HTML file to save the interactive Plotly plot. Required if
-        `plot_type` is "interactive" or "both".
+        `plot_type` is "interactive" or "both", or if `save_plots` is "html"
+        or "both".
     plot_type : {"static", "interactive", "both"}, optional, default="both"
         Specifies the type of plot to generate.
         - `"static"`: Generates only a Matplotlib 3D plot.
@@ -382,9 +393,16 @@ def plot_3d_pdp(
     Raises
     ------
     ValueError
-        If `plot_type` is not one of "static", "interactive", or "both".
-        If `plot_type` is "interactive" or "both" and `html_file_path` or
-        `html_file_name` are not provided.
+        If `save_plots` is not one of ``"html"``, ``"static"``, ``"both"``,
+        or ``None``.
+        If `save_plots` is ``"static"`` or ``"both"`` and neither
+        `image_path_png` nor `image_path_svg` is provided.
+        If `save_plots` is ``"html"`` or ``"both"`` and `html_file_path` is
+        not provided.
+        If `plot_type` is not one of ``"static"``, ``"interactive"``, or
+        ``"both"``.
+        If `plot_type` is ``"interactive"`` or ``"both"`` and either
+        `html_file_path` or `html_file_name` is not provided.
 
     Notes
     -----
