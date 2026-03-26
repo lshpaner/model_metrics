@@ -126,3 +126,59 @@ model_explanation:
 	$(PYTHON_INTERPRETER) \
 	py_scripts/model_explanation.py \
 	model_files/single_model_classification_results/ \
+
+
+################################################################################
+############################## Python Test Scripts #############################
+################################################################################
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Output directory
+# ─────────────────────────────────────────────────────────────────────────────
+DATA_OUTPUT := data_output
+
+$(DATA_OUTPUT):
+	mkdir -p $(DATA_OUTPUT)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Individual script targets
+# ─────────────────────────────────────────────────────────────────────────────
+
+.PHONY: run_single_model_regression
+run_single_model_regression: $(DATA_OUTPUT)
+	python py_scripts/single_model_regression.py | tee $(DATA_OUTPUT)/single_model_regression.txt
+
+.PHONY: run_train_adult_income
+run_train_adult_income: $(DATA_OUTPUT)
+	python py_scripts/train_adult_income.py | tee $(DATA_OUTPUT)/train_adult_income.txt
+
+.PHONY: run_single_model_classification
+run_single_model_classification: $(DATA_OUTPUT)
+	python py_scripts/single_model_classification.py | tee $(DATA_OUTPUT)/single_model_classification.txt
+
+.PHONY: run_single_model_evaluation
+run_single_model_evaluation: $(DATA_OUTPUT)
+	python py_scripts/single_model_evaluation.py | tee $(DATA_OUTPUT)/single_model_evaluation.txt
+
+.PHONY: run_model_calculator_usage
+run_model_calculator_usage: $(DATA_OUTPUT)
+	python py_scripts/model_calculator_usage.py | tee $(DATA_OUTPUT)/model_calculator_usage.txt
+
+.PHONY: run_model_explanation
+run_model_explanation: $(DATA_OUTPUT)
+	python py_scripts/model_explanation.py | tee $(DATA_OUTPUT)/model_explanation.txt
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Run all scripts sequentially
+# ─────────────────────────────────────────────────────────────────────────────
+.PHONY: run_all_py_example_scripts
+run_all_py_example_scripts: \
+	run_single_model_regression \
+	run_train_adult_income \
+	run_single_model_classification \
+	run_single_model_evaluation \	
+	run_model_calculator_usage \
+	run_model_explanation 
+
+	@echo "All scripts complete. Logs in $(DATA_OUTPUT)/"

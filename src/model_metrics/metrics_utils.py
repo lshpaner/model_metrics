@@ -32,28 +32,74 @@ from statsmodels.stats.diagnostic import (
 ################################################################################
 
 
-def save_plot_images(filename, save_plot, image_path_png, image_path_svg):
+def save_plot_images(
+    filename,
+    save_plot,
+    image_path_png,
+    image_path_svg,
+    image_filename=None,
+    fig=None,
+    dpi=None,
+):
     """
-    Save the plot to specified directories.
+    Save the current figure to PNG and/or SVG.
+
+    Saving is triggered when either ``save_plot=True`` or
+    ``image_filename`` is provided explicitly. If ``image_filename``
+    is given it takes precedence over the auto-generated ``filename``.
+
+    Parameters
+    ----------
+    filename : str
+        Auto-generated base filename used when ``image_filename`` is None.
+
+    save_plot : bool
+        If True, saves using the auto-generated ``filename``.
+
+    image_path_png : str or None
+        Directory path where the PNG file should be saved.
+
+    image_path_svg : str or None
+        Directory path where the SVG file should be saved.
+
+    image_filename : str or None, optional
+        Custom filename override. When provided, saving is triggered
+        regardless of ``save_plot`` and this name is used instead of
+        ``filename``.
+
+    fig : matplotlib.figure.Figure or None, optional
+        Figure to save. If None, uses the current active figure.
+
+    dpi : int or None, optional
+        DPI for raster outputs such as PNG.
     """
-    if save_plot:
-        if not (image_path_png or image_path_svg):
-            raise ValueError(
-                "save_plot is set to True, but no image path is provided. "
-                "Please specify at least one of `image_path_png` or `image_path_svg`."
-            )
-        if image_path_png:
-            os.makedirs(image_path_png, exist_ok=True)
-            plt.savefig(
-                os.path.join(image_path_png, f"{filename}.png"),
-                bbox_inches="tight",
-            )
-        if image_path_svg:
-            os.makedirs(image_path_svg, exist_ok=True)
-            plt.savefig(
-                os.path.join(image_path_svg, f"{filename}.svg"),
-                bbox_inches="tight",
-            )
+    effective_name = image_filename if image_filename is not None else filename
+    should_save = save_plot or (image_filename is not None)
+
+    if not should_save:
+        return
+
+    if not (image_path_png or image_path_svg):
+        raise ValueError(
+            "No image path provided. Please specify at least one of "
+            "`image_path_png` or `image_path_svg`."
+        )
+
+    fig = fig or plt.gcf()
+
+    if image_path_png:
+        os.makedirs(image_path_png, exist_ok=True)
+        fig.savefig(
+            os.path.join(image_path_png, f"{effective_name}.png"),
+            bbox_inches="tight",
+            dpi=dpi,
+        )
+    if image_path_svg:
+        os.makedirs(image_path_svg, exist_ok=True)
+        fig.savefig(
+            os.path.join(image_path_svg, f"{effective_name}.svg"),
+            bbox_inches="tight",
+        )
 
 
 def normalize_model_titles(model_title, num_models, format_template="Model {i}"):

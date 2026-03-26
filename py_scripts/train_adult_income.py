@@ -17,6 +17,10 @@ print(os.path.join(os.pardir))
 sys.path.append(os.path.join(os.pardir))
 sys.path.append(".")
 
+print("\n" + "#" * 80)
+print(f"Running script: {os.path.basename(__file__)}")
+print("#" * 80 + "\n")
+
 from py_scripts.model_params import model_definitions
 
 app = typer.Typer()

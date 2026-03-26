@@ -37,9 +37,13 @@ import model_metrics
 from model_metrics.model_calculator import ModelCalculator
 from eda_toolkit import ensure_directory
 
-# ─────────────────────────────────────────────────────────────────────────────
+print("\n" + "#" * 80)
+print(f"Running script: {os.path.basename(__file__)}")
+print("#" * 80 + "\n")
+
+################################################################################
 # Helpers
-# ─────────────────────────────────────────────────────────────────────────────
+################################################################################
 
 PASS = "\033[92mPASS\033[0m"
 FAIL = "\033[91mFAIL\033[0m"
