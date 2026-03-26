@@ -15,20 +15,19 @@ Welcome to Model Metrics! Model Metrics is a versatile Python library designed t
 
 Before you install `model_metrics`, ensure your system meets the following requirements:
 
-- `Python`: Version `3.7.4` or higher.
+- `Python`: Version `3.8` or higher.
 
 Additionally, `model_metrics` depends on the following packages, which will be automatically installed when you install `model_metrics`:
 
-- `matplotlib`: version `3.5.3` or higher, but capped at `3.10.0`
-- `numpy`: version `1.21.6` or higher, but capped at `2.1.0`
-- `pandas`: version `1.3.5` or higher, but capped at `2.2.3`
-- `plotly`: version `5.18.0` or higher, but capped at `5.24.1`
-- `scikit-learn`: version `1.0.2` or higher, but capped at `1.5.2`
-- `scipy`: version `1.8` or higher, but capped at `1.14.0`
-- `shap`: version `0.41.0` or higher, but capped below `0.46.0`
-- `statsmodels`: version `0.12.2` or higher, but capped below `0.14.4`
-- `tqdm`: version `4.66.4` or higher, but capped below `4.67.1`
-
+- `matplotlib`: version `3.5.3` or higher, but capped below `3.11`
+- `numpy`: version `1.21.6` or higher, but capped below `2.2`
+- `pandas`: version `1.3.5` or higher, but capped below `2.3`
+- `plotly`: version `5.18.0` or higher, but capped below `5.25`
+- `scikit-learn`: version `1.0.2` or higher
+- `scipy`: version `1.7.3` or higher
+- `statsmodels`: version `0.13` or higher, but capped below `0.15`
+- `shap`: version `0.41.0` or higher, but capped below `0.52`
+- `tqdm`: version `4.66.4` or higher
 
 ## 💾 Installation
 
@@ -78,7 +77,7 @@ If you use `model_metrics` in your research or projects, please consider citing 
   month        = feb,
   year         = 2025,
   publisher    = {Zenodo},
-  version      = {0.0.5a6},
+  version      = {0.0.5a7},
   doi          = {10.5281/zenodo.14879819},
   url          = {https://doi.org/10.5281/zenodo.14879819}
 }

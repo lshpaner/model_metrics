@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="model_metrics",
-    version="0.0.5a6",
+    version="0.0.5a7",
     author="Leonid Shpaner",
     author_email="lshpaner@ucla.edu",
     description="A Python library for model evaluation, performance tracking, and metric visualizations, supporting classification and regression models with robust analytics and reporting.",
@@ -12,7 +12,7 @@ setup(
     # Automatically find packages in the specified directory
     packages=find_packages(where="src"),
     project_urls={  # Optional
-        "Leonid Shpaner's Website": "https://www.leonshpaner.com",
+        "Leon Shpaner's Website": "https://www.leonshpaner.com",
         "Source Code": "https://github.com/lshpaner/model_metrics/",
     },
     classifiers=[
