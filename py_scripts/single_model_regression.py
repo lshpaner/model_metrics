@@ -15,6 +15,10 @@ print(os.path.join(os.pardir))
 sys.path.append(os.path.join(os.pardir))
 sys.path.append(".")
 
+print("\n" + "#" * 80)
+print(f"Running script: {os.path.basename(__file__)}")
+print("#" * 80 + "\n")
+
 print(f"Model Tuner version: {model_tuner.__version__}")
 print(f"Model Tuner authors: {model_tuner.__author__} \n")
 
@@ -22,25 +26,22 @@ print(f"Model Tuner authors: {model_tuner.__author__} \n")
 if __name__ == "__main__":
 
     argv = sys.argv[1:]
-    model_path = argv[0]
 
     ## Define base paths
-    ## `base_path`` represents the parent directory of current working directory
     base_path = os.path.join(os.pardir)
-    ## Go up one level from 'notebooks' to the parent directory, then into the
-    ## 'results' folder
 
-    model_path = os.path.join(os.pardir, "model_files/single_model_regression_results")
+    default_model_path = os.path.join(
+        os.pardir, "model_files/single_model_regression_results"
+    )
     image_path_png = os.path.join(base_path, "images", "png_images")
     image_path_svg = os.path.join(base_path, "images", "svg_images")
 
-    # Use the function to ensure the directories exist
-    ensure_directory(model_path)
+    ensure_directory(default_model_path)
     ensure_directory(image_path_png)
     ensure_directory(image_path_svg)
 
-    # Ensure model_path is an absolute Path object
-    model_path = Path(os.path.abspath(argv[0]))
+    # Use CLI argument if provided, otherwise fall back to default
+    model_path = Path(os.path.abspath(argv[0] if argv else default_model_path))
 
     # Ensure the directory exists before saving the model
     model_path.mkdir(parents=True, exist_ok=True)

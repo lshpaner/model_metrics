@@ -535,6 +535,7 @@ def show_confusion_matrix(
     save_plot=False,
     image_path_png=None,
     image_path_svg=None,
+    image_filename=None,
     text_wrap=None,
     figsize=(5, 5),
     labels=True,
@@ -581,6 +582,8 @@ def show_confusion_matrix(
     - save_plot (bool, default=False): Whether to save plots to disk.
     - image_path_png (str, optional): Path to save PNG images.
     - image_path_svg (str, optional): Path to save SVG images.
+    - image_filename (str, optional): Custom filename for saved image. When
+      provided, saving is triggered regardless of `save_plot`.
     - text_wrap (int, optional): Maximum width for wrapping long titles.
     - figsize (tuple, default=(8, 6)): Figure size for each confusion matrix.
     - labels (bool, default=True): Whether to show TN, FP, FN, TP text
@@ -799,6 +802,7 @@ def show_confusion_matrix(
                 save_plot,
                 image_path_png,
                 image_path_svg,
+                image_filename=image_filename,
             )
             plt.show()
 
@@ -811,6 +815,7 @@ def show_confusion_matrix(
             save_plot,
             image_path_png,
             image_path_svg,
+            image_filename=image_filename,
         )
         plt.show()
 
@@ -834,6 +839,7 @@ def show_roc_curve(
     save_plot=False,
     image_path_png=None,
     image_path_svg=None,
+    image_filename=None,
     text_wrap=None,
     curve_kwgs=None,
     linestyle_kwgs=None,
@@ -890,6 +896,9 @@ def show_roc_curve(
         Path to save the plot as a PNG image.
     - image_path_svg: str, optional
         Path to save the plot as an SVG image.
+    - image_filename: str, optional
+        Custom filename for saved image. When provided, saving is triggered
+        regardless of `save_plot`.
     - text_wrap: int, optional
         Maximum width for wrapping titles if they are too long (default: None).
     - curve_kwgs: list or dict, optional
@@ -1263,6 +1272,7 @@ def show_roc_curve(
                     save_plot,
                     image_path_png,
                     image_path_svg,
+                    image_filename=image_filename,
                 )
             else:
                 save_plot_images(
@@ -1270,6 +1280,7 @@ def show_roc_curve(
                     save_plot,
                     image_path_png,
                     image_path_svg,
+                    image_filename=image_filename,
                 )
 
             plt.show()
@@ -1315,6 +1326,7 @@ def show_roc_curve(
             save_plot,
             image_path_png,
             image_path_svg,
+            image_filename=image_filename,
         )
         plt.show()
 
@@ -1327,6 +1339,7 @@ def show_roc_curve(
             save_plot,
             image_path_png,
             image_path_svg,
+            image_filename=image_filename,
         )
         plt.show()
 
@@ -1345,6 +1358,7 @@ def show_pr_curve(
     save_plot=False,
     image_path_png=None,
     image_path_svg=None,
+    image_filename=None,
     text_wrap=None,
     curve_kwgs=None,
     subplots=False,
@@ -1400,6 +1414,9 @@ def show_pr_curve(
         File path to save the plot(s) as PNG.
     - image_path_svg: str, optional
         File path to save the plot(s) as SVG.
+    - image_filename: str, optional
+        Custom filename for saved image. When provided, saving is triggered
+        regardless of `save_plot`.
     - text_wrap: int, optional
         Maximum width (in characters) to wrap long titles. If None, no wrapping.
     - curve_kwgs: list or dict, optional
@@ -1625,6 +1642,7 @@ def show_pr_curve(
                     save_plot,
                     image_path_png,
                     image_path_svg,
+                    image_filename=image_filename,
                 )
             else:
                 save_plot_images(
@@ -1632,6 +1650,7 @@ def show_pr_curve(
                     save_plot,
                     image_path_png,
                     image_path_svg,
+                    image_filename=image_filename,
                 )
             plt.show()
 
@@ -1656,6 +1675,7 @@ def show_pr_curve(
             save_plot,
             image_path_png,
             image_path_svg,
+            image_filename=image_filename,
         )
         plt.show()
 
@@ -1668,6 +1688,7 @@ def show_pr_curve(
             save_plot,
             image_path_png,
             image_path_svg,
+            image_filename=image_filename,
         )
         plt.show()
 
@@ -1690,6 +1711,7 @@ def show_lift_chart(
     save_plot=False,
     image_path_png=None,
     image_path_svg=None,
+    image_filename=None,
     text_wrap=None,
     curve_kwgs=None,
     linestyle_kwgs=None,
@@ -1724,6 +1746,8 @@ def show_lift_chart(
     - save_plot (bool, default=False): Whether to save the plot.
     - image_path_png (str, optional): Path to save PNG image.
     - image_path_svg (str, optional): Path to save SVG image.
+    - image_filename (str, optional): Custom filename for saved image. When
+      provided, saving is triggered regardless of `save_plot`.
     - text_wrap (int, optional): Maximum title width before wrapping.
     - curve_kwgs (dict or list, optional): Styling options for model curves.
     - linestyle_kwgs (dict, optional): Styling options for the baseline.
@@ -1843,6 +1867,7 @@ def show_lift_chart(
                 save_plot,
                 image_path_png,
                 image_path_svg,
+                image_filename=image_filename,
             )
             plt.show()
 
@@ -1864,6 +1889,7 @@ def show_lift_chart(
             save_plot,
             image_path_png,
             image_path_svg,
+            image_filename=image_filename,
         )
         plt.show()
 
@@ -1876,6 +1902,7 @@ def show_lift_chart(
             save_plot,
             image_path_png,
             image_path_svg,
+            image_filename=image_filename,
         )
         plt.show()
 
@@ -1893,6 +1920,7 @@ def show_gain_chart(
     save_plot=False,
     image_path_png=None,
     image_path_svg=None,
+    image_filename=None,
     text_wrap=None,
     curve_kwgs=None,
     linestyle_kwgs=None,
@@ -1928,6 +1956,8 @@ def show_gain_chart(
     - save_plot (bool, default=False): Whether to save the plot.
     - image_path_png (str, optional): Path to save PNG image.
     - image_path_svg (str, optional): Path to save SVG image.
+    - image_filename (str, optional): Custom filename for saved image. When
+      provided, saving is triggered regardless of `save_plot`.
     - text_wrap (int, optional): Maximum title width before wrapping.
     - curve_kwgs (dict or list, optional): Styling options for model curves.
     - linestyle_kwgs (dict, optional): Styling options for the baseline.
@@ -2066,6 +2096,7 @@ def show_gain_chart(
                 save_plot,
                 image_path_png,
                 image_path_svg,
+                image_filename=image_filename,
             )
             plt.show()
 
@@ -2087,6 +2118,7 @@ def show_gain_chart(
             save_plot,
             image_path_png,
             image_path_svg,
+            image_filename=image_filename,
         )
         plt.show()
 
@@ -2099,6 +2131,7 @@ def show_gain_chart(
             save_plot,
             image_path_png,
             image_path_svg,
+            image_filename=image_filename,
         )
         plt.show()
 
@@ -2121,6 +2154,7 @@ def show_calibration_curve(
     save_plot=False,
     image_path_png=None,
     image_path_svg=None,
+    image_filename=None,
     text_wrap=None,
     curve_kwgs=None,
     subplots=False,
@@ -2163,6 +2197,8 @@ def show_calibration_curve(
     - save_plot (bool, default=False): Whether to save the generated plot(s).
     - image_path_png (str, optional): Path to save the PNG image.
     - image_path_svg (str, optional): Path to save the SVG image.
+    - image_filename (str, optional): Custom filename for saved image. When
+      provided, saving is triggered regardless of `save_plot`.
     - text_wrap (int, optional): Maximum # of characters before wrapping title.
     - curve_kwgs (dict or list, optional): Styling options for model curves.
     - subplots (bool, default=False): Display models in a grid of subplots.
@@ -2305,14 +2341,14 @@ def show_calibration_curve(
             plt.grid(visible=gridlines)
 
             name_clean = name.lower().replace(" ", "_")
-            if save_plot:
-                filename = f"{name_clean}_by_{group_category.name}_calibration"
-                save_plot_images(
-                    filename,
-                    save_plot,
-                    image_path_png,
-                    image_path_svg,
-                )
+            filename = f"{name_clean}_by_{group_category.name}_calibration"
+            save_plot_images(
+                filename,
+                save_plot,
+                image_path_png,
+                image_path_svg,
+                image_filename=image_filename,
+            )
 
             plt.show()
             continue  # Skip standard rendering
@@ -2404,6 +2440,7 @@ def show_calibration_curve(
                 save_plot,
                 image_path_png,
                 image_path_svg,
+                image_filename=image_filename,
             )
             plt.show()
 
@@ -2425,6 +2462,7 @@ def show_calibration_curve(
             save_plot,
             image_path_png,
             image_path_svg,
+            image_filename=image_filename,
         )
         plt.show()
 
@@ -2437,6 +2475,7 @@ def show_calibration_curve(
             save_plot,
             image_path_png,
             image_path_svg,
+            image_filename=image_filename,
         )
         plt.show()
 
@@ -2466,6 +2505,7 @@ def plot_threshold_metrics(
     save_plot=False,
     image_path_png=None,
     image_path_svg=None,
+    image_filename=None,
     lookup_metric=None,
     lookup_value=None,
     decimal_places=4,
@@ -2490,108 +2530,83 @@ def plot_threshold_metrics(
     model : estimator or list of estimators, optional
         A trained model or list of models that support `predict_proba`.
         Required if `y_prob` is not provided.
-
     X_test : array-like, optional
         Feature matrix for testing. Required if `model` is provided.
-
     y_test : array-like of shape (n_samples,)
         True binary labels. Required.
-
     y_prob : array-like or list of array-like, optional
         Predicted probabilities for the positive class. Can be provided
         instead of `model` and `X_test`. If multiple models are being
         evaluated, pass a list of arrays.
-
     model_title : str or list of str, optional
         Custom name(s) for the model(s). Defaults to the model class name
         when a model object is provided, or "Model 1", "Model 2", etc. when
         only `y_prob` arrays are passed.
-
     title : str or None, default=None
         Per-plot or per-subplot title. If None, a default title is shown.
         If `""`, no per-plot title is displayed.
-
     text_wrap : int, optional
         Maximum width of the title before wrapping onto multiple lines.
-
     figsize : tuple, optional
         Size of the matplotlib figure. Defaults to (8, 6) for single/overlay
         plots and (n_cols * 8, n_rows * 6) for subplots.
-
     label_fontsize : int, default=12
         Font size for axis labels and title.
-
     tick_fontsize : int, default=10
         Font size for tick labels.
-
     gridlines : bool, default=True
         Whether to display gridlines.
-
     baseline_thresh : bool, default=True
         If True, draws a vertical reference line at threshold = 0.5.
-
     curve_kwgs : dict, optional
         Keyword arguments passed to all metric curves
         (e.g., {"linestyle": "-", "linewidth": 1}).
-
     baseline_kwgs : dict, optional
         Keyword arguments for styling the baseline threshold line
         (default: black dotted line).
-
     threshold_kwgs : dict, optional
         Keyword arguments for styling the model threshold line when
         `model_threshold` is provided (default: black dotted line).
-
     lookup_kwgs : dict, optional
         Keyword arguments for styling the lookup threshold line when
         `lookup_metric` and `lookup_value` are provided
         (default: gray dashed line).
-
     save_plot : bool, default=False
         If True, saves the plot to disk.
-
     image_path_png : str, optional
         Path to save the plot as a PNG image.
-
     image_path_svg : str, optional
         Path to save the plot as an SVG image.
-
+    image_filename : str, optional
+        Custom filename for the saved image. When provided, saving is
+        triggered regardless of `save_plot`.
     lookup_metric : {"precision", "recall", "f1", "specificity"}, optional
         Metric for which to locate the threshold closest to `lookup_value`.
-
     lookup_value : float, optional
         Target value of the lookup metric. Must be provided together with
         `lookup_metric`.
-
     decimal_places : int, default=4
         Number of decimal places for reported thresholds.
-
     model_threshold : float or list of float, optional
         A model-specific threshold or list of thresholds (one per model) to
         highlight with a vertical line. If a scalar is passed it is broadcast
         to all models.
-
     overlay : bool, default=False
         If True, plot all models on a single shared axes. Cannot be used
         with `subplots=True`.
-
     subplots : bool, default=False
         If True, plot each model in its own subplot. Cannot be used with
         `overlay=True`.
-
     n_cols : int, default=2
         Number of columns in the subplot grid. Only used when
         `subplots=True`.
-
     n_rows : int, optional
         Number of rows in the subplot grid. If not specified, calculated
         automatically from the number of models and `n_cols`.
-
     suptitle : str or None, default=None
         Overall figure title shown above all subplots when `subplots=True`.
         If None, defaults to "Threshold Metrics". If `""`, no suptitle is
         displayed. Has no effect when `subplots=False`.
-
     suptitle_y : float, default=0.98
         Vertical position of the suptitle (0-1 range). Increase slightly
         (e.g. 1.01) if the title overlaps the top row of subplots.
@@ -2810,6 +2825,7 @@ def plot_threshold_metrics(
                     save_plot=save_plot,
                     image_path_png=image_path_png,
                     image_path_svg=image_path_svg,
+                    image_filename=image_filename,
                 )
             else:
                 save_plot_images(
@@ -2817,6 +2833,7 @@ def plot_threshold_metrics(
                     save_plot=save_plot,
                     image_path_png=image_path_png,
                     image_path_svg=image_path_svg,
+                    image_filename=image_filename,
                 )
             plt.show()
 
@@ -2834,6 +2851,7 @@ def plot_threshold_metrics(
             save_plot=save_plot,
             image_path_png=image_path_png,
             image_path_svg=image_path_svg,
+            image_filename=image_filename,
         )
         plt.tight_layout()
         plt.show()
@@ -2858,6 +2876,7 @@ def plot_threshold_metrics(
             save_plot=save_plot,
             image_path_png=image_path_png,
             image_path_svg=image_path_svg,
+            image_filename=image_filename,
         )
         plt.show()
 
@@ -2881,6 +2900,7 @@ def show_residual_diagnostics(
     save_plot=False,
     image_path_png=None,
     image_path_svg=None,
+    image_filename=None,
     show_outliers=False,
     n_outliers=3,
     suptitle=None,
@@ -2955,6 +2975,9 @@ def show_residual_diagnostics(
         Path to save PNG image.
     image_path_svg : str, optional
         Path to save SVG image.
+    image_filename : str, optional
+        Custom filename for the saved image. When provided, saving is
+        triggered regardless of `save_plot`.
     show_outliers : bool, default=False
         Whether to label outlier points on plots.
     n_outliers : int, default=3
@@ -3669,18 +3692,18 @@ def show_residual_diagnostics(
         )
         plt.tight_layout()
 
-        if save_plot:
-            plot_type_str = (
-                "_".join(plots_to_make)
-                if len(plots_to_make) > 1
-                else (plots_to_make[0] if plots_to_make else "all")
-            )
-            save_plot_images(
-                f"residuals_{plot_type_str}",
-                save_plot,
-                image_path_png,
-                image_path_svg,
-            )
+        plot_type_str = (
+            "_".join(plots_to_make)
+            if len(plots_to_make) > 1
+            else (plots_to_make[0] if plots_to_make else "all")
+        )
+        save_plot_images(
+            f"residuals_{plot_type_str}",
+            save_plot,
+            image_path_png,
+            image_path_svg,
+            image_filename=image_filename,
+        )
 
         plt.show()
 
@@ -3944,14 +3967,14 @@ def show_residual_diagnostics(
 
             plt.tight_layout()
 
-            if save_plot:
-                name_clean = name.lower().replace(" ", "_")
-                save_plot_images(
-                    f"{name_clean}_residuals_by_predictor",
-                    save_plot,
-                    image_path_png,
-                    image_path_svg,
-                )
+            name_clean = name.lower().replace(" ", "_")
+            save_plot_images(
+                f"{name_clean}_residuals_by_predictor",
+                save_plot,
+                image_path_png,
+                image_path_svg,
+                image_filename=image_filename,
+            )
             plt.show()
 
     # Return diagnostics if requested

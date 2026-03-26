@@ -2,7 +2,6 @@ from model_tuner import *
 from eda_toolkit import ensure_directory
 import pandas as pd
 import os
-from pathlib import Path
 import sys
 
 print(os.path.join(os.pardir, ".."))
@@ -10,7 +9,9 @@ sys.path.append("..")
 
 from model_metrics import ModelCalculator
 
-import shap
+print("\n" + "#" * 80)
+print(f"Running script: {os.path.basename(__file__)}")
+print("#" * 80 + "\n")
 
 ## Define base paths
 ## `base_path`` represents the parent directory of current working directory
@@ -34,9 +35,13 @@ csv_global_shap = "results_global_shap.csv"
 
 
 if __name__ == "__main__":
-
     argv = sys.argv[1:]
-    model_path = argv[0]
+    if argv:
+        model_path = argv[0]
+    else:
+        model_path = os.path.join(
+            os.pardir, "model_files/single_model_classification_results"
+        )
     ############################################################################
     ######################### Read in Model Object #############################
     ############################################################################

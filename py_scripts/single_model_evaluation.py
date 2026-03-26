@@ -27,6 +27,10 @@ plt.ion()  # enables interactive mode
 ## Step 2. Append the correct paths
 # Add the parent directory to sys.path to access relevant .py scripts
 
+print("\n" + "#" * 80)
+print(f"Running script: {os.path.basename(__file__)}")
+print("#" * 80 + "\n")
+
 print(os.path.join(os.pardir))
 sys.path.append(os.path.join(os.pardir))
 sys.path.append(".")
@@ -37,23 +41,18 @@ print(f"Model Metrics authors: {model_metrics.__author__} \n")
 if __name__ == "__main__":
 
     argv = sys.argv[1:]
-    model_path = argv[0]
 
     ## Define base paths
-    ## `base_path`` represents the parent directory of current working directory
     base_path = os.path.join(os.pardir)
-    ## Go up one level from 'notebooks' to the parent directory, then into the
-    ## 'results' folder
 
-    # Define paths as Path objects
-    model_path = Path(
-        os.path.abspath(
-            os.path.join(
-                os.pardir,
-                "model_metrics/model_files/single_model_classification_results",
-            )
-        )
+    default_model_path = os.path.join(
+        os.pardir,
+        "model_metrics/model_files/single_model_classification_results",
     )
+
+    # Use CLI argument if provided, otherwise fall back to default
+    model_path = Path(os.path.abspath(argv[0] if argv else default_model_path))
+
     image_path_png = model_path / "images" / "png_images"
     image_path_svg = model_path / "images" / "svg_images"
 
@@ -61,7 +60,6 @@ if __name__ == "__main__":
     image_path_png.mkdir(parents=True, exist_ok=True)
     image_path_svg.mkdir(parents=True, exist_ok=True)
 
-    # Use the function to ensure the 'data' directory exists
     ensure_directory(model_path)
     ensure_directory(image_path_png)
     ensure_directory(image_path_svg)
