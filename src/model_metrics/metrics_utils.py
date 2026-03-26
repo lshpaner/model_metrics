@@ -660,7 +660,7 @@ def check_heteroskedasticity(
         - 'test_name': Name of the test
         - 'statistic': Test statistic
         - 'pvalue': P-value
-        - 'heteroskedastic': Boolean (True if heteroskedasticity detected at α=0.05)
+        - 'heteroskedastic': Boolean (True if heteroskedasticity detected at alpha=0.05)
         - 'interpretation': Text interpretation
     """
     results = {}
@@ -802,7 +802,7 @@ def check_heteroskedasticity(
                     "pvalue": round(pval, decimals),
                     "heteroskedastic": pval < 0.05 and abs(corr) > 0.1,
                     "interpretation": (
-                        f"Spearman: ρ={round(corr, decimals)}, "
+                        f"Spearman: rho={round(corr, decimals)}, "
                         f"$\\mathit{{p}}$={round(pval, decimals)} "
                         f"({het_status})"
                     ),

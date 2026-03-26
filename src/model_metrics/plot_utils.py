@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import textwrap
 import math
 import numpy as np
+import os
+from typing import Optional
 
 
 def apply_axis_limits(ax, xlim=None, ylim=None):
@@ -236,3 +238,68 @@ def normalize_curve_styles(curve_kwgs, model_title, num_models):
         return curve_kwgs
     else:
         return [{}] * num_models
+
+
+################################################################################
+# Figure Saving Utility
+################################################################################
+
+
+def _save_figure(
+    *,
+    fig: Optional[plt.Figure] = None,
+    image_path_png: Optional[str] = None,
+    image_path_svg: Optional[str] = None,
+    filename: Optional[str] = None,
+    bbox_inches: str = "tight",
+    dpi: Optional[int] = None,
+) -> None:
+    """
+    Save a matplotlib figure to PNG and/or SVG.
+
+    This helper centralizes all figure-saving logic. Callers provide
+    output directories and a base filename. Full file paths are
+    constructed internally.
+
+    Parameters
+    ----------
+    fig : matplotlib.figure.Figure or None
+        Figure to save. If None, uses the current active figure.
+
+    image_path_png : str or None
+        Directory path where the PNG file should be saved.
+        If None, PNG output is skipped.
+
+    image_path_svg : str or None
+        Directory path where the SVG file should be saved.
+        If None, SVG output is skipped.
+
+    filename : str or None
+        Base filename without extension. If None, no files are saved.
+
+    bbox_inches : str, optional
+        Bounding box option passed to savefig.
+
+    dpi : int or None, optional
+        DPI for raster outputs such as PNG.
+    """
+    # Nothing to do
+    if filename is None or (image_path_png is None and image_path_svg is None):
+        return
+
+    fig = fig or plt.gcf()
+
+    if image_path_png:
+        png_path = os.path.join(image_path_png, f"{filename}.png")
+        fig.savefig(
+            png_path,
+            bbox_inches=bbox_inches,
+            dpi=dpi,
+        )
+
+    if image_path_svg:
+        svg_path = os.path.join(image_path_svg, f"{filename}.svg")
+        fig.savefig(
+            svg_path,
+            bbox_inches=bbox_inches,
+        )

@@ -1,3 +1,5 @@
+import warnings
+
 import pandas as pd
 import numpy as np
 import math
@@ -103,7 +105,7 @@ def summarize_model_performance(
     custom_threshold : float or None, default=None
         Overrides `model_threshold` across all models.
     model_title : str, list, or None, default=None
-        Custom model names. Defaults to "Model_1", "Model_2", etc.
+        Custom model names. Defaults to "Model 1", "Model 2", etc.
     score : str or None, default=None
         Optional scoring metric for threshold tuning.
     return_df : bool, default=False
@@ -161,8 +163,10 @@ def summarize_model_performance(
     metrics_data = []
 
     # --- Normalize model titles ---
+    # Use "Model {i}" (space) to match the default used everywhere else,
+    # ensuring model_threshold dict lookups against auto-generated names work.
     model_title = normalize_model_titles(
-        model_title, len(models), format_template="Model_{i}"
+        model_title, len(models), format_template="Model {i}"
     )
 
     # --- Main loop ---
@@ -377,8 +381,14 @@ def summarize_model_performance(
             "Model Threshold",
         ]
         if group_category is not None:
-            # keep only one model's group table for header clarity
+            # Warn before silently dropping extra models in grouped path.
             if "Model" in metrics_df.columns and len(metrics_df["Model"].unique()) > 1:
+                warnings.warn(
+                    "group_category with multiple models is not fully supported; "
+                    "returning results for the first model only.",
+                    UserWarning,
+                    stacklevel=2,
+                )
                 first_model = metrics_df["Model"].iloc[0]
                 metrics_df = metrics_df[metrics_df["Model"] == first_model].copy()
 
@@ -412,7 +422,6 @@ def summarize_model_performance(
 
     # --- Regression: nothing to reshape; preserve rows (incl. Coeff/Feat. Imp.) ---
     if model_type == "regression":
-        # Keep as-is. Do not wipe coefficient rows.
         pass
 
     # **Manual formatting**
@@ -420,7 +429,7 @@ def summarize_model_performance(
         if model_type == "classification":
             # Handle grouped vs non-grouped separately
             if "Model" not in metrics_df.columns:
-                # Grouped case — skip transposed printing, just print the table as-is
+                # Grouped cases: skip transposed printing, just print the table as-is
                 print("Grouped Model Performance Metrics:")
                 print(metrics_df.to_string(index=False))
                 return
@@ -641,15 +650,16 @@ def show_confusion_matrix(
         else:
             name = extract_model_name(m)  # Fallback to model class name
 
+        # use y_prob_curr to avoid clobbering the function-level y_prob param.
         if X is None:
             y_true = y
-            y_prob = y_probs[idx]
+            y_prob_curr = y_probs[idx]
             threshold = 0.5
             if custom_threshold:
                 threshold = custom_threshold
             if model_threshold:
                 threshold = model_threshold[name]
-            y_pred = (np.asarray(y_prob) > float(threshold)).astype(int)
+            y_pred = (np.asarray(y_prob_curr) > float(threshold)).astype(int)
         else:
             y_true, _, y_pred, threshold = get_predictions(
                 m,
@@ -694,7 +704,6 @@ def show_confusion_matrix(
             disp = ConfusionMatrixDisplay(
                 confusion_matrix=cm, display_labels=["0", "1"]
             )
-        # show_colorbar = kwargs.get("show_colorbar", True)
         if subplots:
             if "colorbar" in disp.plot.__code__.co_varnames:
                 disp.plot(cmap=cmap, ax=ax, colorbar=show_colorbar)
@@ -783,26 +792,6 @@ def show_confusion_matrix(
                         fontsize=inner_fontsize,
                         color="white" if luminance < 0.5 else "black",
                     )
-
-        # Always display numeric values (confusion matrix counts)
-        for i in range(cm.shape[0]):
-            for j in range(cm.shape[1]):
-                rgba_color = disp.im_.cmap(disp.im_.norm(cm[i, j]))
-                luminance = (
-                    0.2126 * rgba_color[0]
-                    + 0.7152 * rgba_color[1]
-                    + 0.0722 * rgba_color[2]
-                )
-
-                ax.text(
-                    j,
-                    i,  # Exact position for numeric value
-                    f"{cm[i, j]:,}",
-                    ha="center",
-                    va="center",
-                    fontsize=inner_fontsize,
-                    color="white" if luminance < 0.5 else "black",
-                )
 
         if not subplots:
             save_plot_images(
@@ -947,7 +936,7 @@ def show_roc_curve(
         (default: 'lower right').
 
     Raises:
-        ..,kj- ValueError: If `subplots=True` and `overlay=True` are both set, if
+        - ValueError: If `subplots=True` and `overlay=True` are both set, if
           `subplots=True` and `group_category` is provided, if `overlay=True`
           and `group_category` is provided, or if `overlay=True` and only one
           model is provided.
@@ -1011,12 +1000,12 @@ def show_roc_curve(
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
-
+        # use y_prob_curr to avoid clobbering the function-level y_prob param.
         if X is None:
             y_true = y
-            y_prob = y_probs[idx]
+            y_prob_curr = y_probs[idx]
         else:
-            y_true, y_prob, _, _ = get_predictions(
+            y_true, y_prob_curr, _, _ = get_predictions(
                 mod,
                 X,
                 y,
@@ -1025,28 +1014,31 @@ def show_roc_curve(
                 None,
             )
 
+        # renamed idx --> grp_mask to avoid shadowing the enumerate
+        # counter; prints are now per-group inside the loop rather than a single
+        # unconditional statement that printed only the last group's AUC.
         if group_category is not None:
             fpr = {}
             tpr = {}
             auc_str = {}
             counts = {}
             for gr in group_category.unique():
-                idx = group_category.values == gr
+                grp_mask = group_category.values == gr
                 counts[gr] = [
-                    idx.sum(),
-                    y_true.values[idx].sum(),
-                    (1 - y_true.values[idx]).sum(),
+                    grp_mask.sum(),
+                    y_true.values[grp_mask].sum(),
+                    (1 - y_true.values[grp_mask]).sum(),
                 ]
-                fpr[gr], tpr[gr], _ = roc_curve(y_true[idx], y_prob[idx])
-                roc_auc = roc_auc_score(y_true[idx], y_prob[idx])
-                # Format AUC with decimal_places for print and legend
+                fpr[gr], tpr[gr], _ = roc_curve(y_true[grp_mask], y_prob_curr[grp_mask])
+                roc_auc = roc_auc_score(y_true[grp_mask], y_prob_curr[grp_mask])
                 auc_str[gr] = f"{roc_auc:.{decimal_places}f}"
+                print(f"AUC for {gr} ({name}): {auc_str[gr]}")
 
         else:
-            fpr, tpr, thresholds = roc_curve(y_true, y_prob)
-            roc_auc = roc_auc_score(y_true, y_prob)
-            # Format AUC with decimal_places for print and legend
+            fpr, tpr, thresholds = roc_curve(y_true, y_prob_curr)
+            roc_auc = roc_auc_score(y_true, y_prob_curr)
             auc_str = f"{roc_auc:.{decimal_places}f}"
+            print(f"AUC for {name}: {auc_str}")
 
             if show_operating_point:
                 if operating_point_method == "youden":
@@ -1063,10 +1055,7 @@ def show_roc_curve(
                 op_tpr = tpr[idx_opt]
                 op_thresh = thresholds[idx_opt]
 
-                # Format operating point label with both threshold and coordinates
                 op_label = f"Op: {op_thresh:.{decimal_places}f} at ({op_fpr:.{decimal_places}f}, {op_tpr:.{decimal_places}f})"
-
-        print(f"AUC for {name}: {roc_auc:.{decimal_places}f}")
 
         # Optional: Hanley & McNeil AUC comparison if two probability arrays are provided
         if delong is not None and idx == 0:
@@ -1084,14 +1073,13 @@ def show_roc_curve(
                 else:
                     name1, name2 = "Model 1", "Model 2"
 
-                # Call the helper with verbose=False to avoid duplicate prints
                 hanley_mcneil_auc_test(
                     y_true,
                     y_prob_1,
                     y_prob_2,
                     model_names=(name1, name2),
                     return_values=True,
-                    verbose=True,  # prevents double printing
+                    verbose=True,
                 )
 
             except Exception as e:
@@ -1119,7 +1107,6 @@ def show_roc_curve(
                     **point_kwgs,
                 )
 
-                # Create combined legend entry with line and marker
                 combined_handle = (
                     line,
                     Line2D(
@@ -1172,7 +1159,6 @@ def show_roc_curve(
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
-            # Set title per subplot
             apply_plot_title(
                 title,
                 default_title=f"ROC Curve: {name}",
@@ -1181,13 +1167,10 @@ def show_roc_curve(
                 ax=ax,
             )
             if group_category is not None:
-                # Add legend below plot for group_category
                 apply_legend("bottom", fontsize=tick_fontsize, ax=ax, ncol=1)
             else:
-                # Get handles and labels for ordering
                 handles, labels = ax.get_legend_handles_labels()
 
-                # Order: AUC curves, then Random Guess, then Operating Points
                 ordered_labels = []
                 for l in labels:
                     if "AUC" in l:
@@ -1200,7 +1183,6 @@ def show_roc_curve(
                         ordered_labels.append(l)
 
                 ordered_handles = [handles[labels.index(l)] for l in ordered_labels]
-                # Apply ordered legend
                 apply_legend(
                     legend_loc,
                     fontsize=tick_fontsize,
@@ -1225,7 +1207,6 @@ def show_roc_curve(
 
             else:
                 plt.plot(fpr, tpr, label=f"AUC = {auc_str}", **curve_style)
-                # If you want operating point on single-plot too, it MUST be here (or outside both blocks)
                 if show_operating_point:
                     point_kwgs = operating_point_kwgs or {
                         "s": 80,
@@ -1244,7 +1225,6 @@ def show_roc_curve(
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
             plt.tick_params(axis="both", labelsize=tick_fontsize)
-            # Set title for single plot
             apply_plot_title(
                 title,
                 default_title=f"ROC Curve: {name}",
@@ -1253,12 +1233,10 @@ def show_roc_curve(
             )
 
             if group_category is not None:
-                # Add legend below plot for group_category
                 apply_legend("bottom", fontsize=tick_fontsize, ncol=1)
             else:
                 handles, labels = plt.gca().get_legend_handles_labels()
 
-                # Order: AUC curves, then Random Guess, then Operating Points
                 ordered_labels = []
                 for l in labels:
                     if "AUC" in l:
@@ -1271,7 +1249,6 @@ def show_roc_curve(
                         ordered_labels.append(l)
 
                 ordered_handles = [handles[labels.index(l)] for l in ordered_labels]
-                # Apply ordered legend
                 apply_legend(
                     legend_loc,
                     fontsize=tick_fontsize,
@@ -1279,7 +1256,6 @@ def show_roc_curve(
                     labels=ordered_labels,
                 )
             plt.grid(visible=gridlines)
-            # Set title for single plot
             name_clean = name.lower().replace(" ", "_")
             if group_category is not None:
                 save_plot_images(
@@ -1303,21 +1279,18 @@ def show_roc_curve(
         plt.xlabel(xlabel, fontsize=label_fontsize)
         plt.ylabel(ylabel, fontsize=label_fontsize)
         plt.tick_params(axis="both", labelsize=tick_fontsize)
-        # Set title for overlay plot
         apply_plot_title(
             title,
-            default_title="ROC Curves: Overlay",  # Generic for overlay
+            default_title="ROC Curves: Overlay",
             text_wrap=text_wrap,
             fontsize=label_fontsize,
         )
 
         if group_category is not None:
-            # Add legend below plot for group_category
             apply_legend("bottom", fontsize=tick_fontsize, ncol=1)
         else:
             handles, labels = plt.gca().get_legend_handles_labels()
 
-            # Order: AUC curves, then Random Guess, then Operating Points
             ordered_labels = []
             for l in labels:
                 if "AUC" in l:
@@ -1330,7 +1303,6 @@ def show_roc_curve(
                     ordered_labels.append(l)
 
             ordered_handles = [handles[labels.index(l)] for l in ordered_labels]
-            # Apply ordered legend
             apply_legend(
                 legend_loc,
                 fontsize=tick_fontsize,
@@ -1508,12 +1480,12 @@ def show_pr_curve(
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
-
+        # use y_prob_curr to avoid clobbering the function-level y_prob param.
         if X is None:
             y_true = y
-            y_prob = y_probs[idx]
+            y_prob_curr = y_probs[idx]
         else:
-            y_true, y_prob, _, _ = get_predictions(
+            y_true, y_prob_curr, _, _ = get_predictions(
                 mod,
                 X,
                 y,
@@ -1523,39 +1495,45 @@ def show_pr_curve(
             )
 
         counts = {}
+        # renamed idx --> grp_mask to avoid shadowing the enumerate
+        # counter; prints are now per-group inside the loop rather than a single
+        # unconditional statement that only printed the last group's metric.
         if group_category is not None:
             precision = {}
             recall = {}
             ap_str = {}
             aucpr_str = {}
             for gr in group_category.unique():
-                idx = group_category.values == gr
+                grp_mask = group_category.values == gr
                 counts[gr] = [
-                    idx.sum(),  # Total count for this group
-                    y_true.values[idx].sum(),  # Positive class count (y_true = 1)
-                    (1 - y_true.values[idx]).sum(),  # Negative class count (y_true = 0)
+                    grp_mask.sum(),
+                    y_true.values[grp_mask].sum(),
+                    (1 - y_true.values[grp_mask]).sum(),
                 ]
                 precision[gr], recall[gr], _ = precision_recall_curve(
-                    y_true[idx], y_prob[idx]
+                    y_true[grp_mask], y_prob_curr[grp_mask]
                 )
-                avg_precision = average_precision_score(y_true[idx], y_prob[idx])
+                avg_precision = average_precision_score(
+                    y_true[grp_mask], y_prob_curr[grp_mask]
+                )
                 auc_val = auc(recall[gr], precision[gr])
-                # Format Average Precision with decimal_places for print and legend
                 ap_str[gr] = f"{avg_precision:.{decimal_places}f}"
                 aucpr_str[gr] = f"{auc_val:.{decimal_places}f}"
+                if legend_metric == "aucpr":
+                    print(f"AUCPR for {gr} ({name}): {aucpr_str[gr]}")
+                else:
+                    print(f"Average Precision for {gr} ({name}): {ap_str[gr]}")
 
         else:
-            precision, recall, _ = precision_recall_curve(y_true, y_prob)
-            avg_precision = average_precision_score(y_true, y_prob)
+            precision, recall, _ = precision_recall_curve(y_true, y_prob_curr)
+            avg_precision = average_precision_score(y_true, y_prob_curr)
             auc_val = auc(recall, precision)
-            # Format Average Precision with decimal_places for print and legend
             ap_str = f"{avg_precision:.{decimal_places}f}"
             aucpr_str = f"{auc_val:.{decimal_places}f}"
-
-        if legend_metric == "aucpr":
-            print(f"AUCPR for {name}: {auc_val:.{decimal_places}f}")
-        else:
-            print(f"Average Precision for {name}: {avg_precision:.{decimal_places}f}")
+            if legend_metric == "aucpr":
+                print(f"AUCPR for {name}: {aucpr_str}")
+            else:
+                print(f"Average Precision for {name}: {ap_str}")
 
         # Determine the metric label and value based on legend_metric
         metric_label = "AP" if legend_metric == "ap" else "AUCPR"
@@ -1591,7 +1569,6 @@ def show_pr_curve(
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
-            # Set title per subplot
             apply_plot_title(
                 title,
                 default_title=f"PR Curve: {name}",
@@ -1601,7 +1578,6 @@ def show_pr_curve(
             )
 
             if group_category is not None:
-                # Add legend below plot for group_category
                 apply_legend("bottom", fontsize=tick_fontsize, ax=ax, ncol=1)
             else:
                 apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
@@ -1630,7 +1606,6 @@ def show_pr_curve(
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
             plt.tick_params(axis="both", labelsize=tick_fontsize)
-            # Set title for single plot
             apply_plot_title(
                 title,
                 default_title=f"PR Curve: {name}",
@@ -1639,9 +1614,7 @@ def show_pr_curve(
             )
 
             if group_category is not None:
-                # Add legend below plot for group_category
                 apply_legend("bottom", fontsize=tick_fontsize, ncol=1)
-
             else:
                 apply_legend(legend_loc, fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
@@ -1666,7 +1639,6 @@ def show_pr_curve(
         plt.xlabel(xlabel, fontsize=label_fontsize)
         plt.ylabel(ylabel, fontsize=label_fontsize)
         plt.tick_params(axis="both", labelsize=tick_fontsize)
-        # Set title for overlay plot
         apply_plot_title(
             title,
             default_title="PR Curves: Overlay",
@@ -1675,7 +1647,6 @@ def show_pr_curve(
         )
 
         if group_category is not None:
-            # Add legend below plot for group_category
             apply_legend("bottom", fontsize=tick_fontsize, ncol=1)
         else:
             apply_legend(legend_loc, fontsize=tick_fontsize)
@@ -1803,11 +1774,11 @@ def show_lift_chart(
     ):
 
         if X is None:
-            y_prob = y_probs[idx]
+            y_prob_curr = y_probs[idx]
         else:
-            y_prob = mod.predict_proba(X)[:, 1]
+            y_prob_curr = mod.predict_proba(X)[:, 1]
 
-        sorted_indices = np.argsort(y_prob)[::-1]
+        sorted_indices = np.argsort(y_prob_curr)[::-1]
         y_true_sorted = np.array(y)[sorted_indices]
 
         cumulative_gains = np.cumsum(y_true_sorted) / np.sum(y_true_sorted)
@@ -1838,7 +1809,6 @@ def show_lift_chart(
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
-            # Set title per subplot
             apply_plot_title(
                 title,
                 default_title=f"Lift Chart: {name}",
@@ -1846,7 +1816,6 @@ def show_lift_chart(
                 fontsize=label_fontsize,
                 ax=ax,
             )
-            # Add legend below plot for group_category
             apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
             ax.grid(visible=gridlines)
         else:
@@ -1861,14 +1830,12 @@ def show_lift_chart(
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
             plt.tick_params(axis="both", labelsize=tick_fontsize)
-            # Set title for single plot
             apply_plot_title(
                 title,
                 default_title=f"Lift Chart: {name}",
                 text_wrap=text_wrap,
                 fontsize=label_fontsize,
             )
-            # Add legend below plot for group_category
             apply_legend(legend_loc, fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
@@ -1884,14 +1851,12 @@ def show_lift_chart(
         plt.xlabel(xlabel, fontsize=label_fontsize)
         plt.ylabel(ylabel, fontsize=label_fontsize)
         plt.tick_params(axis="both", labelsize=tick_fontsize)
-        # Set title for overlay plot
         apply_plot_title(
             title,
             default_title="Lift Charts: Overlay",
             text_wrap=text_wrap,
             fontsize=label_fontsize,
         )
-        # Add legend below plot for group_category
         apply_legend(legend_loc, fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
@@ -1976,7 +1941,7 @@ def show_gain_chart(
     - legend_loc (str, optional): Location for the legend. Standard matplotlib
       locations like 'best', 'upper right', 'lower left', etc., or 'bottom' to
       place legend below the plot (default: 'best').
-    - show_gini (bool, default=True): Whether to show Gini coefficient in the legend.
+    - show_gini (bool, default=False): Whether to show Gini coefficient in the legend.
     - decimal_places (int, default=3): Number of decimal places for Gini coefficient.
 
     Raises:
@@ -2014,11 +1979,11 @@ def show_gain_chart(
         zip(model, model_title, curve_styles)
     ):
         if X is None:
-            y_prob = y_probs[idx]
+            y_prob_curr = y_probs[idx]
         else:
-            y_prob = mod.predict_proba(X)[:, 1]
+            y_prob_curr = mod.predict_proba(X)[:, 1]
 
-        sorted_indices = np.argsort(y_prob)[::-1]
+        sorted_indices = np.argsort(y_prob_curr)[::-1]
         y_true_sorted = np.array(y)[sorted_indices]
 
         cumulative_gains = np.cumsum(y_true_sorted) / np.sum(y_true_sorted)
@@ -2028,11 +1993,9 @@ def show_gain_chart(
         augc = auc(percentages, cumulative_gains)
         gini = 2 * augc - 1
 
-        # Print Gini coefficient only if show_gini is True
         if show_gini:
             print(f"Gini coefficient for {name}: {gini:.{decimal_places}f}")
 
-        # Create label with optional Gini
         if show_gini:
             model_label = f"{name} (Gini = {gini:.{decimal_places}f})"
         else:
@@ -2048,7 +2011,6 @@ def show_gain_chart(
         elif subplots:
             ax = axes[idx]
 
-            # For subplots, use simpler label or full label based on preference
             if show_gini:
                 subplot_label = f"Gini = {gini:.{decimal_places}f}"
             else:
@@ -2064,7 +2026,6 @@ def show_gain_chart(
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
-            # Set title per subplot
             apply_plot_title(
                 title,
                 default_title=f"Gain Chart: {name}",
@@ -2072,13 +2033,11 @@ def show_gain_chart(
                 fontsize=label_fontsize,
                 ax=ax,
             )
-            # Add legend below plot for group_category
             apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
             ax.grid(visible=gridlines)
         else:
             plt.figure(figsize=figsize or (8, 6))
 
-            # For single plots, show Gini in legend
             if show_gini:
                 single_label = f"Gini = {gini:.{decimal_places}f}"
             else:
@@ -2087,21 +2046,19 @@ def show_gain_chart(
             plt.plot(
                 percentages,
                 cumulative_gains,
-                label=single_label,  # ← Use the conditional label
+                label=single_label,
                 **curve_style,
             )
             plt.plot([0, 1], [0, 1], label="Baseline", **linestyle_kwgs)
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
             plt.tick_params(axis="both", labelsize=tick_fontsize)
-            # Set title for single plot
             apply_plot_title(
                 title,
                 default_title=f"Gain Chart: {name}",
                 text_wrap=text_wrap,
                 fontsize=label_fontsize,
             )
-            # Add legend below plot for group_category
             apply_legend(legend_loc, fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
@@ -2117,14 +2074,12 @@ def show_gain_chart(
         plt.xlabel(xlabel, fontsize=label_fontsize)
         plt.ylabel(ylabel, fontsize=label_fontsize)
         plt.tick_params(axis="both", labelsize=tick_fontsize)
-        # Set title for overlay plot
         apply_plot_title(
             title,
             default_title="Gain Charts: Overlay",
             text_wrap=text_wrap,
             fontsize=label_fontsize,
         )
-        # Add legend below plot for group_category
         apply_legend(legend_loc, fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
@@ -2223,7 +2178,8 @@ def show_calibration_curve(
       the Brier score values in the legend.
     - gridlines (bool, default=True): Whether to display gridlines on the plot.
     - linestyle_kwgs (dict, optional): Styling options for the diagonal
-      "perfectly calibrated" line.
+      "perfectly calibrated" line. Caller-supplied values take precedence over
+      defaults; the dict is never mutated.
     - group_category (array-like, optional): A categorical series to plot
       subgroup calibration curves.
     - legend_loc (str, optional): Location for the legend. Standard matplotlib
@@ -2258,6 +2214,10 @@ def show_calibration_curve(
     # Handle style settings for each model
     curve_styles = normalize_curve_styles(curve_kwgs, model_title, len(model))
 
+    # build a resolved copy of linestyle_kwgs once, before the loop,
+    # so we never mutate the caller's dict and `{} or {}` semantics can't bite.
+    _ls_kwgs = {**{"color": "gray", "linestyle": "--"}, **(linestyle_kwgs or {})}
+
     # Subplot layout setup if requested
     if subplots:
         _, axes = setup_subplots(len(model), n_cols, n_rows, figsize)
@@ -2270,11 +2230,12 @@ def show_calibration_curve(
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
+        # use y_prob_curr to avoid clobbering the function-level y_prob param.
         if X is None:
             y_true = y
-            y_prob = y_probs[idx]
+            y_prob_curr = y_probs[idx]
         else:
-            y_true, y_prob, _, _ = get_predictions(
+            y_true, y_prob_curr, _, _ = get_predictions(
                 mod,
                 X,
                 y,
@@ -2295,7 +2256,7 @@ def show_calibration_curve(
             for group_val in unique_groups:
                 group_idx = group_series == group_val
                 y_group = y_true[group_idx]
-                prob_group = y_prob[group_idx]
+                prob_group = y_prob_curr[group_idx]
 
                 # Skip group if not enough data or only one class
                 if len(y_group) < bins or len(set(y_group)) < 2:
@@ -2305,7 +2266,6 @@ def show_calibration_curve(
                     )
                     continue
 
-                # Calibration computation
                 prob_true, prob_pred = calibration_curve(
                     y_group, prob_group, n_bins=bins
                 )
@@ -2316,7 +2276,6 @@ def show_calibration_curve(
                 if show_brier_score:
                     legend_label += f" (Brier: {brier:.{brier_decimals}f})"
 
-                # Plot curve for group
                 plt.plot(
                     prob_pred,
                     prob_true,
@@ -2326,33 +2285,25 @@ def show_calibration_curve(
                     **kwargs,
                 )
 
-            # Add diagonal reference line
-            linestyle_kwgs = linestyle_kwgs or {}
-            linestyle_kwgs.setdefault("color", "gray")
-            linestyle_kwgs.setdefault("linestyle", "--")
             plt.plot(
                 [0, 1],
                 [0, 1],
                 label="Perfectly Calibrated",
-                **linestyle_kwgs,
+                **_ls_kwgs,
             )
 
-            # Plot formatting
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
-            # Set title for single grouped plot
             apply_plot_title(
                 title,
                 default_title=f"Calibration Curve: {name}",
                 text_wrap=text_wrap,
                 fontsize=label_fontsize,
             )
-            # Add legend below plot for group_category
             apply_legend(legend_loc, fontsize=tick_fontsize)
             plt.tick_params(axis="both", labelsize=tick_fontsize)
             plt.grid(visible=gridlines)
 
-            # Save grouped plot
             name_clean = name.lower().replace(" ", "_")
             if save_plot:
                 filename = f"{name_clean}_by_{group_category.name}_calibration"
@@ -2369,10 +2320,12 @@ def show_calibration_curve(
         # STANDARD CALIBRATION
         prob_true, prob_pred = calibration_curve(
             y_true,
-            y_prob,
+            y_prob_curr,
             n_bins=bins,
         )
-        brier_score = brier_score_loss(y_true, y_prob) if show_brier_score else None
+        brier_score = (
+            brier_score_loss(y_true, y_prob_curr) if show_brier_score else None
+        )
         legend_label = f"{name}"
         if show_brier_score:
             legend_label += f" (Brier: {brier_score:.{brier_decimals}f})"
@@ -2399,18 +2352,14 @@ def show_calibration_curve(
                 **curve_style,
                 **kwargs,
             )
-            linestyle_kwgs = linestyle_kwgs or {}
-            linestyle_kwgs.setdefault("color", "gray")
-            linestyle_kwgs.setdefault("linestyle", "--")
             ax.plot(
                 [0, 1],
                 [0, 1],
                 label="Perfectly Calibrated",
-                **linestyle_kwgs,
+                **_ls_kwgs,
             )
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
-            # Set title per subplot
             apply_plot_title(
                 title,
                 default_title=f"Calibration Curve: {name}",
@@ -2418,7 +2367,6 @@ def show_calibration_curve(
                 fontsize=label_fontsize,
                 ax=ax,
             )
-            # apply_legend below plot for group_category
             apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
             if gridlines:
@@ -2435,25 +2383,20 @@ def show_calibration_curve(
                 **curve_style,
                 **kwargs,
             )
-            linestyle_kwgs = linestyle_kwgs or {}
-            linestyle_kwgs.setdefault("color", "gray")
-            linestyle_kwgs.setdefault("linestyle", "--")
             plt.plot(
                 [0, 1],
                 [0, 1],
                 label="Perfectly Calibrated",
-                **linestyle_kwgs,
+                **_ls_kwgs,
             )
             plt.xlabel(xlabel, fontsize=label_fontsize)
             plt.ylabel(ylabel, fontsize=label_fontsize)
-            # Set title for single plot
             apply_plot_title(
                 title,
                 default_title=f"Calibration Curve: {name}",
                 text_wrap=text_wrap,
                 fontsize=label_fontsize,
             )
-            # Add legend below plot for group_category
             apply_legend(legend_loc, fontsize=tick_fontsize)
             plt.grid(visible=gridlines)
             save_plot_images(
@@ -2466,20 +2409,15 @@ def show_calibration_curve(
 
     # Final overlay post-processing
     if overlay:
-        linestyle_kwgs = linestyle_kwgs or {}
-        linestyle_kwgs.setdefault("color", "gray")
-        linestyle_kwgs.setdefault("linestyle", "--")
-        plt.plot([0, 1], [0, 1], label="Perfectly Calibrated", **linestyle_kwgs)
+        plt.plot([0, 1], [0, 1], label="Perfectly Calibrated", **_ls_kwgs)
         plt.xlabel(xlabel, fontsize=label_fontsize)
         plt.ylabel(ylabel, fontsize=label_fontsize)
-        # Set title for overlay plot
         apply_plot_title(
             title,
             default_title="Calibration Curves: Overlay",
             text_wrap=text_wrap,
             fontsize=label_fontsize,
         )
-        # Add legend below plot for group_category
         apply_legend(legend_loc, fontsize=tick_fontsize)
         plt.grid(visible=gridlines)
         save_plot_images(
@@ -2490,7 +2428,6 @@ def show_calibration_curve(
         )
         plt.show()
 
-    # Final subplot grid cleanup (hide unused axes)
     elif subplots:
         for ax in axes[len(model) :]:
             ax.axis("off")
@@ -2514,9 +2451,10 @@ def plot_threshold_metrics(
     X_test=None,
     y_test=None,
     y_prob=None,
+    model_title=None,
     title=None,
     text_wrap=None,
-    figsize=(8, 6),
+    figsize=None,
     label_fontsize=12,
     tick_fontsize=10,
     gridlines=True,
@@ -2532,20 +2470,26 @@ def plot_threshold_metrics(
     lookup_value=None,
     decimal_places=4,
     model_threshold=None,
+    overlay=False,
+    subplots=False,
+    n_cols=2,
+    n_rows=None,
+    suptitle=None,
+    suptitle_y=0.98,
 ):
     """
-    Plot Precision, Recall, F1 Score, and Specificity vs. decision thresholds.
+    Plot Precision, Recall, F1 Score, and Specificity vs. decision thresholds
+    for one or multiple models.
 
-    This function evaluates threshold-dependent classification metrics
-    (Precision, Recall, F1 Score, Specificity) across the range of possible
-    thresholds, optionally highlighting baseline, model-specified, or custom
-    lookup thresholds.
+    Supports single-model, overlay, and subplot grid layouts. When multiple
+    models are provided, each model's threshold curves are plotted together
+    in a shared or individual axes depending on the display mode selected.
 
     Parameters
     ----------
-    model : estimator, optional
-        A trained model that supports `predict_proba`. Required if `y_prob`
-        is not provided.
+    model : estimator or list of estimators, optional
+        A trained model or list of models that support `predict_proba`.
+        Required if `y_prob` is not provided.
 
     X_test : array-like, optional
         Feature matrix for testing. Required if `model` is provided.
@@ -2553,19 +2497,26 @@ def plot_threshold_metrics(
     y_test : array-like of shape (n_samples,)
         True binary labels. Required.
 
-    y_prob : array-like, optional
+    y_prob : array-like or list of array-like, optional
         Predicted probabilities for the positive class. Can be provided
-        instead of `model` and `X_test`.
+        instead of `model` and `X_test`. If multiple models are being
+        evaluated, pass a list of arrays.
+
+    model_title : str or list of str, optional
+        Custom name(s) for the model(s). Defaults to the model class name
+        when a model object is provided, or "Model 1", "Model 2", etc. when
+        only `y_prob` arrays are passed.
 
     title : str or None, default=None
-        Title for the plot. If None, a default title is shown.
-        If `""`, no title is displayed.
+        Per-plot or per-subplot title. If None, a default title is shown.
+        If `""`, no per-plot title is displayed.
 
     text_wrap : int, optional
         Maximum width of the title before wrapping onto multiple lines.
 
-    figsize : tuple, default=(8, 6)
-        Size of the matplotlib figure.
+    figsize : tuple, optional
+        Size of the matplotlib figure. Defaults to (8, 6) for single/overlay
+        plots and (n_cols * 8, n_rows * 6) for subplots.
 
     label_fontsize : int, default=12
         Font size for axis labels and title.
@@ -2615,9 +2566,35 @@ def plot_threshold_metrics(
     decimal_places : int, default=4
         Number of decimal places for reported thresholds.
 
-    model_threshold : float, optional
-        A model-specific threshold to highlight with a vertical line. Useful
-        if the model uses a threshold other than 0.5 for predictions.
+    model_threshold : float or list of float, optional
+        A model-specific threshold or list of thresholds (one per model) to
+        highlight with a vertical line. If a scalar is passed it is broadcast
+        to all models.
+
+    overlay : bool, default=False
+        If True, plot all models on a single shared axes. Cannot be used
+        with `subplots=True`.
+
+    subplots : bool, default=False
+        If True, plot each model in its own subplot. Cannot be used with
+        `overlay=True`.
+
+    n_cols : int, default=2
+        Number of columns in the subplot grid. Only used when
+        `subplots=True`.
+
+    n_rows : int, optional
+        Number of rows in the subplot grid. If not specified, calculated
+        automatically from the number of models and `n_cols`.
+
+    suptitle : str or None, default=None
+        Overall figure title shown above all subplots when `subplots=True`.
+        If None, defaults to "Threshold Metrics". If `""`, no suptitle is
+        displayed. Has no effect when `subplots=False`.
+
+    suptitle_y : float, default=0.98
+        Vertical position of the suptitle (0-1 range). Increase slightly
+        (e.g. 1.01) if the title overlaps the top row of subplots.
 
     Raises
     ------
@@ -2627,12 +2604,47 @@ def plot_threshold_metrics(
         If neither (`model` and `X_test`) nor `y_prob` is provided.
     ValueError
         If only one of `lookup_metric` or `lookup_value` is provided.
-
-    Returns
-    -------
-    None
-        Displays the threshold metrics plot and optionally saves it to disk.
+    ValueError
+        If both `overlay=True` and `subplots=True` are set.
     """
+
+    if overlay and subplots:
+        raise ValueError("`subplots` cannot be set to True when `overlay` is True.")
+
+    if y_test is None:
+        raise ValueError("y_test is required.")
+
+    if not (((model is not None) and (X_test is not None)) or (y_prob is not None)):
+        raise ValueError(
+            "Provide model and X_test with y_test, or provide y_prob with y_test."
+        )
+
+    if (lookup_metric is not None and lookup_value is None) or (
+        lookup_value is not None and lookup_metric is None
+    ):
+        raise ValueError(
+            "Both `lookup_metric` and `lookup_value` must be provided together."
+        )
+
+    # Normalize models and probabilities into lists
+    model, y_probs, num_models = validate_and_normalize_inputs(model, X_test, y_prob)
+
+    # Normalize model titles — use class name when available, not generic index
+    if model_title is None:
+        model_title = [
+            extract_model_name(m) if m is not None else f"Model {i + 1}"
+            for i, m in enumerate(model)
+        ]
+    else:
+        model_title = normalize_model_titles(model_title, num_models)
+
+    # Normalize model_threshold into a list aligned with models
+    if model_threshold is None:
+        model_thresholds = [None] * num_models
+    elif isinstance(model_threshold, list):
+        model_thresholds = model_threshold
+    else:
+        model_thresholds = [model_threshold] * num_models
 
     curve_kwgs = curve_kwgs or {"linestyle": "-", "linewidth": 1}
     baseline_kwgs = baseline_kwgs or {
@@ -2641,14 +2653,12 @@ def plot_threshold_metrics(
         "color": "black",
         "alpha": 0.7,
     }
-
     threshold_kwgs = threshold_kwgs or {
         "linestyle": ":",
         "linewidth": 1.5,
         "color": "black",
         "alpha": 0.7,
     }
-
     lookup_kwgs = lookup_kwgs or {
         "linestyle": "--",
         "linewidth": 1.5,
@@ -2656,168 +2666,200 @@ def plot_threshold_metrics(
         "alpha": 0.7,
     }
 
-    if y_test is None:
-        raise ValueError("y_test is required.")
-    if not (((model is not None) and (X_test is not None)) or (y_prob is not None)):
-        raise ValueError(
-            "Provide model and X_test with y_test, or provide y_prob with y_test."
-        )
-
-    if y_prob is None:
-        _, y_pred_probs, _, _ = get_predictions(
-            model,
-            X_test,
-            y_test,
-            None,
-            None,
-            None,
-        )
-    else:
-        y_pred_probs = y_prob
-
-    # Calculate Precision, Recall, and F1 Score for various thresholds
-    precision, recall, thresholds = precision_recall_curve(
-        y_test,
-        y_pred_probs,
-    )
-    f1_scores = (
-        2 * (precision * recall) / (precision + recall + 1e-9)
-    )  # Avoid division by zero
-
-    # Calculate Specificity for various thresholds
-    fpr, _, roc_thresholds = roc_curve(y_test, y_pred_probs)
-    specificity = 1 - fpr
-
-    # Find the best threshold for a given metric (if requested)
-    best_threshold = None
-    if (lookup_metric is not None and lookup_value is None) or (
-        lookup_value is not None and lookup_metric is None
-    ):
-        raise ValueError(
-            "Both `lookup_metric` and `lookup_value` must be provided together."
-        )
-    if lookup_metric and lookup_value is not None:
-        metric_dict = {
-            "precision": (precision[:-1], thresholds),
-            "recall": (recall[:-1], thresholds),
-            "f1": (f1_scores[:-1], thresholds),
-            "specificity": (specificity, roc_thresholds),
-        }
-
-        if lookup_metric in metric_dict:
-            metric_values, metric_thresholds = metric_dict[lookup_metric]
-
-            # Find the closest threshold to the requested metric value
-            closest_idx = (np.abs(metric_values - lookup_value)).argmin()
-            best_threshold = metric_thresholds[closest_idx]
-
-            # Print the result
-            print(
-                f"Best threshold for target {lookup_metric} of "
-                f"{round(lookup_value, decimal_places)} is "
-                f"{round(best_threshold, decimal_places)}"
-            )
+    # Set up subplot grid if needed
+    if subplots:
+        if n_rows is not None and n_cols == 2:
+            # user specified n_rows — derive n_cols from it
+            _n_cols = math.ceil(num_models / n_rows)
+            _n_rows = n_rows
+        elif n_rows is None:
+            _n_rows = math.ceil(num_models / n_cols)
+            _n_cols = n_cols
         else:
-            print(
-                f"Invalid lookup metric: {lookup_metric}. Choose from "
-                f"'precision', 'recall', 'f1', 'specificity'."
+            # both explicitly provided
+            _n_rows = n_rows
+            _n_cols = n_cols
+
+        _, axes = setup_subplots(
+            num_models=num_models,
+            n_cols=_n_cols,
+            n_rows=_n_rows,
+            figsize=figsize or (_n_cols * 8, _n_rows * 6),
+        )
+    elif overlay:
+        _, ax_overlay = plt.subplots(figsize=figsize or (8, 6))
+
+    def _plot_single(ax, y_pred_probs, name, thresh):
+        """Plot one model's threshold curves onto the given axes."""
+        precision, recall, thresholds = precision_recall_curve(y_test, y_pred_probs)
+        f1_scores = 2 * (precision * recall) / (precision + recall + 1e-9)
+        fpr, _, roc_thresholds = roc_curve(y_test, y_pred_probs)
+        specificity = 1 - fpr
+
+        ax.plot(thresholds, f1_scores[:-1], label="F1 Score", color="red", **curve_kwgs)
+        ax.plot(thresholds, recall[:-1], label="Recall", color="green", **curve_kwgs)
+        ax.plot(
+            thresholds, precision[:-1], label="Precision", color="blue", **curve_kwgs
+        )
+        ax.plot(
+            roc_thresholds,
+            specificity,
+            label="Specificity",
+            color="purple",
+            **curve_kwgs,
+        )
+
+        if baseline_thresh:
+            ax.axvline(x=0.5, **baseline_kwgs, label="Threshold = 0.5")
+
+        if thresh is not None:
+            ax.axvline(
+                x=thresh,
+                **threshold_kwgs,
+                label=f"Model Threshold: {round(thresh, decimal_places)}",
             )
 
-    # Create the plot
-    _, ax = plt.subplots(figsize=figsize)
+        if lookup_metric and lookup_value is not None:
+            metric_dict = {
+                "precision": (precision[:-1], thresholds),
+                "recall": (recall[:-1], thresholds),
+                "f1": (f1_scores[:-1], thresholds),
+                "specificity": (specificity, roc_thresholds),
+            }
+            if lookup_metric in metric_dict:
+                metric_values, metric_thresholds = metric_dict[lookup_metric]
+                closest_idx = (np.abs(metric_values - lookup_value)).argmin()
+                best_threshold = metric_thresholds[closest_idx]
+                print(
+                    f"{name} — best threshold for target {lookup_metric} of "
+                    f"{round(lookup_value, decimal_places)} is "
+                    f"{round(best_threshold, decimal_places)}"
+                )
+                ax.axvline(
+                    x=best_threshold,
+                    label=f"Best Threshold: {round(best_threshold, decimal_places)}",
+                    **lookup_kwgs,
+                )
+            else:
+                print(
+                    f"Invalid lookup metric: {lookup_metric}. Choose from "
+                    f"'precision', 'recall', 'f1', 'specificity'."
+                )
 
-    # Plot Precision, Recall, F1 Score vs. Thresholds
-    ax.plot(
-        thresholds,
-        f1_scores[:-1],
-        label="F1 Score",
-        color="red",
-        **curve_kwgs,
-    )
-    ax.plot(
-        thresholds,
-        recall[:-1],
-        label="Recall",
-        color="green",
-        **curve_kwgs,
-    )
-    ax.plot(
-        thresholds,
-        precision[:-1],
-        label="Precision",
-        color="blue",
-        **curve_kwgs,
-    )
-
-    # Plot Specificity (adjust to match the corresponding thresholds)
-    ax.plot(
-        roc_thresholds,
-        specificity,
-        label="Specificity",
-        color="purple",
-        **curve_kwgs,
-    )
-
-    if baseline_thresh:
-        # Draw baseline lines at 0.5 for thresholds and metrics
-        ax.axvline(x=0.5, **baseline_kwgs, label="Threshold = 0.5")
-
-    # Highlight the best threshold found
-    if best_threshold is not None:
-        ax.axvline(
-            x=best_threshold,
-            label=f"Best Threshold: {round(best_threshold, decimal_places)}",
-            **lookup_kwgs,
+        ax.set_xlabel("Thresholds", fontsize=label_fontsize)
+        ax.set_ylabel("Metrics", fontsize=label_fontsize)
+        ax.tick_params(axis="both", labelsize=tick_fontsize)
+        ax.grid(visible=gridlines)
+        apply_legend(
+            legend_loc="bottom",
+            fontsize=tick_fontsize,
+            ax=ax,
+            ncol=3,
+            frameon=False,
+            bbox_to_anchor=(0.5, -0.15),
         )
 
-    if model_threshold is not None:
-        ax.axvline(
-            x=model_threshold,
-            **threshold_kwgs,
-            label=f"Model Threshold: {round(model_threshold, decimal_places)}",
+    # Main loop over models
+    for idx, (mod, name, thresh) in enumerate(
+        zip(model, model_title, model_thresholds)
+    ):
+        if X_test is None:
+            y_pred_probs = y_probs[idx]
+        else:
+            _, y_pred_probs, _, _ = get_predictions(
+                mod, X_test, y_test, None, None, None
+            )
+
+        if overlay:
+            _plot_single(ax_overlay, y_pred_probs, name, thresh)
+            # Prefix curve labels with model name for overlay disambiguation
+            for line in ax_overlay.get_lines():
+                lbl = line.get_label()
+                if lbl in {"F1 Score", "Recall", "Precision", "Specificity"}:
+                    line.set_label(f"{name} — {lbl}")
+
+        elif subplots:
+            ax = axes[idx]
+            _plot_single(ax, y_pred_probs, name, thresh)
+            apply_plot_title(
+                title,
+                default_title=f"Threshold Metrics: {name}",
+                text_wrap=text_wrap,
+                fontsize=label_fontsize,
+                ax=ax,
+            )
+
+        else:
+            # Single plot per model
+            _, ax = plt.subplots(figsize=figsize or (8, 6))
+            _plot_single(ax, y_pred_probs, name, thresh)
+            apply_plot_title(
+                title,
+                default_title=(
+                    "Precision, Recall, F1 Score, Specificity vs. Thresholds"
+                    if num_models == 1
+                    else f"Threshold Metrics: {name}"
+                ),
+                text_wrap=text_wrap,
+                fontsize=label_fontsize,
+                ax=ax,
+            )
+            if lookup_metric:
+                save_plot_images(
+                    filename=f"threshold_metrics_{name.lower().replace(' ', '_')}_{lookup_metric}",
+                    save_plot=save_plot,
+                    image_path_png=image_path_png,
+                    image_path_svg=image_path_svg,
+                )
+            else:
+                save_plot_images(
+                    filename=f"threshold_metrics_{name.lower().replace(' ', '_')}",
+                    save_plot=save_plot,
+                    image_path_png=image_path_png,
+                    image_path_svg=image_path_svg,
+                )
+            plt.show()
+
+    # Finalise overlay
+    if overlay:
+        apply_plot_title(
+            title,
+            default_title="Threshold Metrics: Overlay",
+            text_wrap=text_wrap,
+            fontsize=label_fontsize,
+            ax=ax_overlay,
         )
-
-    # Apply labels, legend, and formatting
-    ax.set_xlabel("Thresholds", fontsize=label_fontsize)
-    ax.set_ylabel("Metrics", fontsize=label_fontsize)
-    ax.tick_params(axis="both", labelsize=tick_fontsize)
-    ax.grid(visible=gridlines)
-
-    # Apply title with text wrapping if provided
-    apply_plot_title(
-        title,
-        default_title="Precision, Recall, F1 Score, Specificity vs. Thresholds",
-        text_wrap=text_wrap,
-        fontsize=label_fontsize,
-        ax=ax,
-    )
-
-    apply_legend(
-        legend_loc="bottom",
-        fontsize=tick_fontsize,
-        ax=ax,
-        ncol=3,
-        frameon=False,
-        bbox_to_anchor=(0.5, -0.1),
-    )
-
-    if lookup_metric:
         save_plot_images(
-            filename=f"threshold_metrics_{lookup_metric}",
+            filename="threshold_metrics_overlay",
             save_plot=save_plot,
             image_path_png=image_path_png,
             image_path_svg=image_path_svg,
         )
-    else:
+        plt.tight_layout()
+        plt.show()
+
+    # Finalise subplots
+    elif subplots:
+        for ax in axes[num_models:]:
+            ax.axis("off")
+        # suptitle controls the overall figure heading;
+        # title controls the per-subplot headings (handled in the loop above)
+        apply_plot_title(
+            suptitle,
+            default_title="Threshold Metrics",
+            text_wrap=text_wrap,
+            fontsize=label_fontsize + 2,
+            fig=plt.gcf(),
+            suptitle_y=suptitle_y,
+        )
+        plt.tight_layout()
         save_plot_images(
-            filename="threshold_metrics",
+            filename="threshold_metrics_subplots",
             save_plot=save_plot,
             image_path_png=image_path_png,
             image_path_svg=image_path_svg,
         )
-
-    # Display the plot
-    plt.show()
+        plt.show()
 
 
 ################################################################################
@@ -3087,7 +3129,6 @@ def show_residual_diagnostics(
     # Validate clustering requirements
     if show_centroids and centroid_type == "clusters":
         if X is not None and isinstance(X, pd.DataFrame):
-            # Check for non-numeric columns
             non_numeric_cols = X.select_dtypes(exclude=[np.number]).columns.tolist()
 
             if non_numeric_cols:
@@ -3125,7 +3166,7 @@ def show_residual_diagnostics(
             "histogram",
         ]
     elif "predictors" in plot_types:
-        plots_to_make = []  # Predictors handled separately
+        plots_to_make = []
     else:
         plots_to_make = [pt for pt in plot_types if pt != "predictors"]
 
@@ -3140,16 +3181,13 @@ def show_residual_diagnostics(
     if total_subplots > 0 and show_plots:
         # Determine layout
         if n_rows is None and n_cols is None:
-            # Default layouts
             if "all" in plot_types:
                 if num_models == 1:
-                    cols, rows = 3, 2  # Single model: 3×2 grid
+                    cols, rows = 3, 2
                 else:
-                    # Multiple models: one row per model
-                    cols = len(plots_to_make)  # 6 plots
-                    rows = num_models  # 1 row per model
+                    cols = len(plots_to_make)
+                    rows = num_models
             else:
-                # For custom plot selection
                 cols = min(len(plots_to_make), 3)
                 rows = math.ceil(total_subplots / cols)
         elif n_rows is None:
@@ -3161,7 +3199,6 @@ def show_residual_diagnostics(
         else:
             rows, cols = n_rows, n_cols
 
-        # Determine figsize
         if figsize is None:
             default_figsize = (cols * 5, rows * 5)
         else:
@@ -3262,7 +3299,6 @@ def show_residual_diagnostics(
                 ax.scatter(y_pred_arr, residuals, **point_kwgs)
                 ax.axhline(y=0, **line_kwgs)
 
-                # Add lowess smooth line
                 if show_lowess:
                     try:
                         smoothed = lowess(residuals, y_pred_arr, frac=0.3)
@@ -3270,10 +3306,8 @@ def show_residual_diagnostics(
                     except:
                         pass
 
-                # Plot centroids if requested
                 if show_centroids:
                     if centroid_type == "groups":
-                        # Group-based centroids
                         if isinstance(group_category, str) and isinstance(
                             X, pd.DataFrame
                         ):
@@ -3293,7 +3327,6 @@ def show_residual_diagnostics(
                             if _should_show_in_resid_legend(legend_kwgs, "centroids"):
                                 plot_kwgs["label"] = f"{group_val} centroid"
 
-                            # Handle color assignment
                             if "c" in plot_kwgs:
                                 if isinstance(plot_kwgs["c"], list):
                                     plot_kwgs["color"] = (
@@ -3331,7 +3364,6 @@ def show_residual_diagnostics(
                                     f"Cluster {cluster_id + 1} (n={mask.sum()})"
                                 )
 
-                            # Handle color assignment
                             if "c" in plot_kwgs:
                                 if isinstance(plot_kwgs["c"], list):
                                     plot_kwgs["color"] = (
@@ -3347,12 +3379,10 @@ def show_residual_diagnostics(
 
                             ax.scatter(centroid_x, centroid_y, **plot_kwgs)
 
-                    # Add legend if there are labeled artists
                     handles, labels = ax.get_legend_handles_labels()
                     if labels:
                         apply_legend(legend_loc, fontsize=tick_fontsize - 2, ax=ax)
 
-                # Label outliers
                 if show_outliers:
                     outlier_indices = np.argsort(np.abs(residuals))[-n_outliers:]
                     for i in outlier_indices:
@@ -3402,7 +3432,6 @@ def show_residual_diagnostics(
                 sqrt_abs_resid = np.sqrt(np.abs(standardized_residuals))
                 ax.scatter(y_pred_arr, sqrt_abs_resid, **point_kwgs)
 
-                # Add lowess smooth line
                 if show_lowess:
                     try:
                         smoothed = lowess(sqrt_abs_resid, y_pred_arr, frac=0.3)
@@ -3410,9 +3439,7 @@ def show_residual_diagnostics(
                     except:
                         pass
 
-                # Test for heteroskedasticity
                 if heteroskedasticity_test and het_results:
-                    # Add test results to legend
                     if _should_show_in_resid_legend(legend_kwgs, "het_tests"):
                         for test_name, result in het_results.items():
                             if "error" not in result:
@@ -3425,15 +3452,12 @@ def show_residual_diagnostics(
                                     label=label,
                                 )
 
-                    # Get legend formatting kwargs
                     legend_fmt_kwgs = _get_resid_legend_formatting_kwgs(
                         legend_kwgs, tick_fontsize
                     )
 
-                    # Apply legend with proper formatting
                     apply_legend(legend_loc=legend_loc, ax=ax, **legend_fmt_kwgs)
 
-                # Label outliers
                 if show_outliers:
                     outlier_indices = np.argsort(sqrt_abs_resid)[-n_outliers:]
                     for i in outlier_indices:
@@ -3466,7 +3490,6 @@ def show_residual_diagnostics(
                     ax.scatter(leverage, standardized_residuals, **point_kwgs)
                     ax.axhline(y=0, **line_kwgs)
 
-                    # Add Cook's distance contours
                     x_range = np.linspace(0.001, max(leverage) * 1.1, 100)
                     cook_levels = [0.5, 1.0]
                     colors_cook = ["orange", "red"]
@@ -3487,7 +3510,6 @@ def show_residual_diagnostics(
                             x_range, y_neg, "--", color=color, alpha=0.5, linewidth=1.5
                         )
 
-                    # Label high leverage points
                     if show_outliers:
                         outlier_indices = np.argsort(cooks_d)[-n_outliers:]
                         for i in outlier_indices:
@@ -3527,12 +3549,10 @@ def show_residual_diagnostics(
             # 5. Influence Plot
             elif plot_name == "influence":
                 if leverage is not None and cooks_d is not None:
-                    # Calculate studentized residuals
                     studentized_resid = standardized_residuals * np.sqrt(
                         (n - p - 1) / (n - p - standardized_residuals**2)
                     )
 
-                    # Bubble sizes proportional to Cook's distance
                     bubble_size = cooks_d * 5000
 
                     ax.scatter(
@@ -3546,7 +3566,6 @@ def show_residual_diagnostics(
 
                     ax.axhline(y=0, **line_kwgs)
 
-                    # Reference lines for studentized residuals
                     for threshold in [2, -2]:
                         ax.axhline(
                             y=threshold, color="orange", linestyle=":", alpha=0.5
@@ -3554,7 +3573,6 @@ def show_residual_diagnostics(
                     for threshold in [3, -3]:
                         ax.axhline(y=threshold, color="red", linestyle=":", alpha=0.5)
 
-                    # Label influential points
                     if show_outliers:
                         outlier_indices = np.argsort(cooks_d)[-n_outliers:]
                         for i in outlier_indices:
@@ -3598,7 +3616,6 @@ def show_residual_diagnostics(
                     )
                     ax.axvline(x=0, **line_kwgs)
 
-                    # Add normal distribution overlay
                     mu, sigma = residuals.mean(), residuals.std()
                     x = np.linspace(residuals.min(), residuals.max(), 100)
                     ax.plot(
@@ -3617,7 +3634,6 @@ def show_residual_diagnostics(
                     ax.hist(residuals, bins=30, edgecolor="black", alpha=0.7)
                     ax.axvline(x=0, **line_kwgs)
 
-                    # No overlay - keep it simple
                     ax.set_xlabel("Residuals", fontsize=label_fontsize)
                     ax.set_ylabel("Frequency", fontsize=label_fontsize)
 
@@ -3636,11 +3652,9 @@ def show_residual_diagnostics(
 
     # Finalize main figure (if created)
     if fig is not None and show_plots:
-        # Hide unused subplots
         for i in range(global_plot_idx, len(axes)):
             axes[i].axis("off")
 
-        # Overall figure title
         if num_models > 1:
             default_title = "Residual Diagnostics: Multiple Models"
         else:
@@ -3678,18 +3692,15 @@ def show_residual_diagnostics(
         and show_plots
     ):
         for idx, (mod, name) in enumerate(zip(model, model_title)):
-            # Get predictions
             if y_pred is None:
                 y_pred_m = mod.predict(X)
             else:
                 y_pred_m = y_pred[idx]
 
-            # Calculate residuals
             y_true = np.asarray(y).ravel()
             y_pred_arr = np.asarray(y_pred_m).ravel()
             residuals = y_true - y_pred_arr
 
-            # Exclude group_category column from predictors if it's a column name
             if isinstance(group_category, str) and group_category in X.columns:
                 predictor_cols = [col for col in X.columns if col != group_category]
             else:
@@ -3697,7 +3708,6 @@ def show_residual_diagnostics(
 
             n_predictors = len(predictor_cols)
 
-            # Determine layout
             if n_cols is not None:
                 cols = n_cols
             elif n_predictors <= 3:
@@ -3718,7 +3728,6 @@ def show_residual_diagnostics(
                 if i < len(axes):
                     ax = axes[i]
 
-                    # Color points by group if group_category provided
                     if group_category is not None:
                         if isinstance(group_category, str) and isinstance(
                             X, pd.DataFrame
@@ -3740,7 +3749,6 @@ def show_residual_diagnostics(
                                     f"{group_val} (n={mask.sum()})"
                                 )
 
-                            # Handle color assignment
                             if "color" in group_kwgs or "c" in group_kwgs:
                                 if "c" in group_kwgs and isinstance(
                                     group_kwgs["c"], list
@@ -3777,7 +3785,6 @@ def show_residual_diagnostics(
 
                     ax.axhline(y=0, **line_kwgs)
 
-                    # Add lowess smooth
                     if show_lowess:
                         try:
                             smoothed = lowess(residuals, X[col], frac=0.3)
@@ -3785,7 +3792,6 @@ def show_residual_diagnostics(
                         except:
                             pass
 
-                    # Add centroids if requested
                     if show_centroids:
                         if centroid_type == "groups":
                             if isinstance(group_category, str) and isinstance(
@@ -3816,7 +3822,6 @@ def show_residual_diagnostics(
                                 ):
                                     plot_kwgs["label"] = f"{group_val} centroid"
 
-                                # Handle color assignment
                                 if "c" in plot_kwgs:
                                     if isinstance(plot_kwgs["c"], list):
                                         plot_kwgs["color"] = (
@@ -3861,7 +3866,6 @@ def show_residual_diagnostics(
                                         f"Cluster {cluster_id + 1} (n={mask.sum()})"
                                     )
 
-                                # Handle color assignment
                                 if "c" in plot_kwgs:
                                     if isinstance(plot_kwgs["c"], list):
                                         plot_kwgs["color"] = (
@@ -3877,7 +3881,6 @@ def show_residual_diagnostics(
 
                                 ax.scatter(centroid_x, centroid_y, **plot_kwgs)
 
-                        # Add legend
                         handles, labels_legend = ax.get_legend_handles_labels()
                         if labels_legend:
                             apply_legend(legend_loc, fontsize=tick_fontsize - 2, ax=ax)
@@ -3909,7 +3912,6 @@ def show_residual_diagnostics(
                                         label=label,
                                     )
 
-                    # Ensure legend is shown
                     handles, labels_legend = ax.get_legend_handles_labels()
                     if labels_legend:
                         apply_legend(legend_loc, fontsize=tick_fontsize - 2, ax=ax)
@@ -3929,11 +3931,9 @@ def show_residual_diagnostics(
                     ax.tick_params(labelsize=tick_fontsize)
                     apply_axis_limits(ax, xlim=xlim, ylim=ylim)
 
-            # Hide unused subplots
             for i in range(n_predictors, len(axes)):
                 axes[i].axis("off")
 
-            # Add overall figure title
             apply_plot_title(
                 suptitle,
                 default_title=f"Residual Diagnostics: {name}",

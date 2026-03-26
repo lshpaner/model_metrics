@@ -320,7 +320,7 @@ def test_summarize_model_performance_with_custom_threshold(trained_model, sample
 
     assert isinstance(df, pd.DataFrame)
     # Custom threshold should override
-    assert df.loc[df["Metrics"] == "Model Threshold", "Model_1"].values[0] == 0.7
+    assert df.loc[df["Metrics"] == "Model Threshold", "Model 1"].values[0] == 0.7
 
 
 def test_summarize_model_performance_with_y_prob_only(sample_data):
@@ -1064,7 +1064,7 @@ def test_plot_threshold_metrics_with_lookup(
     )
 
     captured = capsys.readouterr()
-    assert "Best threshold" in captured.out
+    assert "best threshold" in captured.out
     assert mock_show.called
 
 
@@ -1905,7 +1905,7 @@ def test_plot_threshold_metrics_all_lookup_metrics(mock_show, sample_data, capsy
         plt.close("all")
 
     captured = capsys.readouterr()
-    assert "Best threshold" in captured.out
+    assert "best threshold" in captured.out
 
 
 @patch("matplotlib.pyplot.show")
