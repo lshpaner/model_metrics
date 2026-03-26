@@ -182,7 +182,7 @@ def test_calculate_coefficients(model_calculator, sample_data):
     coeff_values = model_calculator._calculate_coefficients(model, X_test)
 
     assert isinstance(coeff_values, list)
-    assert all(isinstance(row, dict) for row in coeff_values)
+    assert all(isinstance(row, list) for row in coeff_values)
 
 
 def test_add_metrics(model_calculator, sample_data):
@@ -426,6 +426,10 @@ def test_calculate_shap_unexpected_shape(
 
     # Monkeypatch `shap.Explainer` to use the mock class
     monkeypatch.setattr("shap.Explainer", lambda *args, **kwargs: MockExplainer())
+
+    monkeypatch.setattr(
+        ModelCalculator, "_get_shap_explainer", lambda self, model, X: MockExplainer()
+    )
 
     # Ensure we trigger the shape check in `_calculate_shap_values`
     with pytest.raises(ValueError, match="Unexpected SHAP values shape"):
@@ -713,6 +717,10 @@ def test_rowwise_shap_output_unexpected_type(
             return "invalid_output"
 
     monkeypatch.setattr("shap.Explainer", lambda *args, **kwargs: MockExplainer())
+
+    monkeypatch.setattr(
+        ModelCalculator, "_get_shap_explainer", lambda self, model, X: MockExplainer()
+    )
 
     with pytest.raises(ValueError, match="Unexpected SHAP output type"):
         model_calculator._calculate_shap_values(model, X_test)
