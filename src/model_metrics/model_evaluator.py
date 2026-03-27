@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.colorbar as mcolorbar
 from matplotlib.lines import Line2D
-import textwrap
+
+from unittest.mock import patch
 
 from sklearn.cluster import KMeans
 from sklearn.calibration import calibration_curve
@@ -546,6 +547,7 @@ def show_confusion_matrix(
     score=None,
     class_report=False,
     show_colorbar=False,
+    ax=None,
     **kwargs,
 ):
     """
@@ -611,6 +613,9 @@ def show_confusion_matrix(
 
     if not ((model is not None and X is not None) or y_prob is not None):
         raise ValueError("You need to provide model and X or y_prob")
+
+    # Save user-supplied ax before the loop variable shadows it
+    _user_ax = ax
 
     if model is not None and not isinstance(model, list):
         model = [model]
@@ -713,7 +718,12 @@ def show_confusion_matrix(
             else:
                 disp.plot(cmap=cmap, ax=ax)
         else:
-            _, ax = plt.subplots(figsize=figsize)
+            if _user_ax is not None:
+                ax = _user_ax
+                _created_fig = False
+            else:
+                _, ax = plt.subplots(figsize=figsize)
+                _created_fig = True
             if "colorbar" in disp.plot.__code__.co_varnames:
                 disp.plot(cmap=cmap, ax=ax, colorbar=show_colorbar)
             else:
@@ -797,14 +807,15 @@ def show_confusion_matrix(
                     )
 
         if not subplots:
-            save_plot_images(
-                f"confusion_matrix_{name}",
-                save_plot,
-                image_path_png,
-                image_path_svg,
-                image_filename=image_filename,
-            )
-            plt.show()
+            if _created_fig:
+                save_plot_images(
+                    f"confusion_matrix_{name}",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                    image_filename=image_filename,
+                )
+                plt.show()
 
     if subplots:
         for ax in axes[len(model) :]:
@@ -856,6 +867,7 @@ def show_roc_curve(
     operating_point_method="youden",
     operating_point_kwgs=None,
     legend_loc="lower right",
+    ax=None,
 ):
     """
     Plot Receiver Operating Characteristic (ROC) curves for models or pipelines
@@ -1201,10 +1213,14 @@ def show_roc_curve(
                 )
             ax.grid(visible=gridlines)
         else:
-            plt.figure(figsize=figsize)
+            if ax is None:
+                fig, ax = plt.subplots(figsize=figsize or (8, 6))
+                _created_fig = True
+            else:
+                _created_fig = False
             if group_category is not None:
                 for gr in group_category.unique():
-                    plt.plot(
+                    ax.plot(
                         fpr[gr],
                         tpr[gr],
                         label=f"AUC for {gr} = {auc_str[gr]:{decimal_places}}, "
@@ -1215,7 +1231,7 @@ def show_roc_curve(
                     )
 
             else:
-                plt.plot(fpr, tpr, label=f"AUC = {auc_str}", **curve_style)
+                ax.plot(fpr, tpr, label=f"AUC = {auc_str}", **curve_style)
                 if show_operating_point:
                     point_kwgs = operating_point_kwgs or {
                         "s": 80,
@@ -1223,28 +1239,29 @@ def show_roc_curve(
                         "facecolor": "white",
                         "edgecolor": "black",
                     }
-                    plt.scatter(
+                    ax.scatter(
                         op_fpr,
                         op_tpr,
                         label=op_label,
                         zorder=10,
                         **point_kwgs,
                     )
-            plt.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
-            plt.xlabel(xlabel, fontsize=label_fontsize)
-            plt.ylabel(ylabel, fontsize=label_fontsize)
-            plt.tick_params(axis="both", labelsize=tick_fontsize)
+            ax.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
+            ax.set_xlabel(xlabel, fontsize=label_fontsize)
+            ax.set_ylabel(ylabel, fontsize=label_fontsize)
+            ax.tick_params(axis="both", labelsize=tick_fontsize)
             apply_plot_title(
                 title,
                 default_title=f"ROC Curve: {name}",
                 text_wrap=text_wrap,
                 fontsize=label_fontsize,
+                ax=ax,
             )
 
             if group_category is not None:
-                apply_legend("bottom", fontsize=tick_fontsize, ncol=1)
+                apply_legend("bottom", fontsize=tick_fontsize, ncol=1, ax=ax)
             else:
-                handles, labels = plt.gca().get_legend_handles_labels()
+                handles, labels = ax.get_legend_handles_labels()
 
                 ordered_labels = []
                 for l in labels:
@@ -1263,27 +1280,28 @@ def show_roc_curve(
                     fontsize=tick_fontsize,
                     handles=ordered_handles,
                     labels=ordered_labels,
+                    ax=ax,
                 )
-            plt.grid(visible=gridlines)
+            ax.grid(visible=gridlines)
             name_clean = name.lower().replace(" ", "_")
-            if group_category is not None:
-                save_plot_images(
-                    f"{name_clean}_{group_category.name}_roc_auc",
-                    save_plot,
-                    image_path_png,
-                    image_path_svg,
-                    image_filename=image_filename,
-                )
-            else:
-                save_plot_images(
-                    f"{name_clean}_roc_auc",
-                    save_plot,
-                    image_path_png,
-                    image_path_svg,
-                    image_filename=image_filename,
-                )
-
-            plt.show()
+            if _created_fig:
+                if group_category is not None:
+                    save_plot_images(
+                        f"{name_clean}_{group_category.name}_roc_auc",
+                        save_plot,
+                        image_path_png,
+                        image_path_svg,
+                        image_filename=image_filename,
+                    )
+                else:
+                    save_plot_images(
+                        f"{name_clean}_roc_auc",
+                        save_plot,
+                        image_path_png,
+                        image_path_svg,
+                        image_filename=image_filename,
+                    )
+                plt.show()
 
     if overlay:
         plt.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
@@ -1371,6 +1389,7 @@ def show_pr_curve(
     group_category=None,
     legend_metric="ap",
     legend_loc="lower left",
+    ax=None,
 ):
     """
     Plot Precision-Recall (PR) curves for models or pipelines with optional
@@ -1601,10 +1620,14 @@ def show_pr_curve(
             ax.grid(visible=gridlines)
 
         else:
-            plt.figure(figsize=figsize or (8, 6))
+            if ax is None:
+                fig, ax = plt.subplots(figsize=figsize or (8, 6))
+                _created_fig = True
+            else:
+                _created_fig = False
             if group_category is not None:
                 for gr in group_category.unique():
-                    plt.plot(
+                    ax.plot(
                         recall[gr],
                         precision[gr],
                         label=f"{metric_label} for {gr} = {metric_str[gr]}, "
@@ -1613,46 +1636,48 @@ def show_pr_curve(
                         **curve_style,
                     )
             else:
-                plt.plot(
+                ax.plot(
                     recall,
                     precision,
                     label=f"{metric_label} = {metric_str}",
                     **curve_style,
                 )
 
-            plt.xlabel(xlabel, fontsize=label_fontsize)
-            plt.ylabel(ylabel, fontsize=label_fontsize)
-            plt.tick_params(axis="both", labelsize=tick_fontsize)
+            ax.set_xlabel(xlabel, fontsize=label_fontsize)
+            ax.set_ylabel(ylabel, fontsize=label_fontsize)
+            ax.tick_params(axis="both", labelsize=tick_fontsize)
             apply_plot_title(
                 title,
                 default_title=f"PR Curve: {name}",
                 text_wrap=text_wrap,
                 fontsize=label_fontsize,
+                ax=ax,
             )
 
             if group_category is not None:
-                apply_legend("bottom", fontsize=tick_fontsize, ncol=1)
+                apply_legend("bottom", fontsize=tick_fontsize, ncol=1, ax=ax)
             else:
-                apply_legend(legend_loc, fontsize=tick_fontsize)
-            plt.grid(visible=gridlines)
+                apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
+            ax.grid(visible=gridlines)
             name_clean = name.lower().replace(" ", "_")
-            if group_category is not None:
-                save_plot_images(
-                    f"{name_clean}_{group_category.name}_precision_recall",
-                    save_plot,
-                    image_path_png,
-                    image_path_svg,
-                    image_filename=image_filename,
-                )
-            else:
-                save_plot_images(
-                    f"{name_clean}_precision_recall",
-                    save_plot,
-                    image_path_png,
-                    image_path_svg,
-                    image_filename=image_filename,
-                )
-            plt.show()
+            if _created_fig:
+                if group_category is not None:
+                    save_plot_images(
+                        f"{name_clean}_{group_category.name}_precision_recall",
+                        save_plot,
+                        image_path_png,
+                        image_path_svg,
+                        image_filename=image_filename,
+                    )
+                else:
+                    save_plot_images(
+                        f"{name_clean}_precision_recall",
+                        save_plot,
+                        image_path_png,
+                        image_path_svg,
+                        image_filename=image_filename,
+                    )
+                plt.show()
 
     if overlay:
         plt.xlabel(xlabel, fontsize=label_fontsize)
@@ -1723,6 +1748,7 @@ def show_lift_chart(
     tick_fontsize=10,
     gridlines=True,
     legend_loc="best",
+    ax=None,
 ):
     """
     Generate and display Lift charts for one or multiple models.
@@ -1843,33 +1869,39 @@ def show_lift_chart(
             apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
             ax.grid(visible=gridlines)
         else:
-            plt.figure(figsize=figsize or (8, 6))
-            plt.plot(
+            if ax is None:
+                fig, ax = plt.subplots(figsize=figsize or (8, 6))
+                _created_fig = True
+            else:
+                _created_fig = False
+            ax.plot(
                 percentages,
                 lift_values,
                 label=f"Lift Curve",
                 **curve_style,
             )
-            plt.plot([0, 1], [1, 1], label="Baseline", **linestyle_kwgs)
-            plt.xlabel(xlabel, fontsize=label_fontsize)
-            plt.ylabel(ylabel, fontsize=label_fontsize)
-            plt.tick_params(axis="both", labelsize=tick_fontsize)
+            ax.plot([0, 1], [1, 1], label="Baseline", **linestyle_kwgs)
+            ax.set_xlabel(xlabel, fontsize=label_fontsize)
+            ax.set_ylabel(ylabel, fontsize=label_fontsize)
+            ax.tick_params(axis="both", labelsize=tick_fontsize)
             apply_plot_title(
                 title,
                 default_title=f"Lift Chart: {name}",
                 text_wrap=text_wrap,
                 fontsize=label_fontsize,
+                ax=ax,
             )
-            apply_legend(legend_loc, fontsize=tick_fontsize)
-            plt.grid(visible=gridlines)
-            save_plot_images(
-                f"{name}_lift",
-                save_plot,
-                image_path_png,
-                image_path_svg,
-                image_filename=image_filename,
-            )
-            plt.show()
+            apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
+            ax.grid(visible=gridlines)
+            if _created_fig:
+                save_plot_images(
+                    f"{name}_lift",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                    image_filename=image_filename,
+                )
+                plt.show()
 
     if overlay:
         plt.plot([0, 1], [1, 1], label="Baseline", **linestyle_kwgs)
@@ -1934,6 +1966,7 @@ def show_gain_chart(
     legend_loc="best",
     show_gini=False,
     decimal_places=3,
+    ax=None,
 ):
     """
     Generate and display Gain charts for one or multiple models.
@@ -2066,39 +2099,45 @@ def show_gain_chart(
             apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
             ax.grid(visible=gridlines)
         else:
-            plt.figure(figsize=figsize or (8, 6))
+            if ax is None:
+                fig, ax = plt.subplots(figsize=figsize or (8, 6))
+                _created_fig = True
+            else:
+                _created_fig = False
 
             if show_gini:
                 single_label = f"Gini = {gini:.{decimal_places}f}"
             else:
                 single_label = "Gain Curve"
 
-            plt.plot(
+            ax.plot(
                 percentages,
                 cumulative_gains,
                 label=single_label,
                 **curve_style,
             )
-            plt.plot([0, 1], [0, 1], label="Baseline", **linestyle_kwgs)
-            plt.xlabel(xlabel, fontsize=label_fontsize)
-            plt.ylabel(ylabel, fontsize=label_fontsize)
-            plt.tick_params(axis="both", labelsize=tick_fontsize)
+            ax.plot([0, 1], [0, 1], label="Baseline", **linestyle_kwgs)
+            ax.set_xlabel(xlabel, fontsize=label_fontsize)
+            ax.set_ylabel(ylabel, fontsize=label_fontsize)
+            ax.tick_params(axis="both", labelsize=tick_fontsize)
             apply_plot_title(
                 title,
                 default_title=f"Gain Chart: {name}",
                 text_wrap=text_wrap,
                 fontsize=label_fontsize,
+                ax=ax,
             )
-            apply_legend(legend_loc, fontsize=tick_fontsize)
-            plt.grid(visible=gridlines)
-            save_plot_images(
-                f"{name}_gain",
-                save_plot,
-                image_path_png,
-                image_path_svg,
-                image_filename=image_filename,
-            )
-            plt.show()
+            apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
+            ax.grid(visible=gridlines)
+            if _created_fig:
+                save_plot_images(
+                    f"{name}_gain",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                    image_filename=image_filename,
+                )
+                plt.show()
 
     if overlay:
         plt.plot([0, 1], [0, 1], label="Baseline", **linestyle_kwgs)
@@ -2171,6 +2210,7 @@ def show_calibration_curve(
     linestyle_kwgs=None,
     group_category=None,
     legend_loc="best",
+    ax=None,
     **kwargs,
 ):
     """
@@ -2410,8 +2450,12 @@ def show_calibration_curve(
 
         # STANDARD SINGLE PLOT
         else:
-            plt.figure(figsize=figsize or (8, 6))
-            plt.plot(
+            if ax is None:
+                fig, ax = plt.subplots(figsize=figsize or (8, 6))
+                _created_fig = True
+            else:
+                _created_fig = False
+            ax.plot(
                 prob_pred,
                 prob_true,
                 marker=marker,
@@ -2419,30 +2463,33 @@ def show_calibration_curve(
                 **curve_style,
                 **kwargs,
             )
-            plt.plot(
+            ax.plot(
                 [0, 1],
                 [0, 1],
                 label="Perfectly Calibrated",
                 **_ls_kwgs,
             )
-            plt.xlabel(xlabel, fontsize=label_fontsize)
-            plt.ylabel(ylabel, fontsize=label_fontsize)
+            ax.set_xlabel(xlabel, fontsize=label_fontsize)
+            ax.set_ylabel(ylabel, fontsize=label_fontsize)
             apply_plot_title(
                 title,
                 default_title=f"Calibration Curve: {name}",
                 text_wrap=text_wrap,
                 fontsize=label_fontsize,
+                ax=ax,
             )
-            apply_legend(legend_loc, fontsize=tick_fontsize)
-            plt.grid(visible=gridlines)
-            save_plot_images(
-                f"{name}_Calibration",
-                save_plot,
-                image_path_png,
-                image_path_svg,
-                image_filename=image_filename,
-            )
-            plt.show()
+            apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
+            ax.tick_params(axis="both", labelsize=tick_fontsize)
+            ax.grid(visible=gridlines)
+            if _created_fig:
+                save_plot_images(
+                    f"{name}_Calibration",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                    image_filename=image_filename,
+                )
+                plt.show()
 
     # Final overlay post-processing
     if overlay:
@@ -2516,6 +2563,7 @@ def plot_threshold_metrics(
     n_rows=None,
     suptitle=None,
     suptitle_y=0.98,
+    ax=None,
 ):
     """
     Plot Precision, Recall, F1 Score, and Specificity vs. decision thresholds
@@ -2644,7 +2692,7 @@ def plot_threshold_metrics(
     # Normalize models and probabilities into lists
     model, y_probs, num_models = validate_and_normalize_inputs(model, X_test, y_prob)
 
-    # Normalize model titles — use class name when available, not generic index
+    # Normalize model titles; use class name when available, not generic index
     if model_title is None:
         model_title = [
             extract_model_name(m) if m is not None else f"Model {i + 1}"
@@ -2684,7 +2732,7 @@ def plot_threshold_metrics(
     # Set up subplot grid if needed
     if subplots:
         if n_rows is not None and n_cols == 2:
-            # user specified n_rows — derive n_cols from it
+            # user specified n_rows; derive n_cols from it
             _n_cols = math.ceil(num_models / n_rows)
             _n_rows = n_rows
         elif n_rows is None:
@@ -2746,7 +2794,7 @@ def plot_threshold_metrics(
                 closest_idx = (np.abs(metric_values - lookup_value)).argmin()
                 best_threshold = metric_thresholds[closest_idx]
                 print(
-                    f"{name} — best threshold for target {lookup_metric} of "
+                    f"Best threshold for target {lookup_metric} of "
                     f"{round(lookup_value, decimal_places)} is "
                     f"{round(best_threshold, decimal_places)}"
                 )
@@ -2791,7 +2839,7 @@ def plot_threshold_metrics(
             for line in ax_overlay.get_lines():
                 lbl = line.get_label()
                 if lbl in {"F1 Score", "Recall", "Precision", "Specificity"}:
-                    line.set_label(f"{name} — {lbl}")
+                    line.set_label(f"{name} - {lbl}")
 
         elif subplots:
             ax = axes[idx]
@@ -2806,7 +2854,11 @@ def plot_threshold_metrics(
 
         else:
             # Single plot per model
-            _, ax = plt.subplots(figsize=figsize or (8, 6))
+            if ax is None:
+                fig, ax = plt.subplots(figsize=figsize or (8, 6))
+                _created_fig = True
+            else:
+                _created_fig = False
             _plot_single(ax, y_pred_probs, name, thresh)
             apply_plot_title(
                 title,
@@ -2819,23 +2871,24 @@ def plot_threshold_metrics(
                 fontsize=label_fontsize,
                 ax=ax,
             )
-            if lookup_metric:
-                save_plot_images(
-                    filename=f"threshold_metrics_{name.lower().replace(' ', '_')}_{lookup_metric}",
-                    save_plot=save_plot,
-                    image_path_png=image_path_png,
-                    image_path_svg=image_path_svg,
-                    image_filename=image_filename,
-                )
-            else:
-                save_plot_images(
-                    filename=f"threshold_metrics_{name.lower().replace(' ', '_')}",
-                    save_plot=save_plot,
-                    image_path_png=image_path_png,
-                    image_path_svg=image_path_svg,
-                    image_filename=image_filename,
-                )
-            plt.show()
+            if _created_fig:
+                if lookup_metric:
+                    save_plot_images(
+                        filename=f"threshold_metrics_{name.lower().replace(' ', '_')}_{lookup_metric}",
+                        save_plot=save_plot,
+                        image_path_png=image_path_png,
+                        image_path_svg=image_path_svg,
+                        image_filename=image_filename,
+                    )
+                else:
+                    save_plot_images(
+                        filename=f"threshold_metrics_{name.lower().replace(' ', '_')}",
+                        save_plot=save_plot,
+                        image_path_png=image_path_png,
+                        image_path_svg=image_path_svg,
+                        image_filename=image_filename,
+                    )
+                plt.show()
 
     # Finalise overlay
     if overlay:
@@ -3983,3 +4036,146 @@ def show_residual_diagnostics(
             return all_diagnostics[model_title[0]]
         else:
             return all_diagnostics
+
+
+################################################################################
+################################ combine_plots ##################################
+################################################################################
+
+
+def combine_plots(
+    plot_calls,
+    n_cols=2,
+    n_rows=None,
+    figsize=None,
+    suptitle=None,
+    suptitle_y=0.98,
+    label_fontsize=12,
+    tight_layout=True,
+    save_plot=False,
+    image_path_png=None,
+    image_path_svg=None,
+    image_filename=None,
+):
+    """
+    Combine multiple model_metrics plotting functions into a single subplot
+    figure.
+
+    Each entry in `plot_calls` maps to one panel. The function creates a
+    shared figure, pre-allocates one axes per panel, and passes each axes
+    to the corresponding plotting function via the `ax` keyword argument.
+    Individual plt.show() and save calls inside each function are suppressed
+    when an external axes is supplied.
+
+    Parameters
+    ----------
+    plot_calls : list of tuple
+        Each tuple is (func, kwargs) where func is any model_metrics
+        single-plot function and kwargs is its full argument dictionary.
+        Example: [(show_roc_curve, {"y_prob": y_prob, "y": y_test})]
+    n_cols : int, default=2
+        Number of columns in the subplot grid.
+    n_rows : int, optional
+        Number of rows. Auto-derived from n_cols if not provided.
+    figsize : tuple, optional
+        Figure size (width, height). Defaults to (n_cols * 6, n_rows * 5).
+    suptitle : str, optional
+        Overall figure title. If None, no suptitle is shown.
+    suptitle_y : float, default=0.98
+        Vertical position of the suptitle (0-1 range).
+    label_fontsize : int, default=12
+        Font size for the suptitle.
+    tight_layout : bool, default=True
+        Whether to call plt.tight_layout() before displaying.
+    save_plot : bool, default=False
+        Whether to save the combined figure to disk.
+    image_path_png : str, optional
+        Path to save PNG output.
+    image_path_svg : str, optional
+        Path to save SVG output.
+    image_filename : str, optional
+        Custom filename for the saved image. When provided, saving is
+        triggered regardless of save_plot.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError
+        If plot_calls is empty.
+    TypeError
+        If any entry in plot_calls is not a (callable, dict) tuple.
+    """
+    if not plot_calls:
+        raise ValueError("plot_calls must contain at least one (func, kwargs) tuple.")
+
+    for i, entry in enumerate(plot_calls):
+        if (
+            not isinstance(entry, (tuple, list))
+            or len(entry) != 2
+            or not callable(entry[0])
+            or not isinstance(entry[1], dict)
+        ):
+            raise TypeError(
+                f"plot_calls[{i}] must be a (callable, dict) tuple, "
+                f"got {type(entry)}."
+            )
+
+    num_plots = len(plot_calls)
+    _n_cols = n_cols
+    _n_rows = n_rows if n_rows is not None else math.ceil(num_plots / _n_cols)
+
+    fig, axes = plt.subplots(
+        _n_rows,
+        _n_cols,
+        figsize=figsize or (_n_cols * 6, _n_rows * 5),
+    )
+
+    # Always work with a flat list of axes. plt.subplots(1, N) returns an
+    # ndarray even when num_plots==1, so never use num_plots to decide —
+    # always inspect the axes object itself.
+    if hasattr(axes, "flatten"):
+        axes_flat = axes.flatten()
+    elif hasattr(axes, "__iter__"):
+        axes_flat = list(axes)
+    else:
+        axes_flat = [axes]
+
+    for i, (func, kwargs) in enumerate(plot_calls):
+        ax = axes_flat[i]
+        try:
+            func(**kwargs, ax=ax)
+        except Exception as e:
+            ax.text(
+                0.5,
+                0.5,
+                f"Error rendering plot:\n{e}",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+                fontsize=10,
+                color="red",
+            )
+
+    # Hide unused axes
+    for ax in axes_flat[num_plots:]:
+        ax.axis("off")
+
+    if suptitle:
+        fig.suptitle(suptitle, fontsize=label_fontsize + 2, y=suptitle_y)
+
+    if tight_layout:
+        plt.tight_layout()
+
+    save_plot_images(
+        "combined_plots",
+        save_plot,
+        image_path_png,
+        image_path_svg,
+        image_filename=image_filename,
+        fig=fig,
+    )
+
+    plt.show()

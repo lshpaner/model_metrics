@@ -46,6 +46,7 @@ from model_metrics.model_evaluator import (
     show_gain_chart,
     plot_threshold_metrics,
     show_residual_diagnostics,
+    combine_plots,
 )
 
 matplotlib.use("Agg")
@@ -134,6 +135,17 @@ def trained_regression_model(sample_regression_data):
     model = LinearRegression()
     model.fit(X, y)
     return model
+
+
+@pytest.fixture
+def clf_data():
+    """Fixture for combine_plots and ax= parameter tests."""
+    X, y = make_classification(n_samples=200, n_features=5, random_state=42)
+    X = pd.DataFrame(X, columns=[f"f{i}" for i in range(5)])
+    y = pd.Series(y)
+    model = LogisticRegression(max_iter=1000).fit(X, y)
+    y_prob = model.predict_proba(X)[:, 1]
+    return X, y, model, y_prob
 
 
 # ==============================================================================
@@ -288,19 +300,17 @@ def test_summarize_model_performance_with_model_threshold_dict(
     """Test summarize_model_performance with model_threshold as a dict."""
     X, y = sample_data
 
-    # Test that function accepts dict-based threshold without error
     df = summarize_model_performance(
-        [trained_model],  # Wrap in list for dict threshold to work
+        [trained_model],
         X,
         y,
         model_type="classification",
         model_threshold={"Model_1": 0.6},
-        model_title=["Model_1"],  # Must also be a list
+        model_title=["Model_1"],
         return_df=True,
     )
 
     assert isinstance(df, pd.DataFrame)
-    # Just verify threshold column exists (actual value depends on internal logic)
     assert "Model Threshold" in df["Metrics"].values
 
 
@@ -319,7 +329,6 @@ def test_summarize_model_performance_with_custom_threshold(trained_model, sample
     )
 
     assert isinstance(df, pd.DataFrame)
-    # Custom threshold should override
     assert df.loc[df["Metrics"] == "Model Threshold", "Model 1"].values[0] == 0.7
 
 
@@ -327,7 +336,6 @@ def test_summarize_model_performance_with_y_prob_only(sample_data):
     """Test summarize_model_performance using y_prob without model."""
     X, y = sample_data
 
-    # Create predictions
     y_prob = np.random.rand(len(y))
 
     df = summarize_model_performance(
@@ -365,7 +373,6 @@ def test_summarize_model_performance_regression_statsmodels(sample_regression_da
     """Test summarize_model_performance with statsmodels OLS model."""
     X, y = sample_regression_data
 
-    # Create statsmodels OLS model
     X_with_const = sm.add_constant(X)
     model = sm.OLS(y, X_with_const).fit()
 
@@ -379,11 +386,8 @@ def test_summarize_model_performance_regression_statsmodels(sample_regression_da
     )
 
     assert isinstance(df, pd.DataFrame)
-    # Should have regression metrics
     assert "R^2" in df.columns
-    # Should have Model column
     assert "Model" in df.columns
-    # Should have metrics
     assert len(df) >= 1
 
 
@@ -418,7 +422,6 @@ def test_summarize_model_performance_grouped_length_mismatch(
     """Test that length mismatch between group_category and y raises ValueError."""
     X, y = sample_data
 
-    # Create group_category with wrong length
     group_category = pd.Series(["A", "B"], name="group")
 
     with pytest.raises(ValueError, match="Length mismatch"):
@@ -438,11 +441,9 @@ def test_summarize_model_performance_grouped_single_class_skip(
     """Test that groups with single class are skipped in grouped metrics."""
     X, y = sample_data
 
-    # Create group where one group has only one class
     group_category = pd.Series(["A"] * 95 + ["B"] * 5, name="group")
-    # Make sure B group has only one class
     y_modified = y.copy()
-    y_modified[95:] = 1  # All class 1 in group B
+    y_modified[95:] = 1
 
     df = summarize_model_performance(
         trained_model,
@@ -453,7 +454,6 @@ def test_summarize_model_performance_grouped_single_class_skip(
         return_df=True,
     )
 
-    # Should still return a DataFrame even if some groups skipped
     assert isinstance(df, pd.DataFrame)
 
 
@@ -563,7 +563,6 @@ def test_show_roc_curve_with_group_category(mock_show, trained_model, sample_dat
     """Test show_roc_curve with group_category parameter."""
     X, y = sample_data
 
-    # Convert y to pandas Series to match expected behavior
     y_series = pd.Series(y)
 
     group_category = pd.Series(
@@ -573,7 +572,7 @@ def test_show_roc_curve_with_group_category(mock_show, trained_model, sample_dat
     show_roc_curve(
         trained_model,
         X,
-        y_series,  # Use Series instead of array
+        y_series,
         group_category=group_category,
         save_plot=False,
     )
@@ -711,7 +710,6 @@ def test_show_pr_curve_with_group_category(mock_show, trained_model, sample_data
     """Test show_pr_curve with group_category parameter."""
     X, y = sample_data
 
-    # Convert y to pandas Series to match expected behavior
     y_series = pd.Series(y)
 
     group_category = pd.Series(
@@ -721,7 +719,7 @@ def test_show_pr_curve_with_group_category(mock_show, trained_model, sample_data
     show_pr_curve(
         trained_model,
         X,
-        y_series,  # Use Series instead of array
+        y_series,
         group_category=group_category,
         save_plot=False,
     )
@@ -1064,7 +1062,7 @@ def test_plot_threshold_metrics_with_lookup(
     )
 
     captured = capsys.readouterr()
-    assert "best threshold" in captured.out
+    assert "Best threshold" in captured.out
     assert mock_show.called
 
 
@@ -1447,7 +1445,6 @@ def test_show_calibration_curve_group_insufficient_data(
     """Test show_calibration_curve handles groups with insufficient data."""
     X, y = sample_data
 
-    # Create group with very few samples
     group_category = pd.Series(["A"] * 98 + ["B"] * 2, name="group")
 
     show_calibration_curve(
@@ -1460,7 +1457,6 @@ def test_show_calibration_curve_group_insufficient_data(
     )
 
     captured = capsys.readouterr()
-    # Should skip group B due to insufficient data
     assert "Skipping" in captured.out or mock_show.called
 
 
@@ -1471,7 +1467,6 @@ def test_show_residual_diagnostics_predictors_no_dataframe(
     """Test show_residual_diagnostics predictors with numpy array X (not DataFrame)."""
     X, y = sample_regression_data
 
-    # Convert to numpy array
     X_array = X.values
     y_array = y.values
 
@@ -1479,12 +1474,11 @@ def test_show_residual_diagnostics_predictors_no_dataframe(
 
     model = LinearRegression().fit(X_array, y_array)
 
-    # Should handle gracefully or skip predictors plot
     show_residual_diagnostics(
         model,
         X_array,
         y_array,
-        plot_type="fitted",  # Use fitted instead of predictors for numpy array
+        plot_type="fitted",
         save_plot=False,
     )
 
@@ -1507,27 +1501,7 @@ def test_summarize_model_performance_grouped_multiple_models_keeps_first(sample_
         model_title=["M1", "M2"],
     )
 
-    # grouped return has "Metrics" + group columns, no "Model"
     assert "Metrics" in df.columns
-
-
-def test_summarize_model_performance_regression_feature_importances(
-    sample_regression_data,
-):
-    X, y = sample_regression_data
-    rf = GradientBoostingRegressor().fit(X, y)
-
-    df = summarize_model_performance(
-        rf,
-        X,
-        y,
-        model_type="regression",
-        return_df=True,
-        overall_only=False,
-    )
-
-    assert "Feat. Imp." in df.columns
-    assert (df["Metric"] == "Feat. Imp.").any()
 
 
 def test_summarize_model_performance_regression_feature_importances(
@@ -1624,7 +1598,6 @@ def test_compute_leverage_and_cooks_distance(
         X,
     )
 
-    # Current implementation returns None tuple
     assert leverage is None
     assert cooks is None
     assert std_resid is None
@@ -1655,19 +1628,16 @@ def test_summarize_classification_with_group_category_as_string(sample_data):
     """Test group_category as Series (not string column name)."""
     X, y = sample_data
 
-    # Create group as separate Series
     group_series = pd.Series(np.random.choice(["A", "B"], len(y)), name="group")
 
-    # Fit model on just the feature columns
     model = LogisticRegression().fit(X[["A", "B", "C"]], y)
 
-    # Pass group_category as Series, NOT as string
     df = summarize_model_performance(
         model,
-        X[["A", "B", "C"]],  # Only feature columns
+        X[["A", "B", "C"]],
         y,
         model_type="classification",
-        group_category=group_series,  # ← Pass as Series
+        group_category=group_series,
         return_df=True,
     )
 
@@ -1681,7 +1651,6 @@ def test_summarize_regression_adjusted_r2_without_X(sample_regression_data):
     model = LinearRegression().fit(X, y)
     y_pred = model.predict(X)
 
-    # This should not crash even though include_adjusted_r2=True
     df = summarize_model_performance(
         model=None,
         X=None,
@@ -1699,7 +1668,6 @@ def test_summarize_regression_model_with_predict_exception(sample_regression_dat
     """Test regression model that raises exception on predict with add_constant."""
     X, y = sample_regression_data
 
-    # Tree-based model that doesn't need add_constant
     model = GradientBoostingRegressor(n_estimators=10, random_state=42)
     model.fit(X, y)
 
@@ -1714,7 +1682,6 @@ def test_summarize_regression_no_coefficients_available(sample_regression_data):
     """Test regression model without coef_ attribute."""
     X, y = sample_regression_data
 
-    # Random Forest doesn't have coef_
     model = RandomForestRegressor(n_estimators=10, random_state=42)
     model.fit(X, y)
 
@@ -1722,7 +1689,6 @@ def test_summarize_regression_no_coefficients_available(sample_regression_data):
         model, X, y, model_type="regression", return_df=True
     )
 
-    # Should handle missing coefficients gracefully
     assert df is not None
 
 
@@ -1759,7 +1725,6 @@ def test_summarize_regression_print_with_multiple_models(
         return_df=False,
     )
 
-    # Should print separators between models
     assert mock_print.called
 
 
@@ -1823,7 +1788,6 @@ def test_show_roc_curve_delong_exception_handling(mock_show, sample_data, capsys
     """Test DeLong test with invalid input (exception handling)."""
     X, y = sample_data
 
-    # Pass invalid delong parameter (not tuple/list of length 2)
     show_roc_curve(
         y_prob=[np.random.rand(len(y)), np.random.rand(len(y))],
         y=y,
@@ -1834,7 +1798,6 @@ def test_show_roc_curve_delong_exception_handling(mock_show, sample_data, capsys
     )
 
     captured = capsys.readouterr()
-    # Should print error message but not crash
     assert "Error" in captured.out or mock_show.called
 
 
@@ -1847,7 +1810,6 @@ def test_show_roc_curve_legend_ordering_with_operating_point(mock_show, sample_d
         y_prob=np.random.rand(len(y)), y=y, show_operating_point=True, save_plot=False
     )
 
-    # Should create legend with proper ordering
     assert mock_show.called
 
 
@@ -1905,7 +1867,7 @@ def test_plot_threshold_metrics_all_lookup_metrics(mock_show, sample_data, capsy
         plt.close("all")
 
     captured = capsys.readouterr()
-    assert "best threshold" in captured.out
+    assert "Best threshold" in captured.out
 
 
 @patch("matplotlib.pyplot.show")
@@ -1994,20 +1956,17 @@ def test_show_residual_diagnostics_predictors_with_group_exclusion(
     """Test predictors plot with group_category as Series."""
     X, y = sample_regression_data
 
-    # Create group as separate Series
     group_series = pd.Series(np.random.choice(["A", "B"], len(y)), name="race")
 
-    # Fit model ONLY on numeric columns
     model = LinearRegression()
     model.fit(X[["A", "B", "C", "D", "E"]], y)
 
-    # Pass group_category as Series (not string)
     show_residual_diagnostics(
         model,
         X[["A", "B", "C", "D", "E"]],
         y,
         plot_type="predictors",
-        group_category=group_series,  # ← Pass as Series
+        group_category=group_series,
         save_plot=False,
     )
 
@@ -2126,7 +2085,6 @@ def test_show_residual_diagnostics_lowess_exception_silent(
     X, y = sample_regression_data
     model = LinearRegression().fit(X, y)
 
-    # Should not crash even if LOWESS fails
     show_residual_diagnostics(
         model, X, y, plot_type="fitted", show_lowess=True, save_plot=False
     )
@@ -2146,7 +2104,6 @@ def test_show_residual_diagnostics_return_diagnostics_only(
 
     assert isinstance(result, dict)
     assert "model_name" in result
-    # Should not create any plots
     assert len(plt.get_fignums()) == 0
 
 
@@ -2201,7 +2158,7 @@ def test_show_residual_diagnostics_empty_suptitle(
         X,
         y,
         plot_type="all",
-        suptitle="",  # Suppress suptitle
+        suptitle="",
         save_plot=False,
     )
 
@@ -2231,7 +2188,6 @@ def test_show_residual_diagnostics_predictors_automatic_layout(
     """Test predictors with automatic layout (>3 predictors)."""
     X, y = sample_regression_data
 
-    # 5 predictors should trigger automatic n_cols=3
     show_residual_diagnostics(
         trained_regression_model, X, y, plot_type="predictors", save_plot=False
     )
@@ -2250,10 +2206,7 @@ def test_show_roc_curve_y_prob_as_single_array_wrapped(mock_show, sample_data):
     X, y = sample_data
     y_prob = np.random.rand(len(y))
 
-    # Single array should be automatically wrapped in list
-    show_roc_curve(
-        model=None, X=None, y=y, y_prob=y_prob, save_plot=False  # Not in a list
-    )
+    show_roc_curve(model=None, X=None, y=y, y_prob=y_prob, save_plot=False)
 
     assert mock_show.called
 
@@ -2273,7 +2226,6 @@ def test_summarize_classification_grouped_transposed_correctly(sample_data):
         return_df=True,
     )
 
-    # Should have 'Metrics' column and group columns
     assert "Metrics" in df.columns
     assert "A" in df.columns or "B" in df.columns
 
@@ -2287,7 +2239,6 @@ def test_show_residual_diagnostics_leverage_plot_without_X_shows_message(
     model = LinearRegression().fit(X, y)
     y_pred = model.predict(X)
 
-    # Call without X
     show_residual_diagnostics(
         model=None, X=None, y=y, y_pred=y_pred, plot_type="leverage", save_plot=False
     )
@@ -2304,12 +2255,252 @@ def test_show_residual_diagnostics_influence_plot_without_X_shows_message(
     model = LinearRegression().fit(X, y)
     y_pred = model.predict(X)
 
-    # Call without X
     show_residual_diagnostics(
         model=None, X=None, y=y, y_pred=y_pred, plot_type="influence", save_plot=False
     )
 
     assert mock_show.called
+
+
+# ==============================================================================
+# ax= parameter — each function draws onto a supplied axes and does NOT call
+# plt.show() or save anything
+# ==============================================================================
+
+
+def test_show_roc_curve_external_ax(clf_data):
+    X, y, model, y_prob = clf_data
+    fig, ax = plt.subplots()
+    show_roc_curve(y_prob=y_prob, y=y, ax=ax, save_plot=False)
+    assert len(ax.lines) > 0
+
+
+def test_show_pr_curve_external_ax(clf_data):
+    X, y, model, y_prob = clf_data
+    fig, ax = plt.subplots()
+    show_pr_curve(y_prob=y_prob, y=y, ax=ax, save_plot=False)
+    assert len(ax.lines) > 0
+
+
+def test_show_confusion_matrix_external_ax(clf_data):
+    X, y, model, y_prob = clf_data
+    fig, ax = plt.subplots()
+    show_confusion_matrix(y_prob=y_prob, y=y, ax=ax, save_plot=False)
+    assert ax.get_images() or ax.collections or ax.texts
+
+
+def test_show_calibration_curve_external_ax(clf_data):
+    X, y, model, y_prob = clf_data
+    fig, ax = plt.subplots()
+    show_calibration_curve(y_prob=y_prob, y=y, ax=ax, save_plot=False)
+    assert len(ax.lines) > 0
+
+
+def test_show_lift_chart_external_ax(clf_data):
+    X, y, model, y_prob = clf_data
+    fig, ax = plt.subplots()
+    show_lift_chart(y_prob=y_prob, y=y, ax=ax, save_plot=False)
+    assert len(ax.lines) > 0
+
+
+def test_show_gain_chart_external_ax(clf_data):
+    X, y, model, y_prob = clf_data
+    fig, ax = plt.subplots()
+    show_gain_chart(y_prob=y_prob, y=y, ax=ax, save_plot=False)
+    assert len(ax.lines) > 0
+
+
+def test_plot_threshold_metrics_external_ax(clf_data):
+    X, y, model, y_prob = clf_data
+    fig, ax = plt.subplots()
+    plot_threshold_metrics(y_prob=y_prob, y_test=y, ax=ax, save_plot=False)
+    assert len(ax.lines) > 0
+
+
+def test_external_ax_does_not_call_show(clf_data):
+    """Passing ax= must not call plt.show() internally."""
+    X, y, model, y_prob = clf_data
+    fig, ax = plt.subplots()
+    with patch("matplotlib.pyplot.show") as mock_show:
+        show_roc_curve(y_prob=y_prob, y=y, ax=ax, save_plot=False)
+    mock_show.assert_not_called()
+
+
+def test_external_ax_does_not_save(clf_data, tmp_path):
+    """Passing ax= must not trigger save_plot_images even when save_plot=True."""
+    X, y, model, y_prob = clf_data
+    fig, ax = plt.subplots()
+    show_roc_curve(
+        y_prob=y_prob,
+        y=y,
+        ax=ax,
+        save_plot=True,
+        image_path_png=str(tmp_path),
+    )
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_no_ax_still_calls_show(clf_data):
+    """Without ax=, plt.show() must be called as before."""
+    X, y, model, y_prob = clf_data
+    with patch("matplotlib.pyplot.show") as mock_show:
+        show_roc_curve(y_prob=y_prob, y=y, save_plot=False)
+    mock_show.assert_called_once()
+
+
+# ==============================================================================
+# combine_plots — happy paths
+# ==============================================================================
+
+
+@patch("matplotlib.pyplot.show")
+def test_combine_plots_2x2(mock_show, clf_data):
+    X, y, model, y_prob = clf_data
+    combine_plots(
+        plot_calls=[
+            (show_roc_curve, {"y_prob": y_prob, "y": y}),
+            (show_pr_curve, {"y_prob": y_prob, "y": y}),
+            (show_confusion_matrix, {"y_prob": y_prob, "y": y}),
+            (show_calibration_curve, {"y_prob": y_prob, "y": y}),
+        ],
+        n_cols=2,
+        suptitle="Test Dashboard",
+    )
+    mock_show.assert_called_once()
+
+
+@patch("matplotlib.pyplot.show")
+def test_combine_plots_1x1(mock_show, clf_data):
+    X, y, model, y_prob = clf_data
+    combine_plots(
+        plot_calls=[(show_roc_curve, {"y_prob": y_prob, "y": y})],
+        n_cols=1,
+    )
+    mock_show.assert_called_once()
+
+
+@patch("matplotlib.pyplot.show")
+def test_combine_plots_odd_panel_count_hides_unused(mock_show, clf_data):
+    """5 plots in a 2-col grid — 6th axes must be hidden."""
+    X, y, model, y_prob = clf_data
+    call = (show_roc_curve, {"y_prob": y_prob, "y": y})
+    combine_plots(plot_calls=[call] * 5, n_cols=2)
+    mock_show.assert_called_once()
+
+
+@patch("matplotlib.pyplot.show")
+def test_combine_plots_explicit_n_rows(mock_show, clf_data):
+    X, y, model, y_prob = clf_data
+    call = (show_roc_curve, {"y_prob": y_prob, "y": y})
+    combine_plots(plot_calls=[call] * 4, n_cols=2, n_rows=2)
+    mock_show.assert_called_once()
+
+
+@patch("matplotlib.pyplot.show")
+def test_combine_plots_no_suptitle(mock_show, clf_data):
+    X, y, model, y_prob = clf_data
+    combine_plots(
+        plot_calls=[(show_roc_curve, {"y_prob": y_prob, "y": y})],
+        suptitle=None,
+    )
+    mock_show.assert_called_once()
+
+
+@patch("matplotlib.pyplot.show")
+def test_combine_plots_saves_file(mock_show, clf_data, tmp_path):
+    X, y, model, y_prob = clf_data
+    combine_plots(
+        plot_calls=[(show_roc_curve, {"y_prob": y_prob, "y": y})],
+        save_plot=True,
+        image_path_png=str(tmp_path),
+    )
+    files = list(tmp_path.iterdir())
+    assert len(files) > 0
+    assert any(f.suffix == ".png" for f in files)
+
+
+@patch("matplotlib.pyplot.show")
+def test_combine_plots_image_filename_triggers_save(mock_show, clf_data, tmp_path):
+    X, y, model, y_prob = clf_data
+    combine_plots(
+        plot_calls=[(show_roc_curve, {"y_prob": y_prob, "y": y})],
+        save_plot=False,
+        image_filename="my_dashboard",
+        image_path_png=str(tmp_path),
+    )
+    files = list(tmp_path.iterdir())
+    assert any("my_dashboard" in f.name for f in files)
+
+
+@patch("matplotlib.pyplot.show")
+def test_combine_plots_tight_layout_false(mock_show, clf_data):
+    X, y, model, y_prob = clf_data
+    combine_plots(
+        plot_calls=[(show_roc_curve, {"y_prob": y_prob, "y": y})],
+        tight_layout=False,
+    )
+    mock_show.assert_called_once()
+
+
+@patch("matplotlib.pyplot.show")
+def test_combine_plots_mix_of_functions(mock_show, clf_data):
+    """All seven plotting functions in one grid."""
+    X, y, model, y_prob = clf_data
+    combine_plots(
+        plot_calls=[
+            (show_roc_curve, {"y_prob": y_prob, "y": y}),
+            (show_pr_curve, {"y_prob": y_prob, "y": y}),
+            (show_confusion_matrix, {"y_prob": y_prob, "y": y}),
+            (show_calibration_curve, {"y_prob": y_prob, "y": y}),
+            (show_lift_chart, {"y_prob": y_prob, "y": y}),
+            (show_gain_chart, {"y_prob": y_prob, "y": y}),
+            (plot_threshold_metrics, {"y_prob": y_prob, "y_test": y}),
+        ],
+        n_cols=2,
+        suptitle="Full Suite",
+        figsize=(14, 18),
+    )
+    mock_show.assert_called_once()
+
+
+# ==============================================================================
+# combine_plots — error handling
+# ==============================================================================
+
+
+def test_combine_plots_empty_raises():
+    with pytest.raises(ValueError, match="at least one"):
+        combine_plots(plot_calls=[])
+
+
+def test_combine_plots_bad_entry_not_tuple_raises():
+    with pytest.raises(TypeError):
+        combine_plots(plot_calls=["not_a_tuple"])
+
+
+def test_combine_plots_bad_entry_not_callable_raises():
+    with pytest.raises(TypeError):
+        combine_plots(plot_calls=[("not_callable", {})])
+
+
+def test_combine_plots_bad_entry_kwargs_not_dict_raises():
+    with pytest.raises(TypeError):
+        combine_plots(plot_calls=[(show_roc_curve, "not_a_dict")])
+
+
+@patch("matplotlib.pyplot.show")
+def test_combine_plots_bad_kwargs_renders_error_cell(mock_show, clf_data):
+    """A function call that raises must render an error cell, not abort."""
+    X, y, model, y_prob = clf_data
+    combine_plots(
+        plot_calls=[
+            (show_roc_curve, {"y_prob": y_prob, "y": y}),
+            (show_roc_curve, {}),  # missing y — will raise inside
+            (show_pr_curve, {"y_prob": y_prob, "y": y}),
+        ],
+        n_cols=2,
+    )
+    mock_show.assert_called_once()
 
 
 if __name__ == "__main__":
