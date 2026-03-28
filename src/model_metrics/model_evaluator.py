@@ -665,15 +665,25 @@ def show_confusion_matrix(
             threshold = 0.5
             if custom_threshold:
                 threshold = custom_threshold
-            if model_threshold:
-                threshold = model_threshold[name]
+            if model_threshold is not None:
+                if isinstance(model_threshold, dict):
+                    threshold = model_threshold[name]
+                elif isinstance(model_threshold, list):
+                    threshold = model_threshold[idx]
+                else:
+                    threshold = model_threshold
             y_pred = (np.asarray(y_prob_curr) > float(threshold)).astype(int)
         else:
+            # Extract per-model threshold from list if needed
+            if isinstance(model_threshold, list):
+                _threshold = model_threshold[idx]
+            else:
+                _threshold = model_threshold
             y_true, _, y_pred, threshold = get_predictions(
                 m,
                 X,
                 y,
-                model_threshold,
+                _threshold,
                 custom_threshold,
                 score,
             )
@@ -1011,7 +1021,12 @@ def show_roc_curve(
     }
 
     if overlay:
-        plt.figure(figsize=figsize or (8, 6))
+        if ax is not None:
+            _overlay_ax = ax
+            _created_fig = False
+        else:
+            fig, _overlay_ax = plt.subplots(figsize=figsize or (8, 6))
+            _created_fig = True
 
     if subplots and not overlay:
         _, axes = setup_subplots(
@@ -1107,7 +1122,7 @@ def show_roc_curve(
                 print(f"Error running Hanley & McNeil AUC comparison: {e}")
 
         if overlay:
-            (line,) = plt.plot(
+            (line,) = _overlay_ax.plot(
                 fpr,
                 tpr,
                 **curve_style,
@@ -1121,7 +1136,7 @@ def show_roc_curve(
                     "edgecolor": "black",
                 }
 
-                scatter = plt.scatter(
+                scatter = _overlay_ax.scatter(
                     op_fpr,
                     op_tpr,
                     zorder=10,
@@ -1304,21 +1319,22 @@ def show_roc_curve(
                 plt.show()
 
     if overlay:
-        plt.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
-        plt.xlabel(xlabel, fontsize=label_fontsize)
-        plt.ylabel(ylabel, fontsize=label_fontsize)
-        plt.tick_params(axis="both", labelsize=tick_fontsize)
+        _overlay_ax.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
+        _overlay_ax.set_xlabel(xlabel, fontsize=label_fontsize)
+        _overlay_ax.set_ylabel(ylabel, fontsize=label_fontsize)
+        _overlay_ax.tick_params(axis="both", labelsize=tick_fontsize)
         apply_plot_title(
             title,
             default_title="ROC Curves: Overlay",
             text_wrap=text_wrap,
             fontsize=label_fontsize,
+            ax=_overlay_ax,
         )
 
         if group_category is not None:
-            apply_legend("bottom", fontsize=tick_fontsize, ncol=1)
+            apply_legend("bottom", fontsize=tick_fontsize, ncol=1, ax=_overlay_ax)
         else:
-            handles, labels = plt.gca().get_legend_handles_labels()
+            handles, labels = _overlay_ax.get_legend_handles_labels()
 
             ordered_labels = []
             for l in labels:
@@ -1337,16 +1353,18 @@ def show_roc_curve(
                 fontsize=tick_fontsize,
                 handles=ordered_handles,
                 labels=ordered_labels,
+                ax=_overlay_ax,
             )
-        plt.grid(visible=gridlines)
-        save_plot_images(
-            "roc_auc_overlay_plot",
-            save_plot,
-            image_path_png,
-            image_path_svg,
-            image_filename=image_filename,
-        )
-        plt.show()
+        _overlay_ax.grid(visible=gridlines)
+        if _created_fig:
+            save_plot_images(
+                "roc_auc_overlay_plot",
+                save_plot,
+                image_path_png,
+                image_path_svg,
+                image_filename=image_filename,
+            )
+            plt.show()
 
     elif subplots:
         for ax in axes[len(model) :]:
@@ -1508,7 +1526,12 @@ def show_pr_curve(
     curve_styles = normalize_curve_styles(curve_kwgs, model_title, len(model))
 
     if overlay:
-        plt.figure(figsize=figsize or (8, 6))
+        if ax is not None:
+            _overlay_ax = ax
+            _created_fig = False
+        else:
+            fig, _overlay_ax = plt.subplots(figsize=figsize or (8, 6))
+            _created_fig = True
 
     if subplots and not overlay:
         _, axes = setup_subplots(len(model), n_cols, n_rows, figsize)
@@ -1576,12 +1599,13 @@ def show_pr_curve(
         metric_str = ap_str if legend_metric == "ap" else aucpr_str
 
         if overlay:
-            plt.plot(
+            _overlay_ax.plot(
                 recall,
                 precision,
                 label=f"{name} ({metric_label} = {metric_str})",
                 **curve_style,
             )
+
         elif subplots:
             ax = axes[idx]
             if group_category is not None:
@@ -1680,29 +1704,31 @@ def show_pr_curve(
                 plt.show()
 
     if overlay:
-        plt.xlabel(xlabel, fontsize=label_fontsize)
-        plt.ylabel(ylabel, fontsize=label_fontsize)
-        plt.tick_params(axis="both", labelsize=tick_fontsize)
+        _overlay_ax.set_xlabel(xlabel, fontsize=label_fontsize)
+        _overlay_ax.set_ylabel(ylabel, fontsize=label_fontsize)
+        _overlay_ax.tick_params(axis="both", labelsize=tick_fontsize)
         apply_plot_title(
             title,
             default_title="PR Curves: Overlay",
             text_wrap=text_wrap,
             fontsize=label_fontsize,
+            ax=_overlay_ax,
         )
 
         if group_category is not None:
-            apply_legend("bottom", fontsize=tick_fontsize, ncol=1)
+            apply_legend("bottom", fontsize=tick_fontsize, ncol=1, ax=_overlay_ax)
         else:
-            apply_legend(legend_loc, fontsize=tick_fontsize)
-        plt.grid(visible=gridlines)
-        save_plot_images(
-            "pr_overlay_plot",
-            save_plot,
-            image_path_png,
-            image_path_svg,
-            image_filename=image_filename,
-        )
-        plt.show()
+            apply_legend(legend_loc, fontsize=tick_fontsize, ax=_overlay_ax)
+        _overlay_ax.grid(visible=gridlines)
+        if _created_fig:
+            save_plot_images(
+                "pr_overlay_plot",
+                save_plot,
+                image_path_png,
+                image_path_svg,
+                image_filename=image_filename,
+            )
+            plt.show()
 
     elif subplots:
         for ax in axes[len(model) :]:
@@ -1814,7 +1840,12 @@ def show_lift_chart(
     }
 
     if overlay:
-        plt.figure(figsize=figsize or (8, 6))
+        if ax is not None:
+            _overlay_ax = ax
+            _created_fig = False
+        else:
+            fig, _overlay_ax = plt.subplots(figsize=figsize or (8, 6))
+            _created_fig = True
 
     if subplots and not overlay:
         _, axes = setup_subplots(len(model), n_cols, n_rows, figsize)
@@ -1841,12 +1872,13 @@ def show_lift_chart(
         lift_values = cumulative_gains / percentages
 
         if overlay:
-            plt.plot(
+            _overlay_ax.plot(
                 percentages,
                 lift_values,
                 label=f"{name}",
                 **curve_style,
             )
+
         elif subplots:
             ax = axes[idx]
             ax.plot(
@@ -1904,26 +1936,28 @@ def show_lift_chart(
                 plt.show()
 
     if overlay:
-        plt.plot([0, 1], [1, 1], label="Baseline", **linestyle_kwgs)
-        plt.xlabel(xlabel, fontsize=label_fontsize)
-        plt.ylabel(ylabel, fontsize=label_fontsize)
-        plt.tick_params(axis="both", labelsize=tick_fontsize)
+        _overlay_ax.plot([0, 1], [1, 1], label="Baseline", **linestyle_kwgs)
+        _overlay_ax.set_xlabel(xlabel, fontsize=label_fontsize)
+        _overlay_ax.set_ylabel(ylabel, fontsize=label_fontsize)
+        _overlay_ax.tick_params(axis="both", labelsize=tick_fontsize)
         apply_plot_title(
             title,
             default_title="Lift Charts: Overlay",
             text_wrap=text_wrap,
             fontsize=label_fontsize,
+            ax=_overlay_ax,
         )
-        apply_legend(legend_loc, fontsize=tick_fontsize)
-        plt.grid(visible=gridlines)
-        save_plot_images(
-            "lift_overlay",
-            save_plot,
-            image_path_png,
-            image_path_svg,
-            image_filename=image_filename,
-        )
-        plt.show()
+        apply_legend(legend_loc, fontsize=tick_fontsize, ax=_overlay_ax)
+        _overlay_ax.grid(visible=gridlines)
+        if _created_fig:
+            save_plot_images(
+                "lift_overlay",
+                save_plot,
+                image_path_png,
+                image_path_svg,
+                image_filename=image_filename,
+            )
+            plt.show()
 
     elif subplots:
         for ax in axes[len(model) :]:
@@ -2033,7 +2067,12 @@ def show_gain_chart(
     }
 
     if overlay:
-        plt.figure(figsize=figsize or (8, 6))
+        if ax is not None:
+            _overlay_ax = ax
+            _created_fig = False
+        else:
+            fig, _overlay_ax = plt.subplots(figsize=figsize or (8, 6))
+            _created_fig = True
 
     if subplots and not overlay:
         _, axes = setup_subplots(len(model), n_cols, n_rows, figsize)
@@ -2065,12 +2104,13 @@ def show_gain_chart(
             model_label = f"{name}"
 
         if overlay:
-            plt.plot(
+            _overlay_ax.plot(
                 percentages,
                 cumulative_gains,
                 label=model_label,
                 **curve_style,
             )
+
         elif subplots:
             ax = axes[idx]
 
@@ -2140,26 +2180,28 @@ def show_gain_chart(
                 plt.show()
 
     if overlay:
-        plt.plot([0, 1], [0, 1], label="Baseline", **linestyle_kwgs)
-        plt.xlabel(xlabel, fontsize=label_fontsize)
-        plt.ylabel(ylabel, fontsize=label_fontsize)
-        plt.tick_params(axis="both", labelsize=tick_fontsize)
+        _overlay_ax.plot([0, 1], [0, 1], label="Baseline", **linestyle_kwgs)
+        _overlay_ax.set_xlabel(xlabel, fontsize=label_fontsize)
+        _overlay_ax.set_ylabel(ylabel, fontsize=label_fontsize)
+        _overlay_ax.tick_params(axis="both", labelsize=tick_fontsize)
         apply_plot_title(
             title,
             default_title="Gain Charts: Overlay",
             text_wrap=text_wrap,
             fontsize=label_fontsize,
+            ax=_overlay_ax,
         )
-        apply_legend(legend_loc, fontsize=tick_fontsize)
-        plt.grid(visible=gridlines)
-        save_plot_images(
-            "gain_overlay",
-            save_plot,
-            image_path_png,
-            image_path_svg,
-            image_filename=image_filename,
-        )
-        plt.show()
+        apply_legend(legend_loc, fontsize=tick_fontsize, ax=_overlay_ax)
+        _overlay_ax.grid(visible=gridlines)
+        if _created_fig:
+            save_plot_images(
+                "gain_overlay",
+                save_plot,
+                image_path_png,
+                image_path_svg,
+                image_filename=image_filename,
+            )
+            plt.show()
 
     elif subplots:
         for ax in axes[len(model) :]:
@@ -2300,7 +2342,12 @@ def show_calibration_curve(
 
     # Initialize overlay figure
     if overlay:
-        plt.figure(figsize=figsize or (8, 6))
+        if ax is not None:
+            _overlay_ax = ax
+            _created_fig = False
+        else:
+            fig, _overlay_ax = plt.subplots(figsize=figsize or (8, 6))
+            _created_fig = True
 
     # Loop over each model
     for idx, (mod, name, curve_style) in enumerate(
@@ -2408,7 +2455,7 @@ def show_calibration_curve(
 
         # PLOT IN OVERLAY
         if overlay:
-            plt.plot(
+            _overlay_ax.plot(
                 prob_pred,
                 prob_true,
                 marker=marker,
@@ -2493,25 +2540,27 @@ def show_calibration_curve(
 
     # Final overlay post-processing
     if overlay:
-        plt.plot([0, 1], [0, 1], label="Perfectly Calibrated", **_ls_kwgs)
-        plt.xlabel(xlabel, fontsize=label_fontsize)
-        plt.ylabel(ylabel, fontsize=label_fontsize)
+        _overlay_ax.plot([0, 1], [0, 1], label="Perfectly Calibrated", **_ls_kwgs)
+        _overlay_ax.set_xlabel(xlabel, fontsize=label_fontsize)
+        _overlay_ax.set_ylabel(ylabel, fontsize=label_fontsize)
         apply_plot_title(
             title,
             default_title="Calibration Curves: Overlay",
             text_wrap=text_wrap,
             fontsize=label_fontsize,
+            ax=_overlay_ax,
         )
-        apply_legend(legend_loc, fontsize=tick_fontsize)
-        plt.grid(visible=gridlines)
-        save_plot_images(
-            "calibration_overlay",
-            save_plot,
-            image_path_png,
-            image_path_svg,
-            image_filename=image_filename,
-        )
-        plt.show()
+        apply_legend(legend_loc, fontsize=tick_fontsize, ax=_overlay_ax)
+        _overlay_ax.grid(visible=gridlines)
+        if _created_fig:
+            save_plot_images(
+                "calibration_overlay",
+                save_plot,
+                image_path_png,
+                image_path_svg,
+                image_filename=image_filename,
+            )
+            plt.show()
 
     elif subplots:
         for ax in axes[len(model) :]:
@@ -2749,8 +2798,14 @@ def plot_threshold_metrics(
             n_rows=_n_rows,
             figsize=figsize or (_n_cols * 8, _n_rows * 6),
         )
+
     elif overlay:
-        _, ax_overlay = plt.subplots(figsize=figsize or (8, 6))
+        if ax is not None:
+            ax_overlay = ax
+            _created_fig = False
+        else:
+            _, ax_overlay = plt.subplots(figsize=figsize or (8, 6))
+            _created_fig = True
 
     def _plot_single(ax, y_pred_probs, name, thresh):
         """Plot one model's threshold curves onto the given axes."""
@@ -2899,15 +2954,16 @@ def plot_threshold_metrics(
             fontsize=label_fontsize,
             ax=ax_overlay,
         )
-        save_plot_images(
-            filename="threshold_metrics_overlay",
-            save_plot=save_plot,
-            image_path_png=image_path_png,
-            image_path_svg=image_path_svg,
-            image_filename=image_filename,
-        )
-        plt.tight_layout()
-        plt.show()
+        if _created_fig:
+            save_plot_images(
+                filename="threshold_metrics_overlay",
+                save_plot=save_plot,
+                image_path_png=image_path_png,
+                image_path_svg=image_path_svg,
+                image_filename=image_filename,
+            )
+            plt.tight_layout()
+            plt.show()
 
     # Finalise subplots
     elif subplots:
@@ -4051,7 +4107,11 @@ def combine_plots(
     suptitle=None,
     suptitle_y=0.98,
     label_fontsize=12,
+    tick_fontsize=10,
     tight_layout=True,
+    hspace=None,
+    wspace=None,
+    height_ratios=None,
     save_plot=False,
     image_path_png=None,
     image_path_svg=None,
@@ -4066,6 +4126,11 @@ def combine_plots(
     to the corresponding plotting function via the `ax` keyword argument.
     Individual plt.show() and save calls inside each function are suppressed
     when an external axes is supplied.
+
+    `label_fontsize` and `tick_fontsize` are injected into each panel
+    function automatically if the function accepts those parameters and the
+    caller has not already set them explicitly in the panel's kwargs dict.
+    Per-panel overrides always take precedence.
 
     Parameters
     ----------
@@ -4084,9 +4149,29 @@ def combine_plots(
     suptitle_y : float, default=0.98
         Vertical position of the suptitle (0-1 range).
     label_fontsize : int, default=12
-        Font size for the suptitle.
+        Font size for axis labels and titles inside each panel, and for the
+        suptitle (rendered at label_fontsize + 2). Injected into each panel
+        function automatically unless overridden per-panel in plot_calls.
+    tick_fontsize : int, default=10
+        Font size for tick labels and legend text inside each panel. Injected
+        into each panel function automatically unless overridden per-panel in
+        plot_calls.
     tight_layout : bool, default=True
-        Whether to call plt.tight_layout() before displaying.
+        Whether to call plt.tight_layout() before displaying. Ignored when
+        hspace or wspace are provided, since constrained_layout is used
+        instead and handles per-row legend overflow automatically.
+    hspace : float, optional
+        Vertical spacing between subplot rows. When provided, switches the
+        figure to constrained_layout and applies hspace via
+        fig.get_layout_engine().set(). Useful when legend_loc="bottom"
+        causes uneven row gaps.
+    wspace : float, optional
+        Horizontal spacing between subplot columns. Same behavior as hspace.
+    height_ratios : list of float, optional
+        Relative heights of each row in the subplot grid. Length must equal
+        the number of rows. Use to shrink rows with smaller plots (e.g.,
+        confusion matrices) and reduce the gap between rows.
+        Example: [1, 0.7, 1, 1] shrinks the second row to 70% height.
     save_plot : bool, default=False
         Whether to save the combined figure to disk.
     image_path_png : str, optional
@@ -4108,6 +4193,8 @@ def combine_plots(
     TypeError
         If any entry in plot_calls is not a (callable, dict) tuple.
     """
+    import inspect
+
     if not plot_calls:
         raise ValueError("plot_calls must contain at least one (func, kwargs) tuple.")
 
@@ -4127,10 +4214,18 @@ def combine_plots(
     _n_cols = n_cols
     _n_rows = n_rows if n_rows is not None else math.ceil(num_plots / _n_cols)
 
+    use_constrained = hspace is not None or wspace is not None
+
+    gridspec_kw = {}
+    if height_ratios is not None:
+        gridspec_kw["height_ratios"] = height_ratios
+
     fig, axes = plt.subplots(
         _n_rows,
         _n_cols,
         figsize=figsize or (_n_cols * 6, _n_rows * 5),
+        constrained_layout=use_constrained,
+        gridspec_kw=gridspec_kw or None,
     )
 
     # Always work with a flat list of axes. plt.subplots(1, N) returns an
@@ -4146,7 +4241,13 @@ def combine_plots(
     for i, (func, kwargs) in enumerate(plot_calls):
         ax = axes_flat[i]
         try:
-            func(**kwargs, ax=ax)
+            sig = inspect.signature(func)
+            merged = dict(kwargs)
+            if "label_fontsize" in sig.parameters and "label_fontsize" not in merged:
+                merged["label_fontsize"] = label_fontsize
+            if "tick_fontsize" in sig.parameters and "tick_fontsize" not in merged:
+                merged["tick_fontsize"] = tick_fontsize
+            func(**merged, ax=ax)
         except Exception as e:
             ax.text(
                 0.5,
@@ -4166,7 +4267,17 @@ def combine_plots(
     if suptitle:
         fig.suptitle(suptitle, fontsize=label_fontsize + 2, y=suptitle_y)
 
-    if tight_layout:
+    if use_constrained:
+        # constrained_layout handles per-row legend overflow automatically.
+        # hspace/wspace are passed through the layout engine.
+        layout_kwgs = {}
+        if hspace is not None:
+            layout_kwgs["hspace"] = hspace
+        if wspace is not None:
+            layout_kwgs["wspace"] = wspace
+        if layout_kwgs:
+            fig.get_layout_engine().set(**layout_kwgs)
+    elif tight_layout:
         plt.tight_layout()
 
     save_plot_images(
