@@ -485,6 +485,7 @@ _VENN_CATEGORY_SPEC = {
 
 
 def _venn_blend(c1, c2):
+    """Return the RGB midpoint of two matplotlib color specs."""
     r1, g1, b1 = to_rgb(c1)
     r2, g2, b2 = to_rgb(c2)
     return ((r1 + r2) / 2, (g1 + g2) / 2, (b1 + b2) / 2)
@@ -509,6 +510,7 @@ def _venn_resolve_side(side, y_pred, model, X):
 
 
 def _venn_category_counts(y_true, y_pred_a, y_pred_b, cat):
+    """Return (a_only, b_only, both, outside, n_sub) counts for one Venn category."""
     spec = _VENN_CATEGORY_SPEC[cat]
     sub = y_true == spec["subpop_val"]
     in_a = y_pred_a == spec["in_set_val"]
@@ -527,6 +529,7 @@ def _draw_one_venn(
     show_subtitle=True,
     title_pad=None,
 ):
+    """Render one category's overlap Venn into the provided axes."""
     spec = _VENN_CATEGORY_SPEC[cat]
     a_only, b_only, both, outside, n_sub = counts
     a_total = a_only + both

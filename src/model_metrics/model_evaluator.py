@@ -3040,44 +3040,122 @@ def plot_overlap_venns(
 
     Parameters
     ----------
+    y_true : array-like
+        True binary class labels (0 / 1). Coerced to int via
+        np.asarray(...).ravel().astype(int).
+    y_pred_a : array-like, optional
+        Binary predictions from Model A. Mutually exclusive with model_a on
+        the same side.
+    y_pred_b : array-like, optional
+        Binary predictions from Model B. Mutually exclusive with model_b on
+        the same side.
+    model_a : estimator, optional
+        Trained model object exposing .predict(). When provided, predictions
+        are generated via model_a.predict(X_a). Mutually exclusive with
+        y_pred_a.
+    model_b : estimator, optional
+        Trained model object exposing .predict(). When provided, predictions
+        are generated via model_b.predict(X_b). Mutually exclusive with
+        y_pred_b.
+    X_a : array-like, optional
+        Feature matrix for model_a. Required when model_a is supplied.
+    X_b : array-like, optional
+        Feature matrix for model_b. If both models share the same features,
+        leave X_b=None and X_b will default to X_a.
+    categories : str or sequence of str, default ("FN", "TN")
+        Confusion-matrix categories to plot, any subset of
+        {"TP", "FP", "FN", "TN"}. A bare string (e.g. categories="FN") is
+        accepted as shorthand for a single-category call.
+    label_a : str, default "Model A"
+        Display name for Model A, rendered beneath the left circle and
+        inside the A-only region.
+    label_b : str, default "Model B"
+        Display name for Model B, rendered beneath the right circle and
+        inside the B-only region.
     titles : dict, optional
-        Per-category title override, e.g. {"FN": "Missed ED admissions",
-        "TP": "Caught ED admissions"}. Keys must be a subset of
-        {"TP", "FP", "FN", "TN"}. Any category not in the dict uses the
-        default heading from _VENN_CATEGORY_SPEC. The auto-generated
-        subpopulation/outside-count line beneath the heading is always
-        preserved.
+        Per-category title override, e.g.
+        {"FN": "Missed ED admissions", "TP": "Caught ED admissions"}.
+        Keys must be a subset of {"TP", "FP", "FN", "TN"}. Any category not
+        in the dict uses the default heading from _VENN_CATEGORY_SPEC. The
+        auto-generated subpopulation/outside-count line beneath the heading
+        is always preserved.
     show_subtitle : bool, default True
         If True, append the auto-generated subpopulation summary line beneath
-        the heading (e.g. "Out of 2,338 actual positives · both catch (TP): 883").
-        Set False for a clean single-line title, e.g. when the heading is being
-        customized via `titles` and the extra stats would be redundant.
+        the heading (e.g. "Out of 2,338 actual positives  ·  both catch
+        (TP): 883"). Set False for a clean single-line title, e.g. when the
+        heading is being customized via `titles` and the extra stats would
+        be redundant.
+    title_pad : float, optional
+        Padding (in points) between the title and the top of the axes,
+        forwarded to ax.set_title(pad=...). None uses matplotlib's default
+        rcParams["axes.titlepad"] (normally 6.0).
+    inner_fontsize : int, default 12
+        Font size for the count + role labels inside each Venn region.
+    outer_fontsize : int, default 12
+        Font size for the set labels rendered beneath each circle.
+    title_fontsize : int, default 11
+        Font size for the panel title above each Venn diagram.
+    figsize : tuple of float, optional
+        Figure size (width, height) in inches. When None and the function
+        creates its own figure, defaults to (7 * ncols, panel_h * nrows)
+        where panel_h is 5.0 if show_subtitle=True and 4.3 otherwise.
+        Ignored when ax is supplied.
+    ncols : int, optional
+        Number of columns in the panel grid. When None, defaults to 1 if
+        there is a single category and 2 otherwise. nrows is derived from
+        ncols and the category count.
+    pad : float, default 1.08
+        Outer figure padding passed to plt.tight_layout(pad=...). Only
+        applied when the function creates its own figure.
+    h_pad : float, optional
+        Vertical spacing between subplot rows, forwarded to
+        plt.tight_layout(h_pad=...). None defers to matplotlib's default.
+    w_pad : float, optional
+        Horizontal spacing between subplot columns, forwarded to
+        plt.tight_layout(w_pad=...). None defers to matplotlib's default.
     colors : tuple of color specs, optional
         2-tuple (color_a, color_b) sets the A-only and B-only patch colors;
         the intersection is the RGB midpoint. 3-tuple lets you specify the
         intersection color explicitly. Any matplotlib color spec works
         (named, hex, RGB tuple). If None, matplotlib_venn defaults apply.
-    alpha : float
-        Patch transparency when colors is provided. Default 0.4 matches
-        matplotlib_venn's default look.
+    alpha : float, default 0.4
+        Patch transparency applied when colors is provided. Default matches
+        matplotlib_venn's stock look.
     save_plot : bool, default False
         Whether to write the figure to disk via save_plot_images. Only
         applied when this function creates its own figure (ax is None).
     image_path_png : str, optional
-        Directory to save the PNG output.
+        Directory to save the PNG output. Only applied when this function
+        creates its own figure.
     image_path_svg : str, optional
-        Directory to save the SVG output.
+        Directory to save the SVG output. Only applied when this function
+        creates its own figure.
     image_filename : str, optional
         Custom filename override. When provided, saving is triggered
-        regardless of save_plot.
+        regardless of save_plot. Only applied when this function creates
+        its own figure.
     ax : matplotlib.axes.Axes, optional
-        Pre-existing axes to nest the Venn grid inside. When supplied,
-        the host ax is removed and its grid slot is subdivided into an
-        nrows x ncols sub-gridspec to hold all category panels. Used
-        when routing through combine_plots; the outer caller owns
-        tight_layout, save, and show in that case.
+        Pre-existing axes to nest the Venn grid inside. When supplied, the
+        host ax is removed and its grid slot is subdivided into an
+        nrows x ncols sub-gridspec to hold all category panels. Used when
+        routing through combine_plots; the outer caller owns tight_layout,
+        save, and show in that case.
 
-    (other params unchanged)
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError
+        If any value in `categories` is not one of {"TP", "FP", "FN", "TN"},
+        if any key in `titles` is outside that set, if both y_pred_a and
+        model_a (or both on side B) are provided, if a model is provided
+        without a corresponding feature matrix, or if `colors` is not a
+        2-tuple or 3-tuple.
+    TypeError
+        If model_a or model_b is supplied but does not implement a
+        .predict() method.
     """
     y_true = np.asarray(y_true).ravel().astype(int)
 
@@ -3085,6 +3163,10 @@ def plot_overlap_venns(
         X_b = X_a
     y_pred_a = _venn_resolve_side("a", y_pred_a, model_a, X_a)
     y_pred_b = _venn_resolve_side("b", y_pred_b, model_b, X_b)
+
+    # accept a bare string for the single-category case
+    if isinstance(categories, str):
+        categories = (categories,)
 
     bad = [c for c in categories if c not in _VENN_CATEGORY_SPEC]
     if bad:

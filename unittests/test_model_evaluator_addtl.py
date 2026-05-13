@@ -583,3 +583,13 @@ def test_combine_plots_with_overlap_venns(mock_show, clf_data):
         n_cols=2,
     )
     mock_show.assert_called_once()
+
+def test_plot_overlap_venns_accepts_bare_string_category():
+    y_true = np.random.randint(0, 2, size=30)
+    y_pred_a = np.random.randint(0, 2, size=30)
+    y_pred_b = np.random.randint(0, 2, size=30)
+    plot_overlap_venns(
+        y_true, y_pred_a, y_pred_b,
+        categories="FN",
+    )
+    plt.close("all")
