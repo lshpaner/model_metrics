@@ -3011,7 +3011,7 @@ def plot_overlap_venns(
     label_a="Model A",
     label_b="Model B",
     titles=None,
-    show_subtitle=True, 
+    show_subtitle=True,
     title_pad=None,
     inner_fontsize=12,
     outer_fontsize=12,
@@ -3023,6 +3023,11 @@ def plot_overlap_venns(
     w_pad=None,
     colors=None,
     alpha=0.4,
+    save_plot=False,
+    image_path_png=None,
+    image_path_svg=None,
+    image_filename=None,
+    ax=None,
 ):
     """
     Plot equal-area Venn diagrams of overlap between two binary classifiers,
@@ -3055,6 +3060,22 @@ def plot_overlap_venns(
     alpha : float
         Patch transparency when colors is provided. Default 0.4 matches
         matplotlib_venn's default look.
+    save_plot : bool, default False
+        Whether to write the figure to disk via save_plot_images. Only
+        applied when this function creates its own figure (ax is None).
+    image_path_png : str, optional
+        Directory to save the PNG output.
+    image_path_svg : str, optional
+        Directory to save the SVG output.
+    image_filename : str, optional
+        Custom filename override. When provided, saving is triggered
+        regardless of save_plot.
+    ax : matplotlib.axes.Axes, optional
+        Pre-existing axes to nest the Venn grid inside. When supplied,
+        the host ax is removed and its grid slot is subdivided into an
+        nrows x ncols sub-gridspec to hold all category panels. Used
+        when routing through combine_plots; the outer caller owns
+        tight_layout, save, and show in that case.
 
     (other params unchanged)
     """
@@ -3083,12 +3104,27 @@ def plot_overlap_venns(
     if ncols is None:
         ncols = 1 if n_cats == 1 else 2
     nrows = -(-n_cats // ncols)
-    if figsize is None:
-        panel_h = 5.0 if show_subtitle else 4.3
-        figsize = (7 * ncols, panel_h * nrows)
 
-    fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False)
-    axes_flat = axes.flatten()
+    if ax is None:
+        # standalone: own the figure
+        if figsize is None:
+            panel_h = 5.0 if show_subtitle else 4.3
+            figsize = (7 * ncols, panel_h * nrows)
+        fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False)
+        axes_flat = axes.flatten()
+        _created_fig = True
+    else:
+        # nested inside an existing axes (e.g. a combine_plots panel):
+        # release the host ax and carve a sub-gridspec from its slot.
+        fig = ax.figure
+        host_spec = ax.get_subplotspec()
+        ax.remove()
+        sub_gs = host_spec.subgridspec(nrows, ncols)
+        axes_flat = np.array([
+            fig.add_subplot(sub_gs[r, c])
+            for r in range(nrows) for c in range(ncols)
+        ])
+        _created_fig = False
 
     for i, cat in enumerate(categories):
         counts = _venn_category_counts(y_true, y_pred_a, y_pred_b, cat)
@@ -3105,15 +3141,24 @@ def plot_overlap_venns(
             colors,
             alpha,
             title_override=title_override,
-            show_subtitle=show_subtitle, 
+            show_subtitle=show_subtitle,
             title_pad=title_pad,
         )
 
     for j in range(n_cats, len(axes_flat)):
         axes_flat[j].axis("off")
 
-    plt.tight_layout(pad=pad, h_pad=h_pad, w_pad=w_pad)
-    plt.show()
+    if _created_fig:
+        plt.tight_layout(pad=pad, h_pad=h_pad, w_pad=w_pad)
+        save_plot_images(
+            "overlap_venns",
+            save_plot,
+            image_path_png,
+            image_path_svg,
+            image_filename=image_filename,
+            fig=fig,
+        )
+        plt.show()
 
 ################################################################################
 # Regression Residuals Plotting
