@@ -521,13 +521,21 @@ def _venn_category_counts(y_true, y_pred_a, y_pred_b, cat):
     outside = int((sub & ~in_a & ~in_b).sum())
     return a_only, b_only, both, outside, int(sub.sum())
 
+
 def _draw_one_venn(
-    ax, cat, counts, label_a, label_b,
-    inner_fontsize, outer_fontsize, title_fontsize,
-    colors, alpha,
+    ax,
+    cat,
+    counts,
+    label_a,
+    label_b,
+    inner_fontsize,
+    outer_fontsize,
+    title_fontsize,
+    colors,
+    alpha,
     title_override=None,
-    show_subtitle=True,
     title_pad=None,
+    label_kwgs=None,
 ):
     """Render one category's overlap Venn into the provided axes."""
     spec = _VENN_CATEGORY_SPEC[cat]
@@ -535,12 +543,32 @@ def _draw_one_venn(
     a_total = a_only + both
     b_total = b_only + both
 
+    opts = {
+        "show_title": True,
+        "show_subtitle": True,
+        "show_set_labels": True,
+        "show_set_totals": True,
+        "show_inner_count": True,
+        "show_inner_role": True,
+    }
+    if label_kwgs:
+        opts.update(label_kwgs)
+
+    # Build set labels beneath each circle
+    if opts["show_set_labels"] and opts["show_set_totals"]:
+        set_label_a = f"{label_a}\n{cat} total: {a_total:,}"
+        set_label_b = f"{label_b}\n{cat} total: {b_total:,}"
+    elif opts["show_set_labels"]:
+        set_label_a, set_label_b = label_a, label_b
+    elif opts["show_set_totals"]:
+        set_label_a = f"{cat} total: {a_total:,}"
+        set_label_b = f"{cat} total: {b_total:,}"
+    else:
+        set_label_a, set_label_b = "", ""
+
     v = venn2(
         subsets=(1, 1, 1),
-        set_labels=(
-            f"{label_a}\n{cat} total: {a_total:,}",
-            f"{label_b}\n{cat} total: {b_total:,}",
-        ),
+        set_labels=(set_label_a, set_label_b),
         ax=ax,
     )
 
@@ -558,33 +586,86 @@ def _draw_one_venn(
                 patch.set_color(c)
                 patch.set_alpha(alpha)
 
+    # Inner region labels (count + role, either, or neither)
     for rid, count, role in (
         ("10", a_only, f"{label_a}"),
         ("01", b_only, f"{label_b}"),
         ("11", both, spec["both_role"]),
     ):
         lab = v.get_label_by_id(rid)
-        if lab is not None:
-            lab.set_text(f"{count:,}\n{role}")
-            lab.set_fontsize(inner_fontsize)
+        if lab is None:
+            continue
+        parts = []
+        if opts["show_inner_count"]:
+            parts.append(f"{count:,}")
+        if opts["show_inner_role"]:
+            parts.append(role)
+        lab.set_text("\n".join(parts))
+        lab.set_fontsize(inner_fontsize)
+
     for sl in v.set_labels:
         if sl is not None:
             sl.set_fontsize(outer_fontsize)
 
+    # Title
+    if not opts["show_title"]:
+        ax.set_title("")
+        return
+
     main_title = title_override if title_override is not None else spec["title"]
-    if show_subtitle:
+    if opts["show_subtitle"]:
         full_title = (
             f"{main_title}\n"
-            f"Out of {n_sub:,} {spec['subpop_name']}  \u00b7  "
+            f"Out of {n_sub:,} {spec['subpop_name']}\n"
             f"{spec['outside_label']}: {outside:,}"
         )
     else:
         full_title = main_title
-    ax.set_title(full_title, fontsize=title_fontsize, weight="bold", pad=title_pad)
+    ax.set_title(
+        full_title,
+        fontsize=title_fontsize,
+        weight="bold",
+        pad=title_pad if title_pad is not None else 2.0,
+    )
+
+
+def _venn_default_figsize(
+    counts_per_cat,
+    categories,
+    titles,
+    label_kwgs,
+    title_fontsize,
+    ncols,
+    nrows,
+):
+    """Size the figure so the longest rendered title fits without overflow."""
+    opts = label_kwgs or {}
+    show_title = opts.get("show_title", True)
+    show_subtitle = opts.get("show_subtitle", True)
+
+    max_chars = 0
+    if show_title:
+        for cat in categories:
+            spec = _VENN_CATEGORY_SPEC[cat]
+            heading = (titles or {}).get(cat, spec["title"])
+            max_chars = max(max_chars, len(heading))
+            if show_subtitle:
+                _, _, _, outside, n_sub = counts_per_cat[cat]
+                # subtitle is rendered on two lines, size to the longer one
+                line1 = f"Out of {n_sub:,} {spec['subpop_name']}"
+                line2 = f"{spec['outside_label']}: {outside:,}"
+                max_chars = max(max_chars, len(line1), len(line2))
+
+    char_w_inches = title_fontsize * 0.009
+    panel_w = max(5.5, max_chars * char_w_inches + 0.6)
+    panel_h = 5.0
+    return (panel_w * ncols, panel_h * nrows)
+
 
 ################################################################################
 ############################ Regression Helpers ################################
 ################################################################################
+
 
 def compute_residual_diagnostics(
     residuals,

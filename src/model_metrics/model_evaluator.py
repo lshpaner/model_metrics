@@ -49,6 +49,7 @@ from model_metrics.metrics_utils import (
     _venn_resolve_side,
     _venn_category_counts,
     _draw_one_venn,
+    _venn_default_figsize,
 )
 
 from model_metrics.plot_utils import (
@@ -2998,6 +2999,7 @@ def plot_threshold_metrics(
 # Model Comparison Venn Diagrams for Confusion Matrix
 ################################################################################
 
+
 def plot_overlap_venns(
     y_true,
     y_pred_a=None,
@@ -3011,8 +3013,8 @@ def plot_overlap_venns(
     label_a="Model A",
     label_b="Model B",
     titles=None,
-    show_subtitle=True,
     title_pad=None,
+    label_kwgs=None,
     inner_fontsize=12,
     outer_fontsize=12,
     title_fontsize=11,
@@ -3079,12 +3081,6 @@ def plot_overlap_venns(
         in the dict uses the default heading from _VENN_CATEGORY_SPEC. The
         auto-generated subpopulation/outside-count line beneath the heading
         is always preserved.
-    show_subtitle : bool, default True
-        If True, append the auto-generated subpopulation summary line beneath
-        the heading (e.g. "Out of 2,338 actual positives  ·  both catch
-        (TP): 883"). Set False for a clean single-line title, e.g. when the
-        heading is being customized via `titles` and the extra stats would
-        be redundant.
     title_pad : float, optional
         Padding (in points) between the title and the top of the axes,
         forwarded to ax.set_title(pad=...). None uses matplotlib's default
@@ -3182,16 +3178,28 @@ def plot_overlap_venns(
                 f"Valid: {sorted(_VENN_CATEGORY_SPEC)}"
             )
 
+    # pre-compute counts once so they feed both figsize estimation and rendering
+    counts_per_cat = {
+        cat: _venn_category_counts(y_true, y_pred_a, y_pred_b, cat)
+        for cat in categories
+    }
+
     n_cats = len(categories)
     if ncols is None:
         ncols = 1 if n_cats == 1 else 2
     nrows = -(-n_cats // ncols)
 
     if ax is None:
-        # standalone: own the figure
         if figsize is None:
-            panel_h = 5.0 if show_subtitle else 4.3
-            figsize = (7 * ncols, panel_h * nrows)
+            figsize = _venn_default_figsize(
+                counts_per_cat,
+                categories,
+                titles,
+                label_kwgs,  
+                title_fontsize,
+                ncols,
+                nrows,
+            )
         fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False)
         axes_flat = axes.flatten()
         _created_fig = True
@@ -3202,14 +3210,13 @@ def plot_overlap_venns(
         host_spec = ax.get_subplotspec()
         ax.remove()
         sub_gs = host_spec.subgridspec(nrows, ncols)
-        axes_flat = np.array([
-            fig.add_subplot(sub_gs[r, c])
-            for r in range(nrows) for c in range(ncols)
-        ])
+        axes_flat = np.array(
+            [fig.add_subplot(sub_gs[r, c]) for r in range(nrows) for c in range(ncols)]
+        )
         _created_fig = False
 
     for i, cat in enumerate(categories):
-        counts = _venn_category_counts(y_true, y_pred_a, y_pred_b, cat)
+        counts = counts_per_cat[cat]
         title_override = (titles or {}).get(cat)
         _draw_one_venn(
             axes_flat[i],
@@ -3223,8 +3230,8 @@ def plot_overlap_venns(
             colors,
             alpha,
             title_override=title_override,
-            show_subtitle=show_subtitle,
             title_pad=title_pad,
+            label_kwgs=label_kwgs,
         )
 
     for j in range(n_cats, len(axes_flat)):
@@ -3241,6 +3248,7 @@ def plot_overlap_venns(
             fig=fig,
         )
         plt.show()
+
 
 ################################################################################
 # Regression Residuals Plotting
