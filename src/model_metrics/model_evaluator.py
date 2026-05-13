@@ -44,10 +44,10 @@ from model_metrics.metrics_utils import (
     has_feature_importances,
     get_feature_importances,
     get_coef_and_intercept,
-    _CATEGORY_SPEC, 
-    _venn_blend, 
-    _venn_resolve_side, 
-    _venn_category_counts, 
+    _VENN_CATEGORY_SPEC,
+    _venn_blend,
+    _venn_resolve_side,
+    _venn_category_counts,
     _draw_one_venn,
 )
 
@@ -60,7 +60,6 @@ from model_metrics.plot_utils import (
     setup_subplots,
     normalize_curve_styles,
 )
-
 
 ################################################################################
 ######################### Summarize Model Performance ##########################
@@ -2994,6 +2993,7 @@ def plot_threshold_metrics(
         )
         plt.show()
 
+
 ################################################################################
 # Model Comparison Venn Diagrams for Confusion Matrix
 ################################################################################
@@ -3010,6 +3010,9 @@ def plot_overlap_venns(
     categories=("FN", "TN"),
     label_a="Model A",
     label_b="Model B",
+    titles=None,
+    show_subtitle=True, 
+    title_pad=None,
     inner_fontsize=12,
     outer_fontsize=12,
     title_fontsize=11,
@@ -3032,6 +3035,18 @@ def plot_overlap_venns(
 
     Parameters
     ----------
+    titles : dict, optional
+        Per-category title override, e.g. {"FN": "Missed ED admissions",
+        "TP": "Caught ED admissions"}. Keys must be a subset of
+        {"TP", "FP", "FN", "TN"}. Any category not in the dict uses the
+        default heading from _VENN_CATEGORY_SPEC. The auto-generated
+        subpopulation/outside-count line beneath the heading is always
+        preserved.
+    show_subtitle : bool, default True
+        If True, append the auto-generated subpopulation summary line beneath
+        the heading (e.g. "Out of 2,338 actual positives · both catch (TP): 883").
+        Set False for a clean single-line title, e.g. when the heading is being
+        customized via `titles` and the extra stats would be redundant.
     colors : tuple of color specs, optional
         2-tuple (color_a, color_b) sets the A-only and B-only patch colors;
         the intersection is the RGB midpoint. 3-tuple lets you specify the
@@ -3045,32 +3060,53 @@ def plot_overlap_venns(
     """
     y_true = np.asarray(y_true).ravel().astype(int)
 
-    # default X_b to X_a for the shared-features case
     if X_b is None:
         X_b = X_a
     y_pred_a = _venn_resolve_side("a", y_pred_a, model_a, X_a)
     y_pred_b = _venn_resolve_side("b", y_pred_b, model_b, X_b)
 
-    bad = [c for c in categories if c not in _CATEGORY_SPEC]
+    bad = [c for c in categories if c not in _VENN_CATEGORY_SPEC]
     if bad:
-        raise ValueError(f"Unknown categories: {bad}. Valid: {sorted(_CATEGORY_SPEC)}")
+        raise ValueError(
+            f"Unknown categories: {bad}. Valid: {sorted(_VENN_CATEGORY_SPEC)}"
+        )
+
+    if titles is not None:
+        bad_titles = [k for k in titles if k not in _VENN_CATEGORY_SPEC]
+        if bad_titles:
+            raise ValueError(
+                f"Unknown title keys: {bad_titles}. "
+                f"Valid: {sorted(_VENN_CATEGORY_SPEC)}"
+            )
 
     n_cats = len(categories)
     if ncols is None:
         ncols = 1 if n_cats == 1 else 2
     nrows = -(-n_cats // ncols)
     if figsize is None:
-        figsize = (7 * ncols, 5 * nrows)
+        panel_h = 5.0 if show_subtitle else 4.3
+        figsize = (7 * ncols, panel_h * nrows)
 
     fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False)
     axes_flat = axes.flatten()
 
     for i, cat in enumerate(categories):
         counts = _venn_category_counts(y_true, y_pred_a, y_pred_b, cat)
+        title_override = (titles or {}).get(cat)
         _draw_one_venn(
-            axes_flat[i], cat, counts, label_a, label_b,
-            inner_fontsize, outer_fontsize, title_fontsize,
-            colors, alpha,
+            axes_flat[i],
+            cat,
+            counts,
+            label_a,
+            label_b,
+            inner_fontsize,
+            outer_fontsize,
+            title_fontsize,
+            colors,
+            alpha,
+            title_override=title_override,
+            show_subtitle=show_subtitle, 
+            title_pad=title_pad,
         )
 
     for j in range(n_cats, len(axes_flat)):

@@ -28,7 +28,6 @@ from statsmodels.stats.diagnostic import (
     het_goldfeldquandt,
 )
 
-
 ################################################################################
 ############################## Helper Functions ################################
 ################################################################################
@@ -449,31 +448,35 @@ def compute_leverage_and_cooks_distance(X, standardized_residuals):
 ########################## Model Venn Diagram Helpers ##########################
 ################################################################################
 
-_CATEGORY_SPEC = {
+_VENN_CATEGORY_SPEC = {
     "TP": dict(
         title="True Positives  (correctly caught)",
-        subpop_val=1, in_set_val=1,
+        subpop_val=1,
+        in_set_val=1,
         both_role="both catch",
         outside_label="both miss (FN)",
         subpop_name="actual positives",
     ),
     "FP": dict(
         title="False Positives  (false alarms)",
-        subpop_val=0, in_set_val=1,
+        subpop_val=0,
+        in_set_val=1,
         both_role="both false-alarm",
         outside_label="both clear (TN)",
         subpop_name="actual negatives",
     ),
     "FN": dict(
         title="False Negatives  (missed positives)",
-        subpop_val=1, in_set_val=0,
+        subpop_val=1,
+        in_set_val=0,
         both_role="both miss",
         outside_label="both catch (TP)",
         subpop_name="actual positives",
     ),
     "TN": dict(
         title="True Negatives  (correctly cleared)",
-        subpop_val=0, in_set_val=0,
+        subpop_val=0,
+        in_set_val=0,
         both_role="both correct",
         outside_label="both false-alarm (FP)",
         subpop_name="actual negatives",
@@ -506,7 +509,7 @@ def _venn_resolve_side(side, y_pred, model, X):
 
 
 def _venn_category_counts(y_true, y_pred_a, y_pred_b, cat):
-    spec = _CATEGORY_SPEC[cat]
+    spec = _VENN_CATEGORY_SPEC[cat]
     sub = y_true == spec["subpop_val"]
     in_a = y_pred_a == spec["in_set_val"]
     in_b = y_pred_b == spec["in_set_val"]
@@ -520,6 +523,9 @@ def _draw_one_venn(
     ax, cat, counts, label_a, label_b,
     inner_fontsize, outer_fontsize, title_fontsize,
     colors, alpha,
+    title_override=None,
+    show_subtitle=True,
+    title_pad=None,
 ):
     spec = _VENN_CATEGORY_SPEC[cat]
     a_only, b_only, both, outside, n_sub = counts
@@ -538,7 +544,7 @@ def _draw_one_venn(
     if colors is not None:
         if len(colors) == 2:
             c_a, c_b = colors
-            c_both = _blend_colors(c_a, c_b)
+            c_both = _venn_blend(c_a, c_b)
         elif len(colors) == 3:
             c_a, c_b, c_both = colors
         else:
@@ -561,14 +567,18 @@ def _draw_one_venn(
     for sl in v.set_labels:
         if sl is not None:
             sl.set_fontsize(outer_fontsize)
-    ax.set_title(
-        f"{spec['title']}\n"
-        f"Out of {n_sub:,} {spec['subpop_name']}  \u00b7  "
-        f"{spec['outside_label']}: {outside:,}",
-        fontsize=title_fontsize,
-        weight="bold",
-    )
-    
+
+    main_title = title_override if title_override is not None else spec["title"]
+    if show_subtitle:
+        full_title = (
+            f"{main_title}\n"
+            f"Out of {n_sub:,} {spec['subpop_name']}  \u00b7  "
+            f"{spec['outside_label']}: {outside:,}"
+        )
+    else:
+        full_title = main_title
+    ax.set_title(full_title, fontsize=title_fontsize, weight="bold", pad=title_pad)
+
 ################################################################################
 ############################ Regression Helpers ################################
 ################################################################################
