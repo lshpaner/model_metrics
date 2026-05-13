@@ -44,6 +44,11 @@ from model_metrics.metrics_utils import (
     has_feature_importances,
     get_feature_importances,
     get_coef_and_intercept,
+    _CATEGORY_SPEC, 
+    _venn_blend, 
+    _venn_resolve_side, 
+    _venn_category_counts, 
+    _draw_one_venn,
 )
 
 from model_metrics.plot_utils import (
@@ -2989,6 +2994,90 @@ def plot_threshold_metrics(
         )
         plt.show()
 
+################################################################################
+# Model Comparison Venn Diagrams for Confusion Matrix
+################################################################################
+
+def plot_overlap_venns(
+    y_true,
+    y_pred_a=None,
+    y_pred_b=None,
+    *,
+    model_a=None,
+    model_b=None,
+    X_a=None,
+    X_b=None,
+    categories=("FN", "TN"),
+    label_a="Model A",
+    label_b="Model B",
+    inner_fontsize=12,
+    outer_fontsize=12,
+    title_fontsize=11,
+    figsize=None,
+    ncols=None,
+    pad=1.08,
+    h_pad=None,
+    w_pad=None,
+    colors=None,
+    alpha=0.4,
+):
+    """
+    Plot equal-area Venn diagrams of overlap between two binary classifiers,
+    for any subset of {"TP", "FP", "FN", "TN"}.
+
+    For each side (a, b) supply EITHER:
+        * y_pred_a / y_pred_b directly, OR
+        * model_a / model_b plus X_a / X_b (model must implement .predict()).
+    If both models share features, you can pass X_a only and leave X_b=None.
+
+    Parameters
+    ----------
+    colors : tuple of color specs, optional
+        2-tuple (color_a, color_b) sets the A-only and B-only patch colors;
+        the intersection is the RGB midpoint. 3-tuple lets you specify the
+        intersection color explicitly. Any matplotlib color spec works
+        (named, hex, RGB tuple). If None, matplotlib_venn defaults apply.
+    alpha : float
+        Patch transparency when colors is provided. Default 0.4 matches
+        matplotlib_venn's default look.
+
+    (other params unchanged)
+    """
+    y_true = np.asarray(y_true).ravel().astype(int)
+
+    # default X_b to X_a for the shared-features case
+    if X_b is None:
+        X_b = X_a
+    y_pred_a = _venn_resolve_side("a", y_pred_a, model_a, X_a)
+    y_pred_b = _venn_resolve_side("b", y_pred_b, model_b, X_b)
+
+    bad = [c for c in categories if c not in _CATEGORY_SPEC]
+    if bad:
+        raise ValueError(f"Unknown categories: {bad}. Valid: {sorted(_CATEGORY_SPEC)}")
+
+    n_cats = len(categories)
+    if ncols is None:
+        ncols = 1 if n_cats == 1 else 2
+    nrows = -(-n_cats // ncols)
+    if figsize is None:
+        figsize = (7 * ncols, 5 * nrows)
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False)
+    axes_flat = axes.flatten()
+
+    for i, cat in enumerate(categories):
+        counts = _venn_category_counts(y_true, y_pred_a, y_pred_b, cat)
+        _draw_one_venn(
+            axes_flat[i], cat, counts, label_a, label_b,
+            inner_fontsize, outer_fontsize, title_fontsize,
+            colors, alpha,
+        )
+
+    for j in range(n_cats, len(axes_flat)):
+        axes_flat[j].axis("off")
+
+    plt.tight_layout(pad=pad, h_pad=h_pad, w_pad=w_pad)
+    plt.show()
 
 ################################################################################
 # Regression Residuals Plotting
