@@ -491,12 +491,40 @@ def _venn_blend(c1, c2):
     return ((r1 + r2) / 2, (g1 + g2) / 2, (b1 + b2) / 2)
 
 
-def _venn_resolve_side(side, y_pred, model, X):
-    """Return integer 1-D array of predictions for one side."""
-    if y_pred is not None and model is not None:
-        raise ValueError(f"Pass either y_pred_{side} or model_{side}, not both.")
+def _venn_resolve_side(
+    side,
+    y_pred,
+    model,
+    X,
+    y_true=None,
+    y_prob=None,
+    threshold=None,
+    score=None,
+):
+    """Return integer 1-D array of predictions for one side.
+
+    Accepts three mutually exclusive input paths for the same side:
+        * y_pred  -- binary predictions, used as-is
+        * y_prob  -- positive-class probabilities, thresholded internally
+                     via threshold (defaulting to 0.5 if unset)
+        * model + X -- predictions generated via the library's standard
+                     `get_predictions` helper. The model's stored
+                     `.threshold` attribute is looked up automatically
+                     (falling back to 0.5 if absent); threshold
+                     overrides; score picks a non-default key from the
+                     model's threshold dict.
+    """
+    provided = sum(v is not None for v in (y_pred, y_prob, model))
+    if provided > 1:
+        raise ValueError(
+            f"For side {side!r}, supply only one of "
+            f"y_pred_{side}, y_prob_{side}, or model_{side}."
+        )
     if y_pred is not None:
         return np.asarray(y_pred).ravel().astype(int)
+    if y_prob is not None:
+        threshold = threshold if threshold is not None else 0.5
+        return (np.asarray(y_prob).ravel() >= threshold).astype(int)
     if model is not None:
         if X is None:
             raise ValueError(
@@ -505,8 +533,18 @@ def _venn_resolve_side(side, y_pred, model, X):
             )
         if not hasattr(model, "predict"):
             raise TypeError(f"model_{side} has no .predict() method.")
-        return np.asarray(model.predict(X)).ravel().astype(int)
-    raise ValueError(f"Provide either y_pred_{side} or (model_{side}, X_{side}).")
+        _, _, y_pred, _ = get_predictions(
+            model,
+            X,
+            y_true,
+            model_threshold=True,
+            custom_threshold=threshold,
+            score=score,
+        )
+        return np.asarray(y_pred).ravel().astype(int)
+    raise ValueError(
+        f"Provide one of y_pred_{side}, y_prob_{side}, " f"or (model_{side}, X_{side})."
+    )
 
 
 def _venn_category_counts(y_true, y_pred_a, y_pred_b, cat):
@@ -660,6 +698,36 @@ def _venn_default_figsize(
     panel_w = max(5.5, max_chars * char_w_inches + 0.6)
     panel_h = 5.0
     return (panel_w * ncols, panel_h * nrows)
+
+
+def _overlap_table_categorize(yt, yp):
+    cats = np.empty(len(yt), dtype=object)
+    cats[(yt == 1) & (yp == 1)] = "TP"
+    cats[(yt == 1) & (yp == 0)] = "FN"
+    cats[(yt == 0) & (yp == 1)] = "FP"
+    cats[(yt == 0) & (yp == 0)] = "TN"
+    return cats
+
+
+def _print_overlap_summary_legend(label_a="Model A", label_b="Model B"):
+    """Print the column-meaning legend for overlap_summary output."""
+    text = f"""\
+overlap_summary columns
+-----------------------
+Rows: confusion-matrix category (TP, FP, FN, TN).
+
+  n_{label_a:<14} count {label_a} placed in this category
+  n_{label_b:<14} count {label_b} placed in this category
+  both             both models agreed on this category for the same observation
+  {label_a}_only{' ' * max(0, 11 - len(label_a))} {label_a} placed it here, {label_b} didn't
+  {label_b}_only{' ' * max(0, 11 - len(label_b))} {label_b} placed it here, {label_a} didn't
+  outside          in the subpop but neither model placed it here
+  subpop           denominator: actual positives for TP/FN,
+                   actual negatives for FP/TN
+
+Identity:  both + {label_a}_only + {label_b}_only + outside == subpop
+"""
+    print(text)
 
 
 ################################################################################

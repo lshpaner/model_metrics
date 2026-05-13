@@ -18,6 +18,8 @@ from model_metrics.model_evaluator import (
     plot_threshold_metrics,
     combine_plots,
     plot_overlap_venns,
+    overlap_table,
+    overlap_summary,
 )
 
 matplotlib.use("Agg")
@@ -667,3 +669,52 @@ def test_plot_overlap_venns_label_kwgs_unknown_key(mock_show, clf_data):
         label_kwgs={"show_inner_count": False, "bogus_key": True},
     )
     plt.close("all")
+
+
+def test_overlap_table_basic():
+    y_true = np.array([1, 1, 0, 0])
+    y_pred_a = np.array([1, 0, 0, 0])
+    y_pred_b = np.array([1, 1, 1, 0])
+    df = overlap_table(y_true, y_pred_a, y_pred_b, label_a="A", label_b="B")
+    assert list(df.columns) == ["y_true", "A", "B", "A_category", "B_category", "agree"]
+    assert df["A_category"].tolist() == ["TP", "FN", "TN", "TN"]
+    assert df["B_category"].tolist() == ["TP", "TP", "FP", "TN"]
+    assert df["agree"].tolist() == [True, False, False, True]
+
+
+def test_overlap_table_with_index():
+    y_true = np.array([1, 0, 1])
+    df = overlap_table(
+        y_true,
+        [1, 0, 0],
+        [1, 1, 1],
+        label_a="A",
+        label_b="B",
+        index=["p1", "p2", "p3"],
+    )
+    assert df.index.tolist() == ["p1", "p2", "p3"]
+
+
+def test_overlap_summary_shape_and_index():
+    y_true = np.random.randint(0, 2, size=50)
+    y_pred_a = np.random.randint(0, 2, size=50)
+    y_pred_b = np.random.randint(0, 2, size=50)
+    s = overlap_summary(y_true, y_pred_a, y_pred_b, label_a="A", label_b="B")
+    assert list(s.index) == ["TP", "FP", "FN", "TN"]
+    assert {"n_A", "n_B", "both", "A_only", "B_only", "outside", "subpop"} == set(
+        s.columns
+    )
+
+
+def test_overlap_summary_consistency_with_venn():
+    # The summary counts must match _venn_category_counts exactly
+    y_true = np.array([1, 1, 1, 0, 0, 0])
+    y_pred_a = np.array([1, 0, 1, 0, 1, 0])
+    y_pred_b = np.array([1, 1, 0, 1, 1, 0])
+    s = overlap_summary(y_true, y_pred_a, y_pred_b, label_a="A", label_b="B")
+    # FN subpop = actual positives = 3
+    assert s.loc["FN", "subpop"] == 3
+    # TP subpop is also actual positives = 3
+    assert s.loc["TP", "subpop"] == 3
+    # TN subpop = actual negatives = 3
+    assert s.loc["TN", "subpop"] == 3
