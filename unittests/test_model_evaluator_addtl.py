@@ -584,12 +584,86 @@ def test_combine_plots_with_overlap_venns(mock_show, clf_data):
     )
     mock_show.assert_called_once()
 
+
 def test_plot_overlap_venns_accepts_bare_string_category():
     y_true = np.random.randint(0, 2, size=30)
     y_pred_a = np.random.randint(0, 2, size=30)
     y_pred_b = np.random.randint(0, 2, size=30)
     plot_overlap_venns(
-        y_true, y_pred_a, y_pred_b,
+        y_true,
+        y_pred_a,
+        y_pred_b,
         categories="FN",
+    )
+    plt.close("all")
+
+
+@patch("model_metrics.model_evaluator.plt.show")
+def test_plot_overlap_venns_label_kwgs_all_off(mock_show, clf_data):
+    """Every toggle off renders a bare venn without error."""
+    X, y, model, y_prob = clf_data
+    y_pred_a = model.predict(X)
+    y_pred_b = (np.random.rand(len(y)) > 0.5).astype(int)
+    plot_overlap_venns(
+        y_true=y,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        categories=("FN",),
+        label_kwgs={
+            "show_title": False,
+            "show_subtitle": False,
+            "show_set_labels": False,
+            "show_set_totals": False,
+            "show_inner_count": False,
+            "show_inner_role": False,
+        },
+    )
+    plt.close("all")
+
+
+@patch("model_metrics.model_evaluator.plt.show")
+def test_plot_overlap_venns_label_kwgs_partial(mock_show, clf_data):
+    """Partial label_kwgs leaves unspecified toggles at their defaults."""
+    X, y, model, y_prob = clf_data
+    y_pred_a = model.predict(X)
+    y_pred_b = (np.random.rand(len(y)) > 0.5).astype(int)
+    plot_overlap_venns(
+        y_true=y,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        categories=("FN", "TP"),
+        label_kwgs={"show_inner_role": False},
+    )
+    plt.close("all")
+
+
+@patch("model_metrics.model_evaluator.plt.show")
+def test_plot_overlap_venns_label_kwgs_none(mock_show, clf_data):
+    """label_kwgs=None is equivalent to passing no label_kwgs at all."""
+    X, y, model, y_prob = clf_data
+    y_pred_a = model.predict(X)
+    y_pred_b = (np.random.rand(len(y)) > 0.5).astype(int)
+    plot_overlap_venns(
+        y_true=y,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        categories=("FN",),
+        label_kwgs=None,
+    )
+    plt.close("all")
+
+
+@patch("model_metrics.model_evaluator.plt.show")
+def test_plot_overlap_venns_label_kwgs_unknown_key(mock_show, clf_data):
+    """Unknown keys in label_kwgs are silently ignored, not raised."""
+    X, y, model, y_prob = clf_data
+    y_pred_a = model.predict(X)
+    y_pred_b = (np.random.rand(len(y)) > 0.5).astype(int)
+    plot_overlap_venns(
+        y_true=y,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        categories=("FN",),
+        label_kwgs={"show_inner_count": False, "bogus_key": True},
     )
     plt.close("all")

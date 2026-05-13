@@ -2,6 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import matplotlib
+
 matplotlib.use("Agg")  # headless, never opens a window
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
@@ -835,7 +836,7 @@ def test_plot_overlap_venns_no_subtitle():
         y_pred_a,
         y_pred_b,
         categories=("FN",),
-        show_subtitle=False,
+        label_kwgs={"show_subtitle": False},
     )
     plt.close("all")
 
@@ -913,4 +914,3 @@ def test_plot_overlap_venns_savefig_writes_png(tmp_path):
     )
     assert list(tmp_path.glob("*.png"))
     plt.close("all")
-
