@@ -5,6 +5,8 @@ import numpy as np
 from scipy.stats import spearmanr, jarque_bera, norm
 from statsmodels.stats.stattools import durbin_watson
 import matplotlib.pyplot as plt
+from matplotlib.colors import to_rgb
+from matplotlib_venn import venn2
 from tqdm import tqdm
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import (
@@ -442,6 +444,134 @@ def compute_leverage_and_cooks_distance(X, standardized_residuals):
     except Exception as e:
         return None, None, None, None
 
+
+################################################################################
+########################## Model Venn Diagram Helpers ##########################
+################################################################################
+
+_CATEGORY_SPEC = {
+    "TP": dict(
+        title="True Positives  (correctly caught)",
+        subpop_val=1, in_set_val=1,
+        both_role="both catch",
+        outside_label="both miss (FN)",
+        subpop_name="actual positives",
+    ),
+    "FP": dict(
+        title="False Positives  (false alarms)",
+        subpop_val=0, in_set_val=1,
+        both_role="both false-alarm",
+        outside_label="both clear (TN)",
+        subpop_name="actual negatives",
+    ),
+    "FN": dict(
+        title="False Negatives  (missed positives)",
+        subpop_val=1, in_set_val=0,
+        both_role="both miss",
+        outside_label="both catch (TP)",
+        subpop_name="actual positives",
+    ),
+    "TN": dict(
+        title="True Negatives  (correctly cleared)",
+        subpop_val=0, in_set_val=0,
+        both_role="both correct",
+        outside_label="both false-alarm (FP)",
+        subpop_name="actual negatives",
+    ),
+}
+
+
+def _venn_blend(c1, c2):
+    r1, g1, b1 = to_rgb(c1)
+    r2, g2, b2 = to_rgb(c2)
+    return ((r1 + r2) / 2, (g1 + g2) / 2, (b1 + b2) / 2)
+
+
+def _venn_resolve_side(side, y_pred, model, X):
+    """Return integer 1-D array of predictions for one side."""
+    if y_pred is not None and model is not None:
+        raise ValueError(f"Pass either y_pred_{side} or model_{side}, not both.")
+    if y_pred is not None:
+        return np.asarray(y_pred).ravel().astype(int)
+    if model is not None:
+        if X is None:
+            raise ValueError(
+                f"model_{side} given but X_{side} is missing "
+                f"(or pass X_a alone if both models share features)."
+            )
+        if not hasattr(model, "predict"):
+            raise TypeError(f"model_{side} has no .predict() method.")
+        return np.asarray(model.predict(X)).ravel().astype(int)
+    raise ValueError(f"Provide either y_pred_{side} or (model_{side}, X_{side}).")
+
+
+def _venn_category_counts(y_true, y_pred_a, y_pred_b, cat):
+    spec = _CATEGORY_SPEC[cat]
+    sub = y_true == spec["subpop_val"]
+    in_a = y_pred_a == spec["in_set_val"]
+    in_b = y_pred_b == spec["in_set_val"]
+    a_only = int((sub & in_a & ~in_b).sum())
+    b_only = int((sub & ~in_a & in_b).sum())
+    both = int((sub & in_a & in_b).sum())
+    outside = int((sub & ~in_a & ~in_b).sum())
+    return a_only, b_only, both, outside, int(sub.sum())
+
+def _draw_one_venn(
+    ax, cat, counts, label_a, label_b,
+    inner_fontsize, outer_fontsize, title_fontsize,
+    colors, alpha,
+):
+    spec = _VENN_CATEGORY_SPEC[cat]
+    a_only, b_only, both, outside, n_sub = counts
+    a_total = a_only + both
+    b_total = b_only + both
+
+    v = venn2(
+        subsets=(1, 1, 1),
+        set_labels=(
+            f"{label_a}\n{cat} total: {a_total:,}",
+            f"{label_b}\n{cat} total: {b_total:,}",
+        ),
+        ax=ax,
+    )
+
+    if colors is not None:
+        if len(colors) == 2:
+            c_a, c_b = colors
+            c_both = _blend_colors(c_a, c_b)
+        elif len(colors) == 3:
+            c_a, c_b, c_both = colors
+        else:
+            raise ValueError("colors must be a 2- or 3-tuple of color specs.")
+        for rid, c in (("10", c_a), ("01", c_b), ("11", c_both)):
+            patch = v.get_patch_by_id(rid)
+            if patch is not None:
+                patch.set_color(c)
+                patch.set_alpha(alpha)
+
+    for rid, count, role in (
+        ("10", a_only, f"{label_a}"),
+        ("01", b_only, f"{label_b}"),
+        ("11", both, spec["both_role"]),
+    ):
+        lab = v.get_label_by_id(rid)
+        if lab is not None:
+            lab.set_text(f"{count:,}\n{role}")
+            lab.set_fontsize(inner_fontsize)
+    for sl in v.set_labels:
+        if sl is not None:
+            sl.set_fontsize(outer_fontsize)
+    ax.set_title(
+        f"{spec['title']}\n"
+        f"Out of {n_sub:,} {spec['subpop_name']}  \u00b7  "
+        f"{spec['outside_label']}: {outside:,}",
+        fontsize=title_fontsize,
+        weight="bold",
+    )
+    
+################################################################################
+############################ Regression Helpers ################################
+################################################################################
 
 def compute_residual_diagnostics(
     residuals,
