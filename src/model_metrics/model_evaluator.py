@@ -50,6 +50,8 @@ from model_metrics.metrics_utils import (
     _venn_category_counts,
     _draw_one_venn,
     _venn_default_figsize,
+    _overlap_table_categorize,
+    _print_overlap_summary_legend,
 )
 
 from model_metrics.plot_utils import (
@@ -3005,10 +3007,16 @@ def plot_overlap_venns(
     y_pred_a=None,
     y_pred_b=None,
     *,
+    y_prob_a=None,
+    y_prob_b=None,
     model_a=None,
     model_b=None,
     X_a=None,
     X_b=None,
+    threshold_a=None,
+    threshold_b=None,
+    score_a=None,
+    score_b=None,
     categories=("FN", "TN"),
     label_a="Model A",
     label_b="Model B",
@@ -3035,39 +3043,69 @@ def plot_overlap_venns(
     Plot equal-area Venn diagrams of overlap between two binary classifiers,
     for any subset of {"TP", "FP", "FN", "TN"}.
 
-    For each side (a, b) supply EITHER:
-        * y_pred_a / y_pred_b directly, OR
-        * model_a / model_b plus X_a / X_b (model must implement .predict()).
-    If both models share features, you can pass X_a only and leave X_b=None.
+    For each side (a, b) supply EXACTLY ONE of:
+        * y_pred_a / y_pred_b directly (binary predictions, used as-is)
+        * y_prob_a / y_prob_b (positive-class probabilities, thresholded
+          internally)
+        * model_a / model_b plus X_a / X_b (model must implement
+          .predict())
+    If both models share features, you can pass X_a only and leave
+    X_b=None.
+
+    When the model_* path is used, predictions are routed through the
+    library's standard `get_predictions` helper. By default, each model's
+    stored `.threshold` attribute is looked up automatically (falling back
+    to 0.5 if absent); pass `threshold_a` / `threshold_b` to
+    override per side. When the y_prob_* path is used, the threshold
+    defaults to 0.5 and custom_threshold_* overrides directly.
 
     Parameters
     ----------
     y_true : array-like
         True binary class labels (0 / 1). Coerced to int via
         np.asarray(...).ravel().astype(int).
-    y_pred_a : array-like, optional
-        Binary predictions from Model A. Mutually exclusive with model_a on
-        the same side.
-    y_pred_b : array-like, optional
-        Binary predictions from Model B. Mutually exclusive with model_b on
-        the same side.
+    y_pred_a, y_pred_b : array-like, optional
+        Binary predictions from each model. Mutually exclusive with
+        y_prob_* and model_* on the same side. When supplied directly,
+        the custom_threshold_* and score_* parameters are ignored on
+        that side.
+    y_prob_a, y_prob_b : array-like, optional
+        Positive-class probabilities from each model. Mutually exclusive
+        with y_pred_* and model_* on the same side. Thresholded
+        internally via custom_threshold_* (defaults to 0.5 if no
+        custom_threshold is set). The score_* parameter is ignored on
+        this path.
     model_a : estimator, optional
-        Trained model object exposing .predict(). When provided, predictions
-        are generated via model_a.predict(X_a). Mutually exclusive with
-        y_pred_a.
+        Trained model object exposing .predict() (and .predict_proba() if
+        a threshold is applied). Mutually exclusive with y_pred_a and
+        y_prob_a.
     model_b : estimator, optional
-        Trained model object exposing .predict(). When provided, predictions
-        are generated via model_b.predict(X_b). Mutually exclusive with
-        y_pred_b.
+        Trained model object exposing .predict() (and .predict_proba() if
+        a threshold is applied). Mutually exclusive with y_pred_b and
+        y_prob_b.
     X_a : array-like, optional
         Feature matrix for model_a. Required when model_a is supplied.
     X_b : array-like, optional
-        Feature matrix for model_b. If both models share the same features,
-        leave X_b=None and X_b will default to X_a.
+        Feature matrix for model_b. If both models share the same
+        features, leave X_b=None and X_b will default to X_a.
+    threshold_a, threshold_b : float, optional
+        Per-side explicit threshold override. When set, used directly as
+        the decision threshold for the y_prob_* and model_* paths. When
+        None (default), the y_prob_* path uses 0.5 and the model_* path
+        falls back to the model's stored `.threshold` attribute (or 0.5
+        if absent). Ignored when y_pred_a / y_pred_b is supplied
+        directly.
+    score_a, score_b : str, optional
+        Score key used to look up the threshold from the model's
+        `.threshold` dict on the model_* path. If None,
+        `get_predictions` falls back to the first entry in the model's
+        `.scoring` list. Ignored when custom_threshold_* is set on the
+        same side, or when y_pred_a / y_prob_a / y_pred_b / y_prob_b is
+        supplied directly.
     categories : str or sequence of str, default ("FN", "TN")
         Confusion-matrix categories to plot, any subset of
-        {"TP", "FP", "FN", "TN"}. A bare string (e.g. categories="FN") is
-        accepted as shorthand for a single-category call.
+        {"TP", "FP", "FN", "TN"}. A bare string (e.g. categories="FN")
+        is accepted as shorthand for a single-category call.
     label_a : str, default "Model A"
         Display name for Model A, rendered beneath the left circle and
         inside the A-only region.
@@ -3077,14 +3115,20 @@ def plot_overlap_venns(
     titles : dict, optional
         Per-category title override, e.g.
         {"FN": "Missed ED admissions", "TP": "Caught ED admissions"}.
-        Keys must be a subset of {"TP", "FP", "FN", "TN"}. Any category not
-        in the dict uses the default heading from _VENN_CATEGORY_SPEC. The
-        auto-generated subpopulation/outside-count line beneath the heading
-        is always preserved.
+        Keys must be a subset of {"TP", "FP", "FN", "TN"}. Any category
+        not in the dict uses the default heading from
+        _VENN_CATEGORY_SPEC. The auto-generated subpopulation/outside-
+        count line beneath the heading is always preserved.
     title_pad : float, optional
         Padding (in points) between the title and the top of the axes,
-        forwarded to ax.set_title(pad=...). None uses matplotlib's default
-        rcParams["axes.titlepad"] (normally 6.0).
+        forwarded to ax.set_title(pad=...). None uses matplotlib's
+        default rcParams["axes.titlepad"] (normally 6.0).
+    label_kwgs : dict, optional
+        Fine-grained visibility toggles for the text decorations on each
+        Venn panel. Recognized keys (all bool, all default True):
+        show_title, show_subtitle, show_set_labels, show_set_totals,
+        show_inner_count, show_inner_role. Pass only the keys you want
+        to override; unspecified keys keep their defaults.
     inner_fontsize : int, default 12
         Font size for the count + role labels inside each Venn region.
     outer_fontsize : int, default 12
@@ -3092,50 +3136,54 @@ def plot_overlap_venns(
     title_fontsize : int, default 11
         Font size for the panel title above each Venn diagram.
     figsize : tuple of float, optional
-        Figure size (width, height) in inches. When None and the function
-        creates its own figure, defaults to (7 * ncols, panel_h * nrows)
-        where panel_h is 5.0 if show_subtitle=True and 4.3 otherwise.
-        Ignored when ax is supplied.
+        Figure size (width, height) in inches. When None and the
+        function creates its own figure, defaults to the dynamic sizing
+        from _venn_default_figsize (width floors at 5.5", height fixed
+        at 5.0", width grows with title text length). Ignored when ax is
+        supplied.
     ncols : int, optional
-        Number of columns in the panel grid. When None, defaults to 1 if
-        there is a single category and 2 otherwise. nrows is derived from
-        ncols and the category count.
+        Number of columns in the panel grid. When None, defaults to 1
+        if there is a single category and 2 otherwise. nrows is derived
+        from ncols and the category count.
     pad : float, default 1.08
         Outer figure padding passed to plt.tight_layout(pad=...). Only
         applied when the function creates its own figure.
     h_pad : float, optional
         Vertical spacing between subplot rows, forwarded to
-        plt.tight_layout(h_pad=...). None defers to matplotlib's default.
+        plt.tight_layout(h_pad=...). None defers to matplotlib's
+        default.
     w_pad : float, optional
         Horizontal spacing between subplot columns, forwarded to
-        plt.tight_layout(w_pad=...). None defers to matplotlib's default.
+        plt.tight_layout(w_pad=...). None defers to matplotlib's
+        default.
     colors : tuple of color specs, optional
-        2-tuple (color_a, color_b) sets the A-only and B-only patch colors;
-        the intersection is the RGB midpoint. 3-tuple lets you specify the
-        intersection color explicitly. Any matplotlib color spec works
-        (named, hex, RGB tuple). If None, matplotlib_venn defaults apply.
+        2-tuple (color_a, color_b) sets the A-only and B-only patch
+        colors; the intersection is the RGB midpoint. 3-tuple lets you
+        specify the intersection color explicitly. Any matplotlib color
+        spec works (named, hex, RGB tuple). If None, matplotlib_venn
+        defaults apply.
     alpha : float, default 0.4
-        Patch transparency applied when colors is provided. Default matches
-        matplotlib_venn's stock look.
+        Patch transparency applied when colors is provided. Default
+        matches matplotlib_venn's stock look.
     save_plot : bool, default False
         Whether to write the figure to disk via save_plot_images. Only
         applied when this function creates its own figure (ax is None).
     image_path_png : str, optional
-        Directory to save the PNG output. Only applied when this function
-        creates its own figure.
+        Directory to save the PNG output. Only applied when this
+        function creates its own figure.
     image_path_svg : str, optional
-        Directory to save the SVG output. Only applied when this function
-        creates its own figure.
+        Directory to save the SVG output. Only applied when this
+        function creates its own figure.
     image_filename : str, optional
         Custom filename override. When provided, saving is triggered
         regardless of save_plot. Only applied when this function creates
         its own figure.
     ax : matplotlib.axes.Axes, optional
-        Pre-existing axes to nest the Venn grid inside. When supplied, the
-        host ax is removed and its grid slot is subdivided into an
-        nrows x ncols sub-gridspec to hold all category panels. Used when
-        routing through combine_plots; the outer caller owns tight_layout,
-        save, and show in that case.
+        Pre-existing axes to nest the Venn grid inside. When supplied,
+        the host ax is removed and its grid slot is subdivided into an
+        nrows x ncols sub-gridspec to hold all category panels. Used
+        when routing through combine_plots; the outer caller owns
+        tight_layout, save, and show in that case.
 
     Returns
     -------
@@ -3144,11 +3192,11 @@ def plot_overlap_venns(
     Raises
     ------
     ValueError
-        If any value in `categories` is not one of {"TP", "FP", "FN", "TN"},
-        if any key in `titles` is outside that set, if both y_pred_a and
-        model_a (or both on side B) are provided, if a model is provided
-        without a corresponding feature matrix, or if `colors` is not a
-        2-tuple or 3-tuple.
+        If any value in `categories` is not one of {"TP", "FP", "FN",
+        "TN"}, if any key in `titles` is outside that set, if more than
+        one of y_pred_*, y_prob_*, model_* is provided on the same side,
+        if a model is provided without a corresponding feature matrix,
+        or if `colors` is not a 2-tuple or 3-tuple.
     TypeError
         If model_a or model_b is supplied but does not implement a
         .predict() method.
@@ -3157,8 +3205,26 @@ def plot_overlap_venns(
 
     if X_b is None:
         X_b = X_a
-    y_pred_a = _venn_resolve_side("a", y_pred_a, model_a, X_a)
-    y_pred_b = _venn_resolve_side("b", y_pred_b, model_b, X_b)
+    y_pred_a = _venn_resolve_side(
+        "a",
+        y_pred_a,
+        model_a,
+        X_a,
+        y_true=y_true,
+        y_prob=y_prob_a,
+        threshold=threshold_a,
+        score=score_a,
+    )
+    y_pred_b = _venn_resolve_side(
+        "b",
+        y_pred_b,
+        model_b,
+        X_b,
+        y_true=y_true,
+        y_prob=y_prob_b,
+        threshold=threshold_b,
+        score=score_b,
+    )
 
     # accept a bare string for the single-category case
     if isinstance(categories, str):
@@ -3195,7 +3261,7 @@ def plot_overlap_venns(
                 counts_per_cat,
                 categories,
                 titles,
-                label_kwgs,  
+                label_kwgs,
                 title_fontsize,
                 ncols,
                 nrows,
@@ -3248,6 +3314,279 @@ def plot_overlap_venns(
             fig=fig,
         )
         plt.show()
+
+
+def overlap_table(
+    y_true,
+    y_pred_a=None,
+    y_pred_b=None,
+    *,
+    y_prob_a=None,
+    y_prob_b=None,
+    model_a=None,
+    model_b=None,
+    X_a=None,
+    X_b=None,
+    threshold_a=None,
+    threshold_b=None,
+    score_a=None,
+    score_b=None,
+    label_a="Model A",
+    label_b="Model B",
+    index=None,
+):
+    """
+    Return a per-observation DataFrame classifying each row as TP/FP/FN/TN
+    for both models, with an agreement flag.
+
+    For each side (a, b) supply EXACTLY ONE of:
+        * y_pred_a / y_pred_b directly (binary predictions, used as-is)
+        * y_prob_a / y_prob_b (positive-class probabilities, thresholded
+          internally)
+        * model_a / model_b plus X_a / X_b (model must implement
+          .predict())
+    If both models share features, pass X_a only and leave X_b=None.
+
+    When the model_* path is used, predictions are routed through the
+    library's standard `get_predictions` helper. By default, each model's
+    stored `.threshold` attribute is looked up automatically (falling back
+    to 0.5 if absent); pass `threshold_a` / `threshold_b` to override per
+    side. When the y_prob_* path is used, the threshold defaults to 0.5
+    and threshold_* overrides directly.
+
+    Parameters
+    ----------
+    y_true : array-like
+        True binary labels.
+    y_pred_a, y_pred_b : array-like, optional
+        Binary predictions from each model. Mutually exclusive with
+        y_prob_* and model_* on the same side. When supplied directly,
+        the threshold_* and score_* parameters are ignored on that side.
+    y_prob_a, y_prob_b : array-like, optional
+        Positive-class probabilities from each model. Mutually exclusive
+        with y_pred_* and model_* on the same side. Thresholded
+        internally via threshold_* (defaults to 0.5 if no threshold is
+        set). The score_* parameter is ignored on this path.
+    model_a, model_b : estimator, optional
+        Trained models exposing .predict(). Mutually exclusive with
+        y_pred_* and y_prob_* on the same side.
+    X_a, X_b : array-like, optional
+        Feature matrices for model_a / model_b. X_b defaults to X_a when
+        both models share features.
+    threshold_a, threshold_b : float, optional
+        Per-side explicit decision threshold. When set, used directly
+        for the y_prob_* and model_* paths. When None (default), the
+        y_prob_* path uses 0.5 and the model_* path falls back to the
+        model's stored `.threshold` attribute (or 0.5 if absent).
+        Ignored when y_pred_a / y_pred_b is supplied directly.
+    score_a, score_b : str, optional
+        Score key used to look up the threshold from the model's
+        `.threshold` dict on the model_* path. If None,
+        `get_predictions` falls back to the first entry in the model's
+        `.scoring` list. Ignored when threshold_* is set on the same
+        side, or when y_pred_a / y_prob_a / y_pred_b / y_prob_b is
+        supplied directly.
+    label_a, label_b : str, default "Model A" / "Model B"
+        Used as column-name stems in the returned DataFrame.
+    index : array-like or pd.Index, optional
+        Custom index for the returned DataFrame (e.g. a patient ID
+        Series). Defaults to RangeIndex.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns: y_true, {label_a}_pred, {label_b}_pred,
+        {label_a}_category, {label_b}_category, agree. One row per
+        observation.
+
+    Raises
+    ------
+    ValueError
+        If more than one of y_pred_*, y_prob_*, model_* is provided on
+        the same side, or if a model is provided without a corresponding
+        feature matrix.
+    TypeError
+        If model_a or model_b is supplied but does not implement a
+        .predict() method.
+    """
+    y_true = np.asarray(y_true).ravel().astype(int)
+    if X_b is None:
+        X_b = X_a
+    y_pred_a = _venn_resolve_side(
+        "a",
+        y_pred_a,
+        model_a,
+        X_a,
+        y_true=y_true,
+        y_prob=y_prob_a,
+        threshold=threshold_a,
+        score=score_a,
+    )
+    y_pred_b = _venn_resolve_side(
+        "b",
+        y_pred_b,
+        model_b,
+        X_b,
+        y_true=y_true,
+        y_prob=y_prob_b,
+        threshold=threshold_b,
+        score=score_b,
+    )
+
+    cat_a = _overlap_table_categorize(y_true, y_pred_a)
+    cat_b = _overlap_table_categorize(y_true, y_pred_b)
+
+    df = pd.DataFrame(
+        {
+            "y_true": y_true,
+            f"{label_a}_pred": y_pred_a,
+            f"{label_b}_pred": y_pred_b,
+            f"{label_a}_category": cat_a,
+            f"{label_b}_category": cat_b,
+            "agree": cat_a == cat_b,
+        }
+    )
+    if index is not None:
+        df.index = pd.Index(index)
+    return df
+
+
+def overlap_summary(
+    y_true,
+    y_pred_a=None,
+    y_pred_b=None,
+    *,
+    y_prob_a=None,
+    y_prob_b=None,
+    model_a=None,
+    model_b=None,
+    X_a=None,
+    X_b=None,
+    threshold_a=None,
+    threshold_b=None,
+    score_a=None,
+    score_b=None,
+    label_a="Model A",
+    label_b="Model B",
+    verbose=False,
+):
+    """
+    Return a per-category summary DataFrame of TP/FP/FN/TN overlap counts.
+
+    For each side (a, b) supply EXACTLY ONE of:
+        * y_pred_a / y_pred_b directly (binary predictions, used as-is)
+        * y_prob_a / y_prob_b (positive-class probabilities, thresholded
+          internally)
+        * model_a / model_b plus X_a / X_b (model must implement
+          .predict())
+
+    When the model_* path is used, predictions are routed through the
+    library's standard `get_predictions` helper. By default, each model's
+    stored `.threshold` attribute is looked up automatically (falling back
+    to 0.5 if absent); pass `threshold_a` / `threshold_b` to override per
+    side. When the y_prob_* path is used, the threshold defaults to 0.5
+    and threshold_* overrides directly.
+
+    Parameters
+    ----------
+    y_true : array-like
+        True binary labels.
+    y_pred_a, y_pred_b : array-like, optional
+        Binary predictions from each model. Mutually exclusive with
+        y_prob_* and model_* on the same side. When supplied directly,
+        the threshold_* and score_* parameters are ignored on that side.
+    y_prob_a, y_prob_b : array-like, optional
+        Positive-class probabilities from each model. Mutually exclusive
+        with y_pred_* and model_* on the same side. Thresholded
+        internally via threshold_* (defaults to 0.5 if no threshold is
+        set). The score_* parameter is ignored on this path.
+    model_a, model_b : estimator, optional
+        Trained models exposing .predict(). Mutually exclusive with
+        y_pred_* and y_prob_* on the same side.
+    X_a, X_b : array-like, optional
+        Feature matrices for model_a / model_b. X_b defaults to X_a when
+        both models share features.
+    threshold_a, threshold_b : float, optional
+        Per-side explicit decision threshold. When set, used directly
+        for the y_prob_* and model_* paths. When None (default), the
+        y_prob_* path uses 0.5 and the model_* path falls back to the
+        model's stored `.threshold` attribute (or 0.5 if absent).
+        Ignored when y_pred_a / y_pred_b is supplied directly.
+    score_a, score_b : str, optional
+        Score key used to look up the threshold from the model's
+        `.threshold` dict on the model_* path. If None,
+        `get_predictions` falls back to the first entry in the model's
+        `.scoring` list. Ignored when threshold_* is set on the same
+        side, or when y_pred_a / y_prob_a / y_pred_b / y_prob_b is
+        supplied directly.
+    label_a, label_b : str, default "Model A" / "Model B"
+        Used as column-name stems in the returned DataFrame.
+    verbose : bool, default False
+        If True, print the column-meaning legend.
+
+    Returns
+    -------
+    pd.DataFrame
+        Four-row DataFrame indexed by {TP, FP, FN, TN} with columns
+        n_{label_a}, n_{label_b}, both, {label_a}_only, {label_b}_only,
+        outside, subpop. The four partition columns (both, {label_a}_only,
+        {label_b}_only, outside) sum to subpop on every row. The per-model
+        totals decompose as n_{label_a} = both + {label_a}_only and
+        n_{label_b} = both + {label_b}_only.
+
+    Raises
+    ------
+    ValueError
+        If more than one of y_pred_*, y_prob_*, model_* is provided on
+        the same side, or if a model is provided without a corresponding
+        feature matrix.
+    TypeError
+        If model_a or model_b is supplied but does not implement a
+        .predict() method.
+    """
+    y_true = np.asarray(y_true).ravel().astype(int)
+    if X_b is None:
+        X_b = X_a
+    y_pred_a = _venn_resolve_side(
+        "a",
+        y_pred_a,
+        model_a,
+        X_a,
+        y_true=y_true,
+        y_prob=y_prob_a,
+        threshold=threshold_a,
+        score=score_a,
+    )
+    y_pred_b = _venn_resolve_side(
+        "b",
+        y_pred_b,
+        model_b,
+        X_b,
+        y_true=y_true,
+        y_prob=y_prob_b,
+        threshold=threshold_b,
+        score=score_b,
+    )
+
+    rows = []
+    for cat in ("TP", "FP", "FN", "TN"):
+        a_only, b_only, both, outside, n_sub = _venn_category_counts(
+            y_true, y_pred_a, y_pred_b, cat
+        )
+        rows.append(
+            {
+                f"n_{label_a}": a_only + both,
+                f"n_{label_b}": b_only + both,
+                "both": both,
+                f"{label_a}_only": a_only,
+                f"{label_b}_only": b_only,
+                "outside": outside,
+                "subpop": n_sub,
+            }
+        )
+    if verbose:
+        _print_overlap_summary_legend(label_a, label_b)
+    return pd.DataFrame(rows, index=["TP", "FP", "FN", "TN"])
 
 
 ################################################################################
