@@ -1,6 +1,9 @@
 import pytest
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")  # headless, never opens a window
+import matplotlib.pyplot as plt
 import statsmodels.api as sm
 from sklearn.pipeline import Pipeline
 
@@ -22,6 +25,15 @@ from model_metrics.metrics_utils import (
     validate_and_normalize_inputs,
     check_heteroskedasticity,
     compute_classification_metrics,
+)
+
+from model_metrics.metrics_utils import (
+    _venn_blend,
+    _venn_resolve_side,
+    _venn_category_counts,
+)
+from model_metrics.model_evaluator import (
+    plot_overlap_venns,
 )
 
 
@@ -561,3 +573,344 @@ def test_hanley_mcneil_identical_probs():
     result = hanley_mcneil_auc_test(y_true, y_prob, y_prob)
 
     assert result is None
+
+
+# --------------------------
+# _venn_blend
+# --------------------------
+
+
+def test_venn_blend_named():
+    out = _venn_blend("red", "blue")
+    # red = (1, 0, 0), blue = (0, 0, 1), midpoint = (0.5, 0, 0.5)
+    assert out[0] == pytest.approx(0.5)
+    assert out[1] == pytest.approx(0.0)
+    assert out[2] == pytest.approx(0.5)
+
+
+def test_venn_blend_hex():
+    out = _venn_blend("#ff0000", "#0000ff")
+    assert out[0] == pytest.approx(0.5)
+    assert out[2] == pytest.approx(0.5)
+
+
+def test_venn_blend_returns_3tuple():
+    out = _venn_blend("white", "black")
+    assert len(out) == 3
+    for c in out:
+        assert 0.0 <= c <= 1.0
+
+
+# --------------------------
+# _venn_resolve_side
+# --------------------------
+
+
+def test_venn_resolve_side_from_y_pred():
+    arr = _venn_resolve_side("a", [0, 1, 1, 0], None, None)
+    assert arr.tolist() == [0, 1, 1, 0]
+
+
+def test_venn_resolve_side_from_model_and_X():
+    X = np.random.randn(20, 3)
+    y = np.random.randint(0, 2, size=20)
+    m = LogisticRegression().fit(X, y)
+    arr = _venn_resolve_side("a", None, m, X)
+    assert arr.shape == (20,)
+
+
+def test_venn_resolve_side_both_raises():
+    with pytest.raises(ValueError):
+        _venn_resolve_side("a", [0, 1], LogisticRegression(), None)
+
+
+def test_venn_resolve_side_neither_raises():
+    with pytest.raises(ValueError):
+        _venn_resolve_side("a", None, None, None)
+
+
+def test_venn_resolve_side_model_without_X_raises():
+    with pytest.raises(ValueError):
+        _venn_resolve_side("a", None, LogisticRegression(), None)
+
+
+def test_venn_resolve_side_no_predict_method_raises():
+
+    class FakeModel:
+        pass
+
+    with pytest.raises(TypeError):
+        _venn_resolve_side("a", None, FakeModel(), np.zeros((5, 2)))
+
+
+# --------------------------
+# _venn_category_counts
+# --------------------------
+
+
+def test_venn_category_counts_returns_5_tuple():
+    y_true = np.array([1, 1, 0, 0])
+    y_pred_a = np.array([1, 0, 0, 0])
+    y_pred_b = np.array([1, 1, 0, 1])
+    result = _venn_category_counts(y_true, y_pred_a, y_pred_b, "FN")
+    assert len(result) == 5
+    for v in result:
+        assert isinstance(v, int)
+
+
+def test_venn_category_counts_fn_correct():
+    # FN subpop = actual positives; FN = predicted 0 when actual is 1.
+    # Construct so each region has exactly one observation.
+    y_true = np.array([1, 1, 1, 1])
+    y_pred_a = np.array([0, 0, 1, 1])  # a misses indices 0, 1
+    y_pred_b = np.array([0, 1, 0, 1])  # b misses indices 0, 2
+    # both miss index 0; a-only misses 1; b-only misses 2; neither misses 3
+    a_only, b_only, both, outside, n_sub = _venn_category_counts(
+        y_true, y_pred_a, y_pred_b, "FN"
+    )
+    assert a_only == 1
+    assert b_only == 1
+    assert both == 1
+    assert outside == 1
+    assert n_sub == 4
+
+
+def test_venn_category_counts_tp_correct():
+    y_true = np.array([1, 1, 1, 1])
+    y_pred_a = np.array([1, 1, 0, 0])
+    y_pred_b = np.array([1, 0, 1, 0])
+    # both catch index 0; a-only catches 1; b-only catches 2; neither catches 3
+    a_only, b_only, both, outside, n_sub = _venn_category_counts(
+        y_true, y_pred_a, y_pred_b, "TP"
+    )
+    assert a_only == 1
+    assert b_only == 1
+    assert both == 1
+    assert outside == 1
+    assert n_sub == 4
+
+
+def test_venn_category_counts_tn_correct():
+    y_true = np.array([0, 0, 0, 0])
+    y_pred_a = np.array([0, 0, 1, 1])
+    y_pred_b = np.array([0, 1, 0, 1])
+    # TN: subpop is actual negatives; in_set means predicted 0
+    a_only, b_only, both, outside, n_sub = _venn_category_counts(
+        y_true, y_pred_a, y_pred_b, "TN"
+    )
+    assert both == 1
+    assert n_sub == 4
+
+
+# --------------------------
+# plot_overlap_venns (plural)
+# --------------------------
+
+
+def test_plot_overlap_venns_basic_runs():
+    y_true = np.array([0, 1, 1, 0, 1, 0, 1, 0])
+    y_pred_a = np.array([0, 1, 0, 0, 1, 0, 1, 1])
+    y_pred_b = np.array([0, 1, 1, 0, 0, 1, 1, 0])
+    plot_overlap_venns(y_true, y_pred_a, y_pred_b)
+    plt.close("all")
+
+
+def test_plot_overlap_venns_all_four_categories():
+    y_true = np.random.randint(0, 2, size=50)
+    y_pred_a = np.random.randint(0, 2, size=50)
+    y_pred_b = np.random.randint(0, 2, size=50)
+    plot_overlap_venns(
+        y_true,
+        y_pred_a,
+        y_pred_b,
+        categories=("FN", "TN", "TP", "FP"),
+    )
+    plt.close("all")
+
+
+def test_plot_overlap_venns_single_category():
+    y_true = np.random.randint(0, 2, size=30)
+    y_pred_a = np.random.randint(0, 2, size=30)
+    y_pred_b = np.random.randint(0, 2, size=30)
+    plot_overlap_venns(
+        y_true,
+        y_pred_a,
+        y_pred_b,
+        categories=("FN",),
+    )
+    plt.close("all")
+
+
+def test_plot_overlap_venns_with_models():
+    X = np.random.randn(50, 3)
+    y = np.random.randint(0, 2, size=50)
+    m1 = LogisticRegression().fit(X, y)
+    m2 = LogisticRegression().fit(X, y)
+    plot_overlap_venns(
+        y,
+        model_a=m1,
+        model_b=m2,
+        X_a=X,
+    )
+    plt.close("all")
+
+
+def test_plot_overlap_venns_models_different_X():
+    X1 = np.random.randn(40, 3)
+    X2 = np.random.randn(40, 5)
+    y = np.random.randint(0, 2, size=40)
+    m1 = LogisticRegression().fit(X1, y)
+    m2 = LogisticRegression().fit(X2, y)
+    plot_overlap_venns(
+        y,
+        model_a=m1,
+        model_b=m2,
+        X_a=X1,
+        X_b=X2,
+    )
+    plt.close("all")
+
+
+def test_plot_overlap_venns_unknown_category_raises():
+    y_true = np.array([0, 1, 0, 1])
+    y_pred_a = np.array([0, 1, 1, 1])
+    y_pred_b = np.array([1, 1, 0, 1])
+    with pytest.raises(ValueError):
+        plot_overlap_venns(
+            y_true,
+            y_pred_a,
+            y_pred_b,
+            categories=("XX",),
+        )
+
+
+def test_plot_overlap_venns_bad_titles_keys_raises():
+    y_true = np.array([0, 1, 0, 1])
+    y_pred_a = np.array([0, 1, 1, 1])
+    y_pred_b = np.array([1, 1, 0, 1])
+    with pytest.raises(ValueError):
+        plot_overlap_venns(
+            y_true,
+            y_pred_a,
+            y_pred_b,
+            titles={"BAD": "nope"},
+        )
+
+
+def test_plot_overlap_venns_invalid_colors_length_raises():
+    y_true = np.random.randint(0, 2, size=30)
+    y_pred_a = np.random.randint(0, 2, size=30)
+    y_pred_b = np.random.randint(0, 2, size=30)
+    with pytest.raises(ValueError):
+        plot_overlap_venns(
+            y_true,
+            y_pred_a,
+            y_pred_b,
+            categories=("FN",),
+            colors=("red",),
+        )
+    plt.close("all")
+
+
+def test_plot_overlap_venns_custom_titles():
+    y_true = np.random.randint(0, 2, size=30)
+    y_pred_a = np.random.randint(0, 2, size=30)
+    y_pred_b = np.random.randint(0, 2, size=30)
+    plot_overlap_venns(
+        y_true,
+        y_pred_a,
+        y_pred_b,
+        categories=("FN",),
+        titles={"FN": "Custom Heading"},
+    )
+    plt.close("all")
+
+
+def test_plot_overlap_venns_no_subtitle():
+    y_true = np.random.randint(0, 2, size=30)
+    y_pred_a = np.random.randint(0, 2, size=30)
+    y_pred_b = np.random.randint(0, 2, size=30)
+    plot_overlap_venns(
+        y_true,
+        y_pred_a,
+        y_pred_b,
+        categories=("FN",),
+        show_subtitle=False,
+    )
+    plt.close("all")
+
+
+def test_plot_overlap_venns_with_colors_2tuple():
+    y_true = np.random.randint(0, 2, size=30)
+    y_pred_a = np.random.randint(0, 2, size=30)
+    y_pred_b = np.random.randint(0, 2, size=30)
+    plot_overlap_venns(
+        y_true,
+        y_pred_a,
+        y_pred_b,
+        categories=("FN",),
+        colors=("steelblue", "crimson"),
+    )
+    plt.close("all")
+
+
+def test_plot_overlap_venns_with_colors_3tuple():
+    y_true = np.random.randint(0, 2, size=30)
+    y_pred_a = np.random.randint(0, 2, size=30)
+    y_pred_b = np.random.randint(0, 2, size=30)
+    plot_overlap_venns(
+        y_true,
+        y_pred_a,
+        y_pred_b,
+        categories=("FN",),
+        colors=("steelblue", "crimson", "purple"),
+    )
+    plt.close("all")
+
+
+def test_plot_overlap_venns_with_ax_subgridspec():
+    fig, ax = plt.subplots(figsize=(8, 6))
+    y_true = np.random.randint(0, 2, size=30)
+    y_pred_a = np.random.randint(0, 2, size=30)
+    y_pred_b = np.random.randint(0, 2, size=30)
+    plot_overlap_venns(
+        y_true,
+        y_pred_a,
+        y_pred_b,
+        categories=("FN", "TN"),
+        ax=ax,
+    )
+    plt.close("all")
+
+
+def test_plot_overlap_venns_savefig_disabled_by_default(tmp_path):
+    y_true = np.random.randint(0, 2, size=30)
+    y_pred_a = np.random.randint(0, 2, size=30)
+    y_pred_b = np.random.randint(0, 2, size=30)
+    plot_overlap_venns(
+        y_true,
+        y_pred_a,
+        y_pred_b,
+        categories=("FN",),
+        image_path_png=str(tmp_path),
+    )
+    # save_plot defaults to False, so no file should be written
+    assert not list(tmp_path.glob("*.png"))
+    plt.close("all")
+
+
+def test_plot_overlap_venns_savefig_writes_png(tmp_path):
+    y_true = np.random.randint(0, 2, size=30)
+    y_pred_a = np.random.randint(0, 2, size=30)
+    y_pred_b = np.random.randint(0, 2, size=30)
+    plot_overlap_venns(
+        y_true,
+        y_pred_a,
+        y_pred_b,
+        categories=("FN",),
+        save_plot=True,
+        image_path_png=str(tmp_path),
+    )
+    assert list(tmp_path.glob("*.png"))
+    plt.close("all")
+

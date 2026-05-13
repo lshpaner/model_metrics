@@ -17,6 +17,7 @@ from model_metrics.model_evaluator import (
     show_gain_chart,
     plot_threshold_metrics,
     combine_plots,
+    plot_overlap_venns,
 )
 
 matplotlib.use("Agg")
@@ -389,3 +390,196 @@ def test_overlay_external_ax_does_not_save(clf_data, tmp_path):
         image_path_png=str(tmp_path),
     )
     assert list(tmp_path.iterdir()) == []
+
+
+# ==============================================================================
+# plot_overlap_venns
+# ==============================================================================
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_overlap_venns_basic(mock_show, clf_data):
+    """Standalone call triggers plt.show()."""
+    X, y, model, y_prob = clf_data
+    y_pred_a = model.predict(X)
+    y_pred_b = (np.random.rand(len(y)) > 0.5).astype(int)
+    plot_overlap_venns(
+        y_true=y,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        categories=("FN", "TN"),
+    )
+    mock_show.assert_called_once()
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_overlap_venns_all_four_categories(mock_show, clf_data):
+    X, y, model, y_prob = clf_data
+    y_pred_a = model.predict(X)
+    y_pred_b = (np.random.rand(len(y)) > 0.5).astype(int)
+    plot_overlap_venns(
+        y_true=y,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        categories=("FN", "TN", "TP", "FP"),
+    )
+    mock_show.assert_called_once()
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_overlap_venns_with_models_shared_X(mock_show, clf_data):
+    """model_a / model_b path with a single shared feature matrix."""
+    X, y, model, _ = clf_data
+    m2 = LogisticRegression(C=0.5, max_iter=1000).fit(X, y)
+    plot_overlap_venns(
+        y_true=y,
+        model_a=model,
+        model_b=m2,
+        X_a=X,
+    )
+    mock_show.assert_called_once()
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_overlap_venns_with_models_different_X(mock_show, clf_data):
+    """model_a / model_b path with separate feature matrices."""
+    X, y, model, _ = clf_data
+    X2 = X.copy()
+    X2["extra"] = np.random.rand(len(X2))
+    m2 = LogisticRegression(C=0.5, max_iter=1000).fit(X2, y)
+    plot_overlap_venns(
+        y_true=y,
+        model_a=model,
+        model_b=m2,
+        X_a=X,
+        X_b=X2,
+    )
+    mock_show.assert_called_once()
+
+
+def test_plot_overlap_venns_unknown_category_raises(clf_data):
+    X, y, model, _ = clf_data
+    y_pred = model.predict(X)
+    with pytest.raises(ValueError):
+        plot_overlap_venns(
+            y_true=y,
+            y_pred_a=y_pred,
+            y_pred_b=y_pred,
+            categories=("XX",),
+        )
+
+
+def test_plot_overlap_venns_bad_titles_keys_raises(clf_data):
+    X, y, model, _ = clf_data
+    y_pred = model.predict(X)
+    with pytest.raises(ValueError):
+        plot_overlap_venns(
+            y_true=y,
+            y_pred_a=y_pred,
+            y_pred_b=y_pred,
+            titles={"BAD": "nope"},
+        )
+
+
+def test_plot_overlap_venns_invalid_colors_length_raises(clf_data):
+    X, y, model, _ = clf_data
+    y_pred = model.predict(X)
+    with pytest.raises(ValueError):
+        plot_overlap_venns(
+            y_true=y,
+            y_pred_a=y_pred,
+            y_pred_b=y_pred,
+            categories=("FN",),
+            colors=("red",),
+        )
+
+
+def test_plot_overlap_venns_external_ax_no_show(clf_data):
+    """When ax= is supplied, the function must not call plt.show()."""
+    X, y, model, y_prob = clf_data
+    y_pred_a = model.predict(X)
+    y_pred_b = (np.random.rand(len(y)) > 0.5).astype(int)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    with patch("matplotlib.pyplot.show") as mock_show:
+        plot_overlap_venns(
+            y_true=y,
+            y_pred_a=y_pred_a,
+            y_pred_b=y_pred_b,
+            categories=("FN", "TN"),
+            ax=ax,
+        )
+        mock_show.assert_not_called()
+
+
+def test_plot_overlap_venns_external_ax_does_not_save(clf_data, tmp_path):
+    """ax + save_plot=True must not save (caller owns saving)."""
+    X, y, model, y_prob = clf_data
+    y_pred_a = model.predict(X)
+    y_pred_b = (np.random.rand(len(y)) > 0.5).astype(int)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    plot_overlap_venns(
+        y_true=y,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        categories=("FN",),
+        ax=ax,
+        save_plot=True,
+        image_path_png=str(tmp_path),
+    )
+    assert list(tmp_path.iterdir()) == []
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_overlap_venns_savefig_writes_png(mock_show, clf_data, tmp_path):
+    """Standalone with save_plot=True writes a PNG."""
+    X, y, model, y_prob = clf_data
+    y_pred_a = model.predict(X)
+    y_pred_b = (np.random.rand(len(y)) > 0.5).astype(int)
+    plot_overlap_venns(
+        y_true=y,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        categories=("FN",),
+        save_plot=True,
+        image_path_png=str(tmp_path),
+    )
+    assert list(tmp_path.glob("*.png"))
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_overlap_venns_savefig_disabled_by_default(mock_show, clf_data, tmp_path):
+    """Standalone without save_plot=True does not write a file."""
+    X, y, model, y_prob = clf_data
+    y_pred_a = model.predict(X)
+    y_pred_b = (np.random.rand(len(y)) > 0.5).astype(int)
+    plot_overlap_venns(
+        y_true=y,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        categories=("FN",),
+        image_path_png=str(tmp_path),
+    )
+    assert list(tmp_path.iterdir()) == []
+
+
+@patch("matplotlib.pyplot.show")
+def test_combine_plots_with_overlap_venns(mock_show, clf_data):
+    """plot_overlap_venns slots into combine_plots via the ax subgridspec hook."""
+    X, y, model, y_prob = clf_data
+    y_pred_a = model.predict(X)
+    y_pred_b = (np.random.rand(len(y)) > 0.5).astype(int)
+    venn_kwargs = {
+        "y_true": y,
+        "y_pred_a": y_pred_a,
+        "y_pred_b": y_pred_b,
+    }
+    combine_plots(
+        plot_calls=[
+            (show_roc_curve, {"y_prob": y_prob, "y": y}),
+            (plot_overlap_venns, {**venn_kwargs, "categories": ("FN",)}),
+            (plot_overlap_venns, {**venn_kwargs, "categories": ("TN",)}),
+            (plot_overlap_venns, {**venn_kwargs, "categories": ("TP",)}),
+        ],
+        n_cols=2,
+    )
+    mock_show.assert_called_once()
