@@ -723,3 +723,283 @@ def test_overlap_summary_consistency_with_venn():
     assert s.loc["TP", "subpop"] == 3
     # TN subpop = actual negatives = 3
     assert s.loc["TN", "subpop"] == 3
+
+
+def test_overlap_table_y_prob_path():
+    """y_prob_a / y_prob_b path produces same df shape as y_pred_a / y_pred_b."""
+    y_true = np.array([1, 1, 0, 0, 1, 0])
+    y_prob_a = np.array([0.6, 0.4, 0.3, 0.7, 0.8, 0.2])
+    y_prob_b = np.array([0.9, 0.55, 0.1, 0.6, 0.3, 0.45])
+    df = overlap_table(
+        y_true,
+        y_prob_a=y_prob_a,
+        y_prob_b=y_prob_b,
+        label_a="A",
+        label_b="B",
+    )
+    assert list(df.columns) == [
+        "y_true",
+        "A_pred",
+        "B_pred",
+        "A_category",
+        "B_category",
+        "agree",
+    ]
+    assert len(df) == 6
+
+
+def test_overlap_table_y_prob_with_threshold():
+    """Threshold parameter is honored on the y_prob path."""
+    y_true = np.array([1, 1, 0, 0])
+    y_prob_a = np.array([0.6, 0.4, 0.3, 0.7])
+    y_prob_b = np.array([0.9, 0.55, 0.1, 0.6])
+    df_low = overlap_table(
+        y_true,
+        y_prob_a=y_prob_a,
+        y_prob_b=y_prob_b,
+        threshold_a=0.3,
+        threshold_b=0.3,
+        label_a="A",
+        label_b="B",
+    )
+    df_high = overlap_table(
+        y_true,
+        y_prob_a=y_prob_a,
+        y_prob_b=y_prob_b,
+        threshold_a=0.7,
+        threshold_b=0.7,
+        label_a="A",
+        label_b="B",
+    )
+    # Lower threshold predicts more positives
+    assert df_low["A_pred"].sum() >= df_high["A_pred"].sum()
+    assert df_low["B_pred"].sum() >= df_high["B_pred"].sum()
+
+
+def test_overlap_table_model_path():
+    """model_a + X_a path works end-to-end."""
+    X = np.random.randn(30, 3)
+    y = np.random.randint(0, 2, size=30)
+    m1 = LogisticRegression().fit(X, y)
+    m2 = LogisticRegression(C=0.5).fit(X, y)
+    df = overlap_table(
+        y,
+        model_a=m1,
+        model_b=m2,
+        X_a=X,
+        label_a="A",
+        label_b="B",
+    )
+    assert len(df) == 30
+    assert df["A_pred"].isin([0, 1]).all()
+
+
+def test_overlap_table_three_way_exclusivity_raises():
+    """Cannot supply y_pred and y_prob on the same side."""
+    y_true = np.array([1, 1, 0, 0])
+    with pytest.raises(ValueError):
+        overlap_table(
+            y_true,
+            y_pred_a=[1, 0, 0, 1],
+            y_prob_a=[0.5, 0.5, 0.5, 0.5],
+            y_pred_b=[0, 1, 0, 1],
+        )
+
+
+def test_overlap_table_with_index():
+    """Custom index is applied to the returned df."""
+    y_true = np.array([1, 1, 0, 0])
+    y_pred_a = np.array([1, 0, 0, 0])
+    y_pred_b = np.array([1, 1, 1, 0])
+    patient_ids = ["P1", "P2", "P3", "P4"]
+    df = overlap_table(
+        y_true,
+        y_pred_a,
+        y_pred_b,
+        label_a="A",
+        label_b="B",
+        index=patient_ids,
+    )
+    assert list(df.index) == patient_ids
+
+
+def test_overlap_summary_column_names():
+    """Summary returns the 7 expected columns in the right order."""
+    y_true = np.array([1, 1, 0, 0, 1, 0])
+    y_pred_a = np.array([1, 0, 0, 1, 1, 0])
+    y_pred_b = np.array([1, 1, 0, 0, 0, 1])
+    df = overlap_summary(y_true, y_pred_a, y_pred_b, label_a="A", label_b="B")
+    assert list(df.columns) == [
+        "n_A",
+        "n_B",
+        "both",
+        "A_only",
+        "B_only",
+        "outside",
+        "subpop",
+    ]
+
+
+def test_overlap_summary_partition_identity():
+    """The four partition columns sum to subpop on every row."""
+    np.random.seed(0)
+    y_true = np.random.randint(0, 2, size=200)
+    y_pred_a = np.random.randint(0, 2, size=200)
+    y_pred_b = np.random.randint(0, 2, size=200)
+    df = overlap_summary(y_true, y_pred_a, y_pred_b, label_a="A", label_b="B")
+    partition_sum = df["both"] + df["A_only"] + df["B_only"] + df["outside"]
+    assert (partition_sum == df["subpop"]).all()
+
+
+def test_overlap_summary_per_model_decomposition():
+    """n_A = both + A_only and n_B = both + B_only on every row."""
+    np.random.seed(0)
+    y_true = np.random.randint(0, 2, size=200)
+    y_pred_a = np.random.randint(0, 2, size=200)
+    y_pred_b = np.random.randint(0, 2, size=200)
+    df = overlap_summary(y_true, y_pred_a, y_pred_b, label_a="A", label_b="B")
+    assert (df["n_A"] == df["both"] + df["A_only"]).all()
+    assert (df["n_B"] == df["both"] + df["B_only"]).all()
+
+
+def test_overlap_summary_row_index():
+    """Rows are indexed in confusion-matrix order: TP, FP, FN, TN."""
+    y_true = np.array([1, 1, 0, 0])
+    y_pred_a = np.array([1, 0, 0, 0])
+    y_pred_b = np.array([1, 1, 1, 0])
+    df = overlap_summary(y_true, y_pred_a, y_pred_b, label_a="A", label_b="B")
+    assert list(df.index) == ["TP", "FP", "FN", "TN"]
+
+
+def test_overlap_summary_subpop_correctness():
+    """subpop is actual positives for TP/FN, actual negatives for FP/TN."""
+    y_true = np.array([1, 1, 1, 1, 0, 0, 0])  # 4 positives, 3 negatives
+    y_pred_a = np.zeros(7, dtype=int)
+    y_pred_b = np.zeros(7, dtype=int)
+    df = overlap_summary(y_true, y_pred_a, y_pred_b, label_a="A", label_b="B")
+    assert df.loc["TP", "subpop"] == 4
+    assert df.loc["FN", "subpop"] == 4
+    assert df.loc["FP", "subpop"] == 3
+    assert df.loc["TN", "subpop"] == 3
+
+
+def test_overlap_summary_y_prob_path():
+    """y_prob path produces the same output shape."""
+    np.random.seed(0)
+    y_true = np.random.randint(0, 2, size=50)
+    y_prob_a = np.random.rand(50)
+    y_prob_b = np.random.rand(50)
+    df = overlap_summary(
+        y_true,
+        y_prob_a=y_prob_a,
+        y_prob_b=y_prob_b,
+        label_a="LR",
+        label_b="DT",
+    )
+    assert df.shape == (4, 7)
+    assert (
+        df["both"] + df["LR_only"] + df["DT_only"] + df["outside"] == df["subpop"]
+    ).all()
+
+
+def test_overlap_summary_y_prob_threshold_changes_output():
+    """Different thresholds produce different partition counts."""
+    np.random.seed(0)
+    y_true = np.random.randint(0, 2, size=100)
+    y_prob_a = np.random.rand(100)
+    y_prob_b = np.random.rand(100)
+    df_low = overlap_summary(
+        y_true,
+        y_prob_a=y_prob_a,
+        y_prob_b=y_prob_b,
+        threshold_a=0.3,
+        threshold_b=0.3,
+    )
+    df_high = overlap_summary(
+        y_true,
+        y_prob_a=y_prob_a,
+        y_prob_b=y_prob_b,
+        threshold_a=0.7,
+        threshold_b=0.7,
+    )
+    # At least one cell differs
+    assert not df_low.equals(df_high)
+
+
+def test_overlap_summary_verbose_prints_legend(capsys):
+    """verbose=True prints the column legend."""
+    y_true = np.array([1, 1, 0, 0])
+    y_pred_a = np.array([1, 0, 0, 1])
+    y_pred_b = np.array([1, 1, 0, 0])
+    overlap_summary(
+        y_true,
+        y_pred_a,
+        y_pred_b,
+        label_a="LR",
+        label_b="DT",
+        verbose=True,
+    )
+    captured = capsys.readouterr()
+    assert "overlap_summary columns" in captured.out
+    assert "LR_only" in captured.out
+    assert "DT_only" in captured.out
+
+
+def test_overlap_summary_three_way_exclusivity_raises():
+    """Cannot supply y_pred and y_prob on the same side."""
+    y_true = np.array([1, 1, 0, 0])
+    with pytest.raises(ValueError):
+        overlap_summary(
+            y_true,
+            y_pred_a=[1, 0, 0, 1],
+            y_prob_a=[0.5, 0.5, 0.5, 0.5],
+            y_pred_b=[0, 1, 0, 1],
+        )
+
+
+@patch("model_metrics.model_evaluator.plt.show")
+def test_plot_overlap_venns_y_prob_path(mock_show, clf_data):
+    """y_prob_a / y_prob_b path renders without error."""
+    X, y, model, y_prob = clf_data
+    y_prob_b = np.random.rand(len(y))
+    plot_overlap_venns(
+        y_true=y,
+        y_prob_a=y_prob,
+        y_prob_b=y_prob_b,
+        categories=("FN",),
+        label_a="LR",
+        label_b="DT",
+    )
+    plt.close("all")
+
+
+@patch("model_metrics.model_evaluator.plt.show")
+def test_plot_overlap_venns_y_prob_with_threshold(mock_show, clf_data):
+    """y_prob path honors threshold_a / threshold_b."""
+    X, y, model, y_prob = clf_data
+    y_prob_b = np.random.rand(len(y))
+    plot_overlap_venns(
+        y_true=y,
+        y_prob_a=y_prob,
+        y_prob_b=y_prob_b,
+        threshold_a=0.3,
+        threshold_b=0.7,
+        categories=("FN", "TP"),
+        label_a="LR",
+        label_b="DT",
+    )
+    plt.close("all")
+
+
+def test_plot_overlap_venns_y_pred_and_y_prob_raises(clf_data):
+    """Cannot mix y_pred and y_prob on the same side."""
+    X, y, model, y_prob = clf_data
+    y_pred = model.predict(X)
+    with pytest.raises(ValueError):
+        plot_overlap_venns(
+            y_true=y,
+            y_pred_a=y_pred,
+            y_prob_a=y_prob,
+            y_pred_b=y_pred,
+        )
+    plt.close("all")
