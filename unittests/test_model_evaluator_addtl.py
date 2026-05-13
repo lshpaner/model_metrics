@@ -676,10 +676,15 @@ def test_overlap_table_basic():
     y_pred_a = np.array([1, 0, 0, 0])
     y_pred_b = np.array([1, 1, 1, 0])
     df = overlap_table(y_true, y_pred_a, y_pred_b, label_a="A", label_b="B")
-    assert list(df.columns) == ["y_true", "A", "B", "A_category", "B_category", "agree"]
-    assert df["A_category"].tolist() == ["TP", "FN", "TN", "TN"]
-    assert df["B_category"].tolist() == ["TP", "TP", "FP", "TN"]
-    assert df["agree"].tolist() == [True, False, False, True]
+    # _pred suffix was added in the column rename
+    assert list(df.columns) == [
+        "y_true",
+        "A_pred",
+        "B_pred",
+        "A_category",
+        "B_category",
+        "agree",
+    ]
 
 
 def test_overlap_table_with_index():

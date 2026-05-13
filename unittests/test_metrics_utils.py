@@ -914,3 +914,72 @@ def test_plot_overlap_venns_savefig_writes_png(tmp_path):
     )
     assert list(tmp_path.glob("*.png"))
     plt.close("all")
+
+
+def test_venn_resolve_side_from_y_prob():
+    """y_prob path applies default 0.5 threshold."""
+    y_prob = np.array([0.1, 0.4, 0.6, 0.9])
+    arr = _venn_resolve_side("a", None, None, None, y_prob=y_prob)
+    assert arr.tolist() == [0, 0, 1, 1]
+
+
+def test_venn_resolve_side_from_y_prob_with_threshold():
+    """y_prob path respects custom threshold."""
+    y_prob = np.array([0.1, 0.4, 0.6, 0.9])
+    arr = _venn_resolve_side("a", None, None, None, y_prob=y_prob, threshold=0.5)
+    assert arr.tolist() == [0, 0, 1, 1]
+    arr = _venn_resolve_side("a", None, None, None, y_prob=y_prob, threshold=0.7)
+    assert arr.tolist() == [0, 0, 0, 1]
+
+
+def test_venn_resolve_side_y_pred_and_y_prob_both_raises():
+    """Cannot supply both y_pred and y_prob on the same side."""
+    with pytest.raises(ValueError):
+        _venn_resolve_side(
+            "a", [0, 1, 1, 0], None, None, y_prob=np.array([0.1, 0.5, 0.6, 0.2])
+        )
+
+
+def test_venn_resolve_side_y_prob_and_model_both_raises():
+    """Cannot supply both y_prob and model on the same side."""
+    X = np.random.randn(10, 3)
+    y = np.random.randint(0, 2, size=10)
+    m = LogisticRegression().fit(X, y)
+    with pytest.raises(ValueError):
+        _venn_resolve_side("a", None, m, X, y_prob=np.random.rand(10))
+
+
+def test_venn_resolve_side_all_three_provided_raises():
+    """Three-way exclusivity check."""
+    X = np.random.randn(10, 3)
+    y = np.random.randint(0, 2, size=10)
+    m = LogisticRegression().fit(X, y)
+    with pytest.raises(ValueError):
+        _venn_resolve_side(
+            "a",
+            np.zeros(10),
+            m,
+            X,
+            y_prob=np.random.rand(10),
+        )
+
+
+def test_venn_resolve_side_model_uses_get_predictions():
+    """Model path routes through get_predictions; default threshold 0.5 applies."""
+    X = np.random.randn(30, 3)
+    y = np.random.randint(0, 2, size=30)
+    m = LogisticRegression().fit(X, y)
+    arr = _venn_resolve_side("a", None, m, X, y_true=y)
+    assert arr.shape == (30,)
+    assert set(np.unique(arr)).issubset({0, 1})
+
+
+def test_venn_resolve_side_model_with_custom_threshold():
+    """Custom threshold overrides the model's stored threshold."""
+    X = np.random.randn(30, 3)
+    y = np.random.randint(0, 2, size=30)
+    m = LogisticRegression().fit(X, y)
+    arr_default = _venn_resolve_side("a", None, m, X, y_true=y)
+    arr_high = _venn_resolve_side("a", None, m, X, y_true=y, threshold=0.99)
+    # Higher threshold yields fewer (or equal) positive predictions
+    assert arr_high.sum() <= arr_default.sum()
