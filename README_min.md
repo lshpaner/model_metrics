@@ -20,6 +20,7 @@ Before you install `model_metrics`, ensure your system meets the following requi
 Additionally, `model_metrics` depends on the following packages, which will be automatically installed when you install `model_metrics`:
 
 - `matplotlib`: version `3.5.3` or higher, but capped below `3.11`
+- `matplotlib-venn`: version `1.0.0` or higher, but capped at `1.1.2`
 - `numpy`: version `1.21.6` or higher, but capped below `2.2`
 - `pandas`: version `1.3.5` or higher, but capped below `2.3`
 - `plotly`: version `5.18.0` or higher, but capped below `5.25`
@@ -77,7 +78,7 @@ If you use `model_metrics` in your research or projects, please consider citing 
   month        = feb,
   year         = 2025,
   publisher    = {Zenodo},
-  version      = {0.0.5a9},
+  version      = {0.0.5a9.dev2},
   doi          = {10.5281/zenodo.14879819},
   url          = {https://doi.org/10.5281/zenodo.14879819}
 }
