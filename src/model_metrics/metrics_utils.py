@@ -821,14 +821,19 @@ def _draw_crosstab_matrix(
     )
 
     ax.set_xlim(-1.0, n + 0.2)
-    ax.set_ylim(-0.3, n + 1.4)
-    ax.set_aspect("equal")
+    ax.set_ylim(-0.3, n + 0.85)
+    ax.set_aspect("equal", anchor="N")
     ax.axis("off")
 
 
-def _draw_crosstab_summary(ax, label_b, stats, fontsize):
+def _draw_crosstab_summary(
+    ax, label_b, stats, fontsize, label_fontsize=12, body_fontsize=None
+):
     """Render the right-hand swap-summary text block."""
     ax.axis("off")
+
+    if body_fontsize is None:
+        body_fontsize = fontsize - 1  # preserves original default exactly
 
     blocks = [
         (
@@ -863,7 +868,7 @@ def _draw_crosstab_summary(ax, label_b, stats, fontsize):
             headline,
             ha="left",
             va="top",
-            fontsize=fontsize + 6,
+            fontsize=label_fontsize + 5,  # was: fontsize + 6
             color=color,
             weight="bold",
             transform=ax.transAxes,
@@ -875,7 +880,7 @@ def _draw_crosstab_summary(ax, label_b, stats, fontsize):
             body,
             ha="left",
             va="top",
-            fontsize=fontsize - 1,
+            fontsize=body_fontsize,  # was: fontsize - 1
             color="#5a6268",
             style="italic",
             transform=ax.transAxes,

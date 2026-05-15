@@ -1211,3 +1211,177 @@ def test_overlap_crosstab_model_without_x_raises(two_model_clf_data):
     X, y, model_a, model_b = two_model_clf_data
     with pytest.raises(ValueError):
         overlap_crosstab(y_true=y, model_a=model_a, model_b=model_b)
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_overlap_crosstab_summary_body_fontsize_accepted(
+    mock_show, two_model_clf_data
+):
+    """summary_body_fontsize is accepted as a keyword and the call completes."""
+    X, y, model_a, model_b = two_model_clf_data
+    plot_overlap_crosstab(
+        y_true=y,
+        model_a=model_a,
+        model_b=model_b,
+        X_a=X,
+        summary_body_fontsize=18,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_overlap_crosstab_summary_body_fontsize_applied(
+    mock_show, two_model_clf_data
+):
+    """summary_body_fontsize reaches the italic body lines in the summary panel."""
+    plt.close("all")
+    X, y, model_a, model_b = two_model_clf_data
+    plot_overlap_crosstab(
+        y_true=y,
+        model_a=model_a,
+        model_b=model_b,
+        X_a=X,
+        summary_body_fontsize=30,
+    )
+    # Walk every axes in the figure; any italic-style text artist is a body line
+    italic_sizes = [
+        t.get_fontsize()
+        for ax in plt.gcf().axes
+        for t in ax.texts
+        if t.get_style() == "italic"
+    ]
+    assert any(s == 30 for s in italic_sizes), f"got {italic_sizes}"
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_overlap_crosstab_label_fontsize_controls_summary_headlines(
+    mock_show, two_model_clf_data
+):
+    """label_fontsize flows into the summary panel headlines as label_fontsize + 5."""
+    plt.close("all")
+    X, y, model_a, model_b = two_model_clf_data
+    plot_overlap_crosstab(
+        y_true=y,
+        model_a=model_a,
+        model_b=model_b,
+        X_a=X,
+        label_fontsize=22,
+    )
+    bold_sizes = [
+        t.get_fontsize()
+        for ax in plt.gcf().axes
+        for t in ax.texts
+        if t.get_weight() == "bold"
+    ]
+    # The four summary headlines should render at 22 + 5 = 27pt
+    assert 27 in bold_sizes, f"expected 27pt headlines, got {bold_sizes}"
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_overlap_crosstab_table_only_matrix_anchored_north(
+    mock_show, two_model_clf_data
+):
+    """In table_only mode, the matrix axes is anchored north (regression for top-whitespace bug)."""
+    plt.close("all")
+    X, y, model_a, model_b = two_model_clf_data
+    plot_overlap_crosstab(
+        y_true=y,
+        model_a=model_a,
+        model_b=model_b,
+        X_a=X,
+        table_only=True,
+    )
+    fig = plt.gcf()
+    # table_only renders the matrix as the only axes
+    ax = fig.axes[0]
+    assert ax.get_anchor() == "N"
+
+
+def test_overlap_crosstab_decimal_places_rounds_normalized_proportions():
+    """decimal_places=2 rounds normalized proportions to 2 decimals."""
+    y_true = np.array([1, 1, 1, 0, 0, 0, 0])
+    y_pred_a = np.array([1, 1, 0, 0, 0, 0, 1])
+    y_pred_b = np.array([1, 0, 1, 0, 1, 0, 0])
+    ct = overlap_crosstab(
+        y_true=y_true,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        normalize=True,
+        decimal_places=2,
+    )
+    for v in ct.values.flatten():
+        if not np.isnan(v):
+            assert v == round(v, 2), f"got {v}, expected {round(v, 2)}"
+
+
+def test_overlap_crosstab_decimal_places_none_preserves_full_precision():
+    """Default decimal_places=None does not round; 1/3 stays at 0.3333..."""
+    y_true = np.array([1, 1, 1])
+    y_pred_a = np.array([1, 1, 0])
+    y_pred_b = np.array([1, 1, 0])
+    ct = overlap_crosstab(
+        y_true=y_true,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        normalize=True,
+    )
+    # (FN, FN) is 1/3, which should NOT equal round(1/3, 2) = 0.33
+    val = ct.loc["FN", "FN"]
+    assert val != round(val, 2)
+    assert abs(val - 1 / 3) < 1e-10
+
+
+def test_overlap_crosstab_decimal_places_with_mask_impossible_preserves_nan():
+    """decimal_places does not touch NaN cells from mask_impossible."""
+    y_true = np.array([1, 1, 0, 0])
+    y_pred_a = np.array([1, 0, 1, 0])
+    y_pred_b = np.array([1, 0, 1, 0])
+    ct = overlap_crosstab(
+        y_true=y_true,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        mask_impossible=True,
+        decimal_places=2,
+    )
+    pos = {"TP", "FN"}
+    for ra in ct.index:
+        for cb in ct.columns:
+            if (ra in pos) != (cb in pos):
+                assert np.isnan(ct.loc[ra, cb])
+
+
+def test_overlap_crosstab_decimal_places_zero_rounds_to_whole_numbers():
+    """decimal_places=0 rounds proportions to 0.0 or 1.0."""
+    y_true = np.array([1, 1, 1])
+    y_pred_a = np.array([1, 1, 0])
+    y_pred_b = np.array([1, 1, 0])
+    ct = overlap_crosstab(
+        y_true=y_true,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        normalize=True,
+        decimal_places=0,
+    )
+    # 2/3 rounds to 1.0, 1/3 rounds to 0.0
+    for v in ct.values.flatten():
+        if not np.isnan(v):
+            assert v in (0.0, 1.0), f"got {v}"
+
+
+def test_overlap_crosstab_decimal_places_no_op_on_integer_counts():
+    """Without normalize, decimal_places leaves integer counts unchanged."""
+    y_true = np.array([1, 1, 0, 0])
+    y_pred_a = np.array([1, 0, 1, 0])
+    y_pred_b = np.array([1, 1, 0, 0])
+    ct_no_round = overlap_crosstab(
+        y_true=y_true,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+    )
+    ct_rounded = overlap_crosstab(
+        y_true=y_true,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        decimal_places=2,
+    )
+    assert ct_no_round.equals(ct_rounded)

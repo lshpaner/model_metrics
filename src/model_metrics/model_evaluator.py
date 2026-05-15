@@ -3613,6 +3613,7 @@ def overlap_crosstab(
     label_b="Model B",
     normalize=False,
     mask_impossible=False,
+    decimal_places=None,
     verbose=False,
 ):
     """
@@ -3662,6 +3663,11 @@ def overlap_crosstab(
     mask_impossible : bool, default False
         If True, set the eight structurally impossible cells to NaN
         instead of leaving them at 0.
+    decimal_places : int, optional
+        If set, round every numeric cell to this many decimal places
+        before returning. NaN cells from mask_impossible=True are left
+        untouched. Most useful with normalize=True to control proportion
+        display. Default None (no rounding).
     verbose : bool, default False
         If True, print the cell-meaning legend and the derived swap
         summary before returning.
@@ -3736,6 +3742,9 @@ def overlap_crosstab(
                 if (ra in pos) != (cb in pos):
                     ct.loc[ra, cb] = np.nan
 
+    if decimal_places is not None:
+        ct = ct.round(decimal_places)
+
     return ct
 
 
@@ -3765,6 +3774,7 @@ def plot_overlap_crosstab(
     label_fontsize=12,
     title_fontsize=14,
     summary_fontsize=11,
+    summary_body_fontsize=None,
     font=None,
     figsize=None,
     save_plot=False,
@@ -3948,8 +3958,17 @@ def plot_overlap_crosstab(
             cell_fontsize,
             label_fontsize,
         )
+        if table_only:
+            ax_mat.set_anchor("N")
         if ax_sum is not None:
-            _draw_crosstab_summary(ax_sum, label_b, stats, summary_fontsize)
+            _draw_crosstab_summary(
+                ax_sum,
+                label_b,
+                stats,
+                summary_fontsize,
+                label_fontsize=label_fontsize,
+                body_fontsize=summary_body_fontsize,
+            )
         if ax_leg is not None:
             _draw_crosstab_legend(ax_leg, colors, label_fontsize)
 
@@ -3978,8 +3997,11 @@ def plot_overlap_crosstab(
             )
 
         if _created_fig:
-            rect_top = 0.88 if title else 1.0
-            plt.tight_layout(rect=[0, 0, 1, rect_top])
+            if table_only:
+                fig.subplots_adjust(top=0.97, bottom=0.05, left=0.08, right=0.95)
+            else:
+                rect_top = 0.88 if title else 1.0
+                plt.tight_layout(rect=[0, 0, 1, rect_top])
             save_plot_images(
                 "overlap_crosstab",
                 save_plot,
