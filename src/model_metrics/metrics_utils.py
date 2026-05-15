@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 from scipy.stats import spearmanr, jarque_bera, norm
+from statsmodels import stats
 from statsmodels.stats.stattools import durbin_watson
 import matplotlib.pyplot as plt
 from matplotlib.colors import to_rgb
@@ -728,6 +729,362 @@ Rows: confusion-matrix category (TP, FP, FN, TN).
 Identity:  both + {label_a}_only + {label_b}_only + outside == subpop
 """
     print(text)
+
+
+def _draw_crosstab_matrix(
+    ax, ct, label_a, label_b, colors, cell_fontsize, label_fontsize
+):
+    """Render the 4x4 crosstab grid with per-cell colors and counts."""
+    from matplotlib.patches import Rectangle
+
+    order = list(ct.index)
+    pos = {"TP", "FN"}
+    n = len(order)
+
+    for i, ra in enumerate(order):
+        for j, cb in enumerate(order):
+            yi = n - 1 - i  # invert so row 0 (TP) is at the top
+            if (ra in pos) != (cb in pos):
+                fc, tc = colors["impossible"], "#9aa0a6"
+            elif ra == cb:
+                fc, tc = colors["agree"], "#1e7e34"
+            else:
+                fc, tc = colors["disagree"], "#c82333"
+
+            ax.add_patch(
+                Rectangle(
+                    (j, yi),
+                    1,
+                    1,
+                    facecolor=fc,
+                    edgecolor="white",
+                    linewidth=2,
+                )
+            )
+            val = ct.iat[i, j]
+            text = (
+                "-" if (isinstance(val, float) and np.isnan(val)) else f"{int(val):,}"
+            )
+            ax.text(
+                j + 0.5,
+                yi + 0.5,
+                text,
+                ha="center",
+                va="center",
+                fontsize=cell_fontsize,
+                color=tc,
+                weight="bold",
+            )
+
+    # row labels (label_a categories, on the left)
+    for i, ra in enumerate(order):
+        ax.text(
+            -0.15,
+            n - 1 - i + 0.5,
+            ra,
+            ha="right",
+            va="center",
+            fontsize=label_fontsize,
+            weight="bold",
+        )
+    # column labels (label_b categories, along the top)
+    for j, cb in enumerate(order):
+        ax.text(
+            j + 0.5,
+            n + 0.15,
+            cb,
+            ha="center",
+            va="bottom",
+            fontsize=label_fontsize,
+            weight="bold",
+        )
+
+    # axis-level labels (label_a vertical on left, label_b above the columns)
+    ax.text(
+        -0.75,
+        n / 2,
+        label_a,
+        ha="center",
+        va="center",
+        fontsize=label_fontsize + 1,
+        rotation=90,
+        weight="bold",
+    )
+    ax.text(
+        n / 2,
+        n + 0.55,
+        label_b,
+        ha="center",
+        va="bottom",
+        fontsize=label_fontsize + 1,
+        weight="bold",
+    )
+
+    ax.set_xlim(-1.0, n + 0.2)
+    ax.set_ylim(-0.3, n + 1.4)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+
+def _draw_crosstab_summary(ax, label_b, stats, fontsize):
+    """Render the right-hand swap-summary text block."""
+    ax.axis("off")
+
+    blocks = [
+        (
+            f"{stats['both_fn']:,} shared false negatives",
+            "#a04500",
+            "Both models miss the same hard positive cases.",
+        ),
+        (
+            f"{stats['both_tn']:,} shared true negatives",
+            "#1e7e34",
+            "Both models correctly rule out the same easy negatives.",
+        ),
+        (
+            f"{stats['b_extra_tp']:,} vs {stats['b_lost_tp']:,} TP swap",
+            "#1f5fb0",
+            f"{label_b} catches {stats['b_extra_tp']:,} extra positives, "
+            f"misses {stats['b_lost_tp']:,}. Net: {stats['net_tp']:+,} TPs.",
+        ),
+        (
+            f"{stats['b_extra_fp']:,} vs {stats['b_avoided_fp']:,} FP swap",
+            "#a02838",
+            f"{label_b} adds {stats['b_extra_fp']:,} false alarms, "
+            f"avoids {stats['b_avoided_fp']:,}. Net: {stats['net_fp']:+,} FPs.",
+        ),
+    ]
+
+    y = 0.98
+    for headline, color, body in blocks:
+        ax.text(
+            0.0,
+            y,
+            headline,
+            ha="left",
+            va="top",
+            fontsize=fontsize + 6,
+            color=color,
+            weight="bold",
+            transform=ax.transAxes,
+        )
+        y -= 0.07
+        ax.text(
+            0.0,
+            y,
+            body,
+            ha="left",
+            va="top",
+            fontsize=fontsize - 1,
+            color="#5a6268",
+            style="italic",
+            transform=ax.transAxes,
+            wrap=True,
+        )
+        y -= 0.14
+
+
+def _draw_crosstab_legend(ax, colors, fontsize):
+    """Render a horizontal color-legend strip."""
+    from matplotlib.patches import Patch
+
+    ax.axis("off")
+    ax.legend(
+        handles=[
+            Patch(facecolor=colors["agree"], edgecolor="#999", label="agree"),
+            Patch(
+                facecolor=colors["disagree"], edgecolor="#999", label="disagree (swap)"
+            ),
+            Patch(
+                facecolor=colors["impossible"],
+                edgecolor="#999",
+                label="impossible (true label conflict)",
+            ),
+        ],
+        loc="center",
+        ncol=3,
+        frameon=False,
+        fontsize=fontsize,
+    )
+
+
+def _print_overlap_crosstab_legend(ct, label_a="Model A", label_b="Model B"):
+    """Print the cell-meaning legend and derived swap summary for
+    overlap_crosstab. Expects the raw integer-count crosstab."""
+    total = int(ct.values.sum())
+    agree = int(np.trace(ct.values))
+    disagree = total - agree
+    agree_pct = (agree / total * 100) if total else 0.0
+
+    both_tp = int(ct.loc["TP", "TP"])
+    both_fp = int(ct.loc["FP", "FP"])
+    both_fn = int(ct.loc["FN", "FN"])
+    both_tn = int(ct.loc["TN", "TN"])
+
+    b_extra_tp = int(ct.loc["FN", "TP"])  # a missed, b caught
+    b_lost_tp = int(ct.loc["TP", "FN"])  # a caught, b missed
+    b_extra_fp = int(ct.loc["TN", "FP"])  # a cleared, b false-alarmed
+    b_avoided_fp = int(ct.loc["FP", "TN"])  # a false-alarmed, b cleared
+
+    net_tp = b_extra_tp - b_lost_tp
+    net_fp = b_extra_fp - b_avoided_fp
+
+    text = f"""\
+overlap_crosstab cells
+----------------------
+Rows: {label_a}'s confusion-matrix category.
+Cols: {label_b}'s confusion-matrix category.
+
+  diagonal            agreement: both models put the observation in the
+                      same category. (TP,TP), (FP,FP), (FN,FN), (TN,TN).
+  (TP,FN) / (FN,TP)   TP swap: one model catches an actual positive the
+                      other misses.
+  (FP,TN) / (TN,FP)   FP swap: one model false-alarms on an actual
+                      negative the other clears.
+  impossible cells    the 8 cells mixing a positive-subpop category
+                      (TP, FN) with a negative-subpop one (FP, TN). A
+                      single observation cannot be, say, TP for one model
+                      and FP for the other, because y_true is fixed.
+                      Always 0, or NaN when mask_impossible=True.
+
+Swap summary
+------------
+  Agreement:     {agree:,} / {total:,}  ({agree_pct:.1f}%)
+  Disagreement:  {disagree:,}
+
+  Shared TP:     {both_tp:,}
+  Shared FN:     {both_fn:,}
+  Shared TN:     {both_tn:,}
+  Shared FP:     {both_fp:,}
+
+  TP swap:       {label_b} catches {b_extra_tp:,}, misses {b_lost_tp:,} (net {net_tp:+,} TP)
+  FP swap:       {label_b} adds {b_extra_fp:,}, avoids {b_avoided_fp:,} (net {net_fp:+,} FP)
+"""
+    print(text)
+
+
+_FONT_ALIASES = {
+    "arial": ["Arial", "Liberation Sans", "Nimbus Sans", "DejaVu Sans"],
+    "helvetica": [
+        "Helvetica",
+        "Helvetica Neue",
+        "Nimbus Sans",
+        "Liberation Sans",
+        "DejaVu Sans",
+    ],
+    "helvetica neue": [
+        "Helvetica Neue",
+        "Helvetica",
+        "Nimbus Sans",
+        "Liberation Sans",
+        "DejaVu Sans",
+    ],
+    "times": [
+        "Times New Roman",
+        "Times",
+        "Liberation Serif",
+        "Nimbus Roman",
+        "DejaVu Serif",
+    ],
+    "times new roman": [
+        "Times New Roman",
+        "Times",
+        "Liberation Serif",
+        "Nimbus Roman",
+        "DejaVu Serif",
+    ],
+    "courier": [
+        "Courier New",
+        "Courier",
+        "Liberation Mono",
+        "Nimbus Mono",
+        "DejaVu Sans Mono",
+    ],
+    "courier new": [
+        "Courier New",
+        "Courier",
+        "Liberation Mono",
+        "Nimbus Mono",
+        "DejaVu Sans Mono",
+    ],
+    "consolas": [
+        "Consolas",
+        "Cascadia Code",
+        "Cascadia Mono",
+        "Source Code Pro",
+        "Inconsolata",
+        "Liberation Mono",
+        "DejaVu Sans Mono",
+    ],
+    "georgia": ["Georgia", "Liberation Serif", "Nimbus Roman", "DejaVu Serif"],
+    "verdana": ["Verdana", "Liberation Sans", "DejaVu Sans"],
+    "calibri": ["Calibri", "Carlito", "Liberation Sans", "DejaVu Sans"],
+    "cambria": ["Cambria", "Caladea", "Liberation Serif", "DejaVu Serif"],
+    "tahoma": ["Tahoma", "Liberation Sans", "DejaVu Sans"],
+    "garamond": ["Garamond", "EB Garamond", "Liberation Serif", "DejaVu Serif"],
+}
+
+
+def _resolve_font_family(font):
+    """Expand a font name (or list of names) to a fallback chain filtered
+    to the fonts actually installed on this system.
+
+    Returns None when the input is None (caller should leave rcParams
+    untouched).
+
+    Raises
+    ------
+    ValueError
+        If none of the candidate fonts (after alias expansion) are
+        installed on the system.
+    TypeError
+        If `font` is not None, a string, or a list/tuple of strings.
+    """
+    if font is None:
+        return None
+
+    from matplotlib import font_manager
+
+    # build a list of candidates by expanding any aliases
+    if isinstance(font, str):
+        key = font.lower().strip()
+        candidates = _FONT_ALIASES.get(key, [font])
+    elif isinstance(font, (list, tuple)):
+        candidates = []
+        for f in font:
+            if isinstance(f, str):
+                candidates.extend(_FONT_ALIASES.get(f.lower().strip(), [f]))
+            else:
+                candidates.append(f)
+    else:
+        raise TypeError(
+            f"font must be a string, a list/tuple of strings, or None. "
+            f"Got {type(font).__name__}."
+        )
+
+    # filter to fonts actually installed; dedupe while preserving order
+    installed, seen = [], set()
+    for name in candidates:
+        if name in seen:
+            continue
+        seen.add(name)
+        try:
+            font_manager.findfont(name, fallback_to_default=False)
+            installed.append(name)
+        except Exception:
+            continue
+
+    if not installed:
+        raise ValueError(
+            f"None of the requested fonts are installed on this system: "
+            f"{candidates!r}. Install one of them, pass a font from the "
+            f"built-in aliases ({sorted(_FONT_ALIASES)}), or supply your "
+            f"own fallback list including one font you know exists. "
+            f"To see what's available: "
+            f"`sorted({{f.name for f in matplotlib.font_manager.fontManager.ttflist}})`."
+        )
+
+    return installed
 
 
 ################################################################################

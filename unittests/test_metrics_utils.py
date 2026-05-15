@@ -2,6 +2,8 @@ import pytest
 import pandas as pd
 import numpy as np
 import matplotlib
+import io
+import contextlib
 
 matplotlib.use("Agg")  # headless, never opens a window
 import matplotlib.pyplot as plt
@@ -32,6 +34,12 @@ from model_metrics.metrics_utils import (
     _venn_blend,
     _venn_resolve_side,
     _venn_category_counts,
+    _FONT_ALIASES,
+    _resolve_font_family,
+    _print_overlap_crosstab_legend,
+    _draw_crosstab_matrix,
+    _draw_crosstab_summary,
+    _draw_crosstab_legend,
 )
 from model_metrics.model_evaluator import (
     plot_overlap_venns,
@@ -983,3 +991,398 @@ def test_venn_resolve_side_model_with_custom_threshold():
     arr_high = _venn_resolve_side("a", None, m, X, y_true=y, threshold=0.99)
     # Higher threshold yields fewer (or equal) positive predictions
     assert arr_high.sum() <= arr_default.sum()
+
+
+def _make_sample_crosstab(label_a="LR", label_b="RF"):
+    """Build a realistic 4x4 crosstab for draw-helper tests."""
+    order = ["TP", "FP", "FN", "TN"]
+    data = np.array(
+        [
+            [1460, 0, 14, 0],  # TP row
+            [0, 985, 0, 170],  # FP row
+            [489, 0, 375, 0],  # FN row
+            [0, 1249, 0, 5027],  # TN row
+        ]
+    )
+    ct = pd.DataFrame(data, index=order, columns=order)
+    ct.index.name = label_a
+    ct.columns.name = label_b
+    return ct
+
+
+def _stats_from_ct(ct):
+    """Build the stats dict expected by _draw_crosstab_summary."""
+    s = dict(
+        both_tp=int(ct.loc["TP", "TP"]),
+        both_fp=int(ct.loc["FP", "FP"]),
+        both_fn=int(ct.loc["FN", "FN"]),
+        both_tn=int(ct.loc["TN", "TN"]),
+        b_extra_tp=int(ct.loc["FN", "TP"]),
+        b_lost_tp=int(ct.loc["TP", "FN"]),
+        b_extra_fp=int(ct.loc["TN", "FP"]),
+        b_avoided_fp=int(ct.loc["FP", "TN"]),
+    )
+    s["net_tp"] = s["b_extra_tp"] - s["b_lost_tp"]
+    s["net_fp"] = s["b_extra_fp"] - s["b_avoided_fp"]
+    return s
+
+
+# --------------------------
+# _FONT_ALIASES
+# --------------------------
+
+
+def test_font_aliases_has_common_entries():
+    """The alias map must cover the common cross-platform fonts."""
+    expected_keys = {
+        "arial",
+        "helvetica",
+        "times",
+        "times new roman",
+        "consolas",
+        "courier",
+        "courier new",
+    }
+    assert expected_keys.issubset(set(_FONT_ALIASES))
+
+
+def test_font_aliases_keys_are_lowercase():
+    """Keys must be lowercase since _resolve_font_family lowercases input."""
+    for key in _FONT_ALIASES:
+        assert key == key.lower()
+
+
+def test_font_aliases_chains_end_in_dejavu():
+    """Every chain must end in a font matplotlib ships with so aliases never fail."""
+    dejavu_fonts = {"DejaVu Sans", "DejaVu Sans Mono", "DejaVu Serif"}
+    for key, chain in _FONT_ALIASES.items():
+        assert (
+            chain[-1] in dejavu_fonts
+        ), f"alias {key!r} chain {chain!r} does not end in a DejaVu font"
+
+
+def test_font_aliases_chains_are_lists_of_strings():
+    """Every chain must be a list of strings."""
+    for key, chain in _FONT_ALIASES.items():
+        assert isinstance(chain, list)
+        for name in chain:
+            assert isinstance(name, str)
+
+
+# --------------------------
+# _resolve_font_family
+# --------------------------
+
+
+def test_resolve_font_family_none_returns_none():
+    assert _resolve_font_family(None) is None
+
+
+def test_resolve_font_family_aliased_string():
+    """An aliased name should return a list and never raise."""
+    out = _resolve_font_family("Arial")
+    assert isinstance(out, list)
+    assert len(out) >= 1
+    # DejaVu Sans ships with matplotlib so the chain should always land somewhere
+    assert all(isinstance(name, str) for name in out)
+
+
+def test_resolve_font_family_case_insensitive():
+    """Alias lookup must be case-insensitive."""
+    assert _resolve_font_family("Arial") == _resolve_font_family("ARIAL")
+    assert _resolve_font_family("Arial") == _resolve_font_family("arial")
+    assert _resolve_font_family("Helvetica") == _resolve_font_family("HELVETICA")
+
+
+def test_resolve_font_family_aliased_list():
+    """A list with aliased names should expand each alias in place."""
+    out = _resolve_font_family(["Arial", "Times"])
+    assert isinstance(out, list)
+    assert len(out) >= 1
+
+
+def test_resolve_font_family_dejavu_always_resolves():
+    """DejaVu Sans ships with matplotlib so it must always be findable."""
+    out = _resolve_font_family("DejaVu Sans")
+    assert out == ["DejaVu Sans"]
+
+
+def test_resolve_font_family_unknown_font_raises_value_error():
+    """An unaliased font not installed on the system must raise ValueError."""
+    with pytest.raises(ValueError, match="None of the requested fonts"):
+        _resolve_font_family("DefinitelyNotARealFontName123XYZ")
+
+
+def test_resolve_font_family_unknown_in_list_raises_when_none_installed():
+    """A list of unaliased, uninstalled fonts must raise ValueError."""
+    with pytest.raises(ValueError, match="None of the requested fonts"):
+        _resolve_font_family(["NoSuchFont1XYZ", "NoSuchFont2XYZ"])
+
+
+def test_resolve_font_family_unknown_in_list_with_dejavu_passes():
+    """A list that mixes a fake font with an installable one should not raise."""
+    out = _resolve_font_family(["NoSuchFont1XYZ", "DejaVu Sans"])
+    assert out == ["DejaVu Sans"]
+
+
+def test_resolve_font_family_invalid_type_raises_type_error():
+    """Non-string, non-list/tuple input must raise TypeError."""
+    with pytest.raises(TypeError):
+        _resolve_font_family(42)
+    with pytest.raises(TypeError):
+        _resolve_font_family({"font": "Arial"})
+
+
+def test_resolve_font_family_dedupes_chain():
+    """Repeated entries (e.g. when a list contains an alias whose chain repeats
+    a font also passed literally) should appear only once in the output."""
+    out = _resolve_font_family(["DejaVu Sans", "DejaVu Sans"])
+    assert out == ["DejaVu Sans"]
+
+
+def test_resolve_font_family_error_message_lists_aliases():
+    """The ValueError message should point users at the alias table."""
+    try:
+        _resolve_font_family("NoSuchFontXYZ")
+    except ValueError as e:
+        msg = str(e)
+        # should mention at least one alias the user could have used instead
+        assert "arial" in msg.lower() or "aliases" in msg.lower()
+
+
+# --------------------------
+# _print_overlap_crosstab_legend
+# --------------------------
+
+
+def test_print_overlap_crosstab_legend_runs():
+    ct = _make_sample_crosstab()
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        _print_overlap_crosstab_legend(ct, "LR", "RF")
+    assert buf.getvalue()
+
+
+def test_print_overlap_crosstab_legend_mentions_labels():
+    """The header lines must include both labels so users know which is which."""
+    ct = _make_sample_crosstab()
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        _print_overlap_crosstab_legend(ct, "LR", "RF")
+    text = buf.getvalue()
+    assert "LR" in text
+    assert "RF" in text
+
+
+def test_print_overlap_crosstab_legend_has_swap_summary():
+    """The swap summary section must appear with TP/FP swap headers."""
+    ct = _make_sample_crosstab()
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        _print_overlap_crosstab_legend(ct, "LR", "RF")
+    text = buf.getvalue()
+    assert "Swap summary" in text
+    assert "TP swap" in text
+    assert "FP swap" in text
+
+
+def test_print_overlap_crosstab_legend_derived_numbers_correct():
+    """The derived agreement and swap numbers must match the crosstab."""
+    ct = _make_sample_crosstab()
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        _print_overlap_crosstab_legend(ct, "LR", "RF")
+    text = buf.getvalue()
+    # agreement = diagonal sum = 1460 + 985 + 375 + 5027 = 7847
+    assert "7,847" in text
+    # total = 7847 + 14 + 170 + 489 + 1249 = 9769
+    assert "9,769" in text
+    # shared FN = 375
+    assert "375" in text
+
+
+def test_print_overlap_crosstab_legend_zero_total_does_not_crash():
+    """Edge case: an all-zero crosstab should not raise on the agree_pct calc."""
+    order = ["TP", "FP", "FN", "TN"]
+    ct = pd.DataFrame(np.zeros((4, 4), dtype=int), index=order, columns=order)
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        _print_overlap_crosstab_legend(ct, "A", "B")
+    assert buf.getvalue()
+
+
+# --------------------------
+# _draw_crosstab_matrix
+# --------------------------
+
+
+def test_draw_crosstab_matrix_creates_16_cells():
+    """The matrix must render exactly 16 rectangle patches, one per cell."""
+    from matplotlib.patches import Rectangle
+
+    ct = _make_sample_crosstab()
+    fig, ax = plt.subplots()
+    colors = {"agree": "#d4edda", "disagree": "#f8d7da", "impossible": "#e2e6ed"}
+    _draw_crosstab_matrix(ax, ct, "LR", "RF", colors, 14, 12)
+    n_rects = sum(1 for p in ax.patches if isinstance(p, Rectangle))
+    assert n_rects == 16
+    plt.close(fig)
+
+
+def test_draw_crosstab_matrix_renders_count_text():
+    """The cell counts must appear as text on the axes."""
+    ct = _make_sample_crosstab()
+    fig, ax = plt.subplots()
+    colors = {"agree": "#d4edda", "disagree": "#f8d7da", "impossible": "#e2e6ed"}
+    _draw_crosstab_matrix(ax, ct, "LR", "RF", colors, 14, 12)
+    texts = [t.get_text() for t in ax.texts]
+    assert "1,460" in texts
+    assert "5,027" in texts
+    assert "489" in texts
+    plt.close(fig)
+
+
+def test_draw_crosstab_matrix_uses_thousands_separator():
+    """Counts >= 1000 must use the :, format with comma separator."""
+    ct = _make_sample_crosstab()
+    fig, ax = plt.subplots()
+    colors = {"agree": "#d4edda", "disagree": "#f8d7da", "impossible": "#e2e6ed"}
+    _draw_crosstab_matrix(ax, ct, "LR", "RF", colors, 14, 12)
+    texts = [t.get_text() for t in ax.texts]
+    # the 5027 cell should render with a comma
+    assert "5,027" in texts
+    assert "5027" not in texts
+    plt.close(fig)
+
+
+def test_draw_crosstab_matrix_nan_cell_renders_as_hyphen():
+    """NaN cells (from mask_impossible=True) must render as '-' not 'nan' or em dash."""
+    ct = _make_sample_crosstab().astype(float)
+    ct.loc["TP", "FP"] = np.nan
+    fig, ax = plt.subplots()
+    colors = {"agree": "#d4edda", "disagree": "#f8d7da", "impossible": "#e2e6ed"}
+    _draw_crosstab_matrix(ax, ct, "LR", "RF", colors, 14, 12)
+    texts = [t.get_text() for t in ax.texts]
+    assert "-" in texts
+    assert "nan" not in texts
+    plt.close(fig)
+
+
+def test_draw_crosstab_matrix_renders_axis_labels():
+    """label_a and label_b must appear somewhere in the axes text."""
+    ct = _make_sample_crosstab()
+    fig, ax = plt.subplots()
+    colors = {"agree": "#d4edda", "disagree": "#f8d7da", "impossible": "#e2e6ed"}
+    _draw_crosstab_matrix(ax, ct, "LR", "RF", colors, 14, 12)
+    texts = [t.get_text() for t in ax.texts]
+    assert "LR" in texts
+    assert "RF" in texts
+    plt.close(fig)
+
+
+def test_draw_crosstab_matrix_renders_category_headers():
+    """Each of TP/FP/FN/TN must appear as both a row and column header."""
+    ct = _make_sample_crosstab()
+    fig, ax = plt.subplots()
+    colors = {"agree": "#d4edda", "disagree": "#f8d7da", "impossible": "#e2e6ed"}
+    _draw_crosstab_matrix(ax, ct, "LR", "RF", colors, 14, 12)
+    texts = [t.get_text() for t in ax.texts]
+    for cat in ("TP", "FP", "FN", "TN"):
+        # cat appears as row header AND col header so at least 2 occurrences
+        assert texts.count(cat) >= 2
+    plt.close(fig)
+
+
+def test_draw_crosstab_matrix_aspect_equal():
+    """Cells must be square (aspect=equal) regardless of figure shape."""
+    ct = _make_sample_crosstab()
+    fig, ax = plt.subplots(figsize=(10, 4))
+    colors = {"agree": "#d4edda", "disagree": "#f8d7da", "impossible": "#e2e6ed"}
+    _draw_crosstab_matrix(ax, ct, "LR", "RF", colors, 14, 12)
+    aspect = ax.get_aspect()
+    # matplotlib stores "equal" as the string 1.0 or the literal string
+    assert aspect == "equal" or aspect == 1.0
+    plt.close(fig)
+
+
+# --------------------------
+# _draw_crosstab_summary
+# --------------------------
+
+
+def test_draw_crosstab_summary_creates_text():
+    ct = _make_sample_crosstab()
+    fig, ax = plt.subplots()
+    _draw_crosstab_summary(ax, "RF", _stats_from_ct(ct), 11)
+    assert len(ax.texts) > 0
+    plt.close(fig)
+
+
+def test_draw_crosstab_summary_mentions_label_b():
+    """The summary frames swaps relative to label_b so it must appear in the text."""
+    ct = _make_sample_crosstab()
+    fig, ax = plt.subplots()
+    _draw_crosstab_summary(ax, "RF", _stats_from_ct(ct), 11)
+    full = " ".join(t.get_text() for t in ax.texts)
+    assert "RF" in full
+    plt.close(fig)
+
+
+def test_draw_crosstab_summary_includes_swap_headlines():
+    ct = _make_sample_crosstab()
+    fig, ax = plt.subplots()
+    _draw_crosstab_summary(ax, "RF", _stats_from_ct(ct), 11)
+    full = " ".join(t.get_text() for t in ax.texts)
+    assert "TP swap" in full
+    assert "FP swap" in full
+    plt.close(fig)
+
+
+def test_draw_crosstab_summary_uses_thousands_separator():
+    """Numbers in the summary must use the :, format."""
+    ct = _make_sample_crosstab()
+    fig, ax = plt.subplots()
+    _draw_crosstab_summary(ax, "RF", _stats_from_ct(ct), 11)
+    full = " ".join(t.get_text() for t in ax.texts)
+    # both_tn = 5027 → should render as 5,027
+    assert "5,027" in full
+    # b_extra_fp = 1249 → should render as 1,249 (the bug Leon caught)
+    assert "1,249" in full
+    plt.close(fig)
+
+
+def test_draw_crosstab_summary_renders_net_with_sign():
+    """Net deltas must include the +/- sign via :+, format."""
+    ct = _make_sample_crosstab()
+    fig, ax = plt.subplots()
+    _draw_crosstab_summary(ax, "RF", _stats_from_ct(ct), 11)
+    full = " ".join(t.get_text() for t in ax.texts)
+    # net_tp = 489 - 14 = +475, net_fp = 1249 - 170 = +1079
+    assert "+475" in full
+    assert "+1,079" in full
+    plt.close(fig)
+
+
+# --------------------------
+# _draw_crosstab_legend
+# --------------------------
+
+
+def test_draw_crosstab_legend_creates_legend():
+    fig, ax = plt.subplots()
+    colors = {"agree": "#d4edda", "disagree": "#f8d7da", "impossible": "#e2e6ed"}
+    _draw_crosstab_legend(ax, colors, 12)
+    assert ax.get_legend() is not None
+    plt.close(fig)
+
+
+def test_draw_crosstab_legend_has_three_entries():
+    fig, ax = plt.subplots()
+    colors = {"agree": "#d4edda", "disagree": "#f8d7da", "impossible": "#e2e6ed"}
+    _draw_crosstab_legend(ax, colors, 12)
+    legend = ax.get_legend()
+    labels = [t.get_text() for t in legend.get_texts()]
+    assert "agree" in labels
+    assert "disagree (swap)" in labels
+    assert "impossible (true label conflict)" in labels
+    plt.close(fig)
