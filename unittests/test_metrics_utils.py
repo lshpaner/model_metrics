@@ -1386,3 +1386,125 @@ def test_draw_crosstab_legend_has_three_entries():
     assert "disagree (swap)" in labels
     assert "impossible (true label conflict)" in labels
     plt.close(fig)
+
+
+def _crosstab_stats_fixture():
+    """Reusable stats dict for _draw_crosstab_summary tests."""
+    return {
+        "both_tp": 1460,
+        "both_fp": 985,
+        "both_fn": 375,
+        "both_tn": 5027,
+        "b_extra_tp": 489,
+        "b_lost_tp": 14,
+        "b_extra_fp": 1249,
+        "b_avoided_fp": 170,
+        "net_tp": 475,
+        "net_fp": 1079,
+    }
+
+
+def test_draw_crosstab_summary_default_label_fontsize_gives_17pt_headlines():
+    """Default label_fontsize=12 produces 17pt headlines (preserves original visual)."""
+    fig, ax = plt.subplots()
+    stats = _crosstab_stats_fixture()
+    _draw_crosstab_summary(ax, "B", stats, fontsize=11)
+    headline_sizes = [t.get_fontsize() for t in ax.texts if t.get_weight() == "bold"]
+    assert len(headline_sizes) == 4
+    assert all(s == 17 for s in headline_sizes), f"got {headline_sizes}"
+    plt.close(fig)
+
+
+def test_draw_crosstab_summary_label_fontsize_explicit_scales_headlines():
+    """Explicit label_fontsize=20 produces 25pt headlines (label_fontsize + 5)."""
+    fig, ax = plt.subplots()
+    stats = _crosstab_stats_fixture()
+    _draw_crosstab_summary(ax, "B", stats, fontsize=11, label_fontsize=20)
+    headline_sizes = [t.get_fontsize() for t in ax.texts if t.get_weight() == "bold"]
+    assert all(s == 25 for s in headline_sizes), f"got {headline_sizes}"
+    plt.close(fig)
+
+
+def test_draw_crosstab_summary_body_fontsize_defaults_to_fontsize_minus_one():
+    """When body_fontsize is None, italic body lines render at fontsize - 1."""
+    fig, ax = plt.subplots()
+    stats = _crosstab_stats_fixture()
+    _draw_crosstab_summary(ax, "B", stats, fontsize=14)
+    body_sizes = [t.get_fontsize() for t in ax.texts if t.get_style() == "italic"]
+    assert len(body_sizes) == 4
+    assert all(s == 13 for s in body_sizes), f"got {body_sizes}"
+    plt.close(fig)
+
+
+def test_draw_crosstab_summary_body_fontsize_explicit_overrides_default():
+    """Explicit body_fontsize=30 takes precedence over the fontsize-1 fallback."""
+    fig, ax = plt.subplots()
+    stats = _crosstab_stats_fixture()
+    _draw_crosstab_summary(ax, "B", stats, fontsize=11, body_fontsize=30)
+    body_sizes = [t.get_fontsize() for t in ax.texts if t.get_style() == "italic"]
+    assert all(s == 30 for s in body_sizes), f"got {body_sizes}"
+    plt.close(fig)
+
+
+def test_draw_crosstab_summary_label_and_body_fontsize_independent():
+    """label_fontsize and body_fontsize control their texts independently."""
+    fig, ax = plt.subplots()
+    stats = _crosstab_stats_fixture()
+    _draw_crosstab_summary(
+        ax,
+        "B",
+        stats,
+        fontsize=11,
+        label_fontsize=22,
+        body_fontsize=9,
+    )
+    headline_sizes = [t.get_fontsize() for t in ax.texts if t.get_weight() == "bold"]
+    body_sizes = [t.get_fontsize() for t in ax.texts if t.get_style() == "italic"]
+    assert all(
+        s == 27 for s in headline_sizes
+    ), f"headlines got {headline_sizes}"  # 22 + 5
+    assert all(s == 9 for s in body_sizes), f"bodies got {body_sizes}"
+    plt.close(fig)
+
+
+def test_draw_crosstab_summary_backward_compat_positional_args():
+    """The pre-change call shape (ax, label_b, stats, fontsize) still works."""
+    fig, ax = plt.subplots()
+    stats = _crosstab_stats_fixture()
+    _draw_crosstab_summary(ax, "B", stats, 11)  # no kwargs
+    # 4 headlines (bold) + 4 bodies (italic) = 8 text artists
+    assert len(ax.texts) == 8
+    plt.close(fig)
+
+
+def test_draw_crosstab_matrix_ylim_is_tight():
+    """ylim top should sit close to label_b's anchor (n+0.55), not waste 65%+ headroom."""
+    fig, ax = plt.subplots()
+    ct = pd.DataFrame(
+        [[100, 0, 5, 0], [0, 80, 0, 10], [3, 0, 50, 0], [0, 20, 0, 200]],
+        index=["TP", "FP", "FN", "TN"],
+        columns=["TP", "FP", "FN", "TN"],
+    )
+    colors = {"agree": "#d4edda", "disagree": "#f8d7da", "impossible": "#e2e6ed"}
+    _draw_crosstab_matrix(ax, ct, "A", "B", colors, 14, 12)
+    _, ymax = ax.get_ylim()
+    n = 4
+    # The label_b text anchor sits at n+0.55. ylim top should be just above that.
+    # Anything > n+1.0 means we've reintroduced the old wasteful headroom.
+    assert ymax <= n + 1.0, f"ylim top {ymax} is too generous; should be ~n+0.85"
+    assert ymax >= n + 0.7, f"ylim top {ymax} is too tight; label_b text may clip"
+    plt.close(fig)
+
+
+def test_draw_crosstab_matrix_aspect_anchor_is_north():
+    """Matrix axes anchored north so any leftover bbox space falls below, not above."""
+    fig, ax = plt.subplots()
+    ct = pd.DataFrame(
+        [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
+        index=["TP", "FP", "FN", "TN"],
+        columns=["TP", "FP", "FN", "TN"],
+    )
+    colors = {"agree": "#d4edda", "disagree": "#f8d7da", "impossible": "#e2e6ed"}
+    _draw_crosstab_matrix(ax, ct, "A", "B", colors, 14, 12)
+    assert ax.get_anchor() == "N", f"expected anchor 'N', got {ax.get_anchor()!r}"
+    plt.close(fig)
