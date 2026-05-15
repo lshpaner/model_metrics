@@ -52,6 +52,11 @@ from model_metrics.metrics_utils import (
     _venn_default_figsize,
     _overlap_table_categorize,
     _print_overlap_summary_legend,
+    _draw_crosstab_matrix,
+    _draw_crosstab_summary,
+    _draw_crosstab_legend,
+    _print_overlap_crosstab_legend,
+    _resolve_font_family,
 )
 
 from model_metrics.plot_utils import (
@@ -3587,6 +3592,403 @@ def overlap_summary(
     if verbose:
         _print_overlap_summary_legend(label_a, label_b)
     return pd.DataFrame(rows, index=["TP", "FP", "FN", "TN"])
+
+
+def overlap_crosstab(
+    y_true,
+    y_pred_a=None,
+    y_pred_b=None,
+    *,
+    y_prob_a=None,
+    y_prob_b=None,
+    model_a=None,
+    model_b=None,
+    X_a=None,
+    X_b=None,
+    threshold_a=None,
+    threshold_b=None,
+    score_a=None,
+    score_b=None,
+    label_a="Model A",
+    label_b="Model B",
+    normalize=False,
+    mask_impossible=False,
+    verbose=False,
+):
+    """
+    Return the 4x4 joint distribution of confusion-matrix categories for
+    two classifiers.
+
+    Each observation is categorized as TP/FP/FN/TN for both models; the
+    returned DataFrame counts every (model_a category, model_b category)
+    pair. The diagonal is agreement. The off-diagonal valid cells are
+    "swaps": (TP, FN) / (FN, TP) is a TP swap, (FP, TN) / (TN, FP) is an
+    FP swap.
+
+    Eight of the sixteen cells are structurally impossible: a single
+    observation cannot be a positive-subpop category (TP, FN) for one
+    model and a negative-subpop category (FP, TN) for the other, because
+    y_true is fixed. Those cells are always 0 (or NaN when
+    mask_impossible=True).
+
+    Parameters
+    ----------
+    y_true : array-like
+        True binary labels.
+    y_pred_a, y_pred_b : array-like, optional
+        Binary predictions. Mutually exclusive with y_prob_* and model_*
+        on the same side.
+    y_prob_a, y_prob_b : array-like, optional
+        Positive-class probabilities, thresholded internally via
+        threshold_* (defaults to 0.5). Mutually exclusive with y_pred_*
+        and model_* on the same side.
+    model_a, model_b : estimator, optional
+        Trained models exposing .predict(). Mutually exclusive with
+        y_pred_* and y_prob_* on the same side. Routed through
+        get_predictions, so each model's stored .threshold attribute is
+        picked up automatically.
+    X_a, X_b : array-like, optional
+        Feature matrices. X_b defaults to X_a when both models share
+        features.
+    threshold_a, threshold_b : float, optional
+        Per-side explicit threshold override.
+    score_a, score_b : str, optional
+        Score key for the model_* path's .threshold lookup.
+    label_a, label_b : str, default "Model A" / "Model B"
+        Used as the index name (label_a) and columns name (label_b) of
+        the returned DataFrame.
+    normalize : bool, default False
+        If True, divide every cell by the total observation count.
+    mask_impossible : bool, default False
+        If True, set the eight structurally impossible cells to NaN
+        instead of leaving them at 0.
+    verbose : bool, default False
+        If True, print the cell-meaning legend and the derived swap
+        summary before returning.
+
+    Returns
+    -------
+    pd.DataFrame
+        4x4 DataFrame indexed by {TP, FP, FN, TN} with the same four
+        columns.
+
+    Raises
+    ------
+    ValueError
+        If more than one of y_pred_*, y_prob_*, model_* is provided on
+        the same side, or if a model is provided without a feature
+        matrix.
+    TypeError
+        If model_a or model_b is supplied but does not implement
+        .predict().
+    """
+    y_true = np.asarray(y_true).ravel().astype(int)
+    if X_b is None:
+        X_b = X_a
+    y_pred_a = _venn_resolve_side(
+        "a",
+        y_pred_a,
+        model_a,
+        X_a,
+        y_true=y_true,
+        y_prob=y_prob_a,
+        threshold=threshold_a,
+        score=score_a,
+    )
+    y_pred_b = _venn_resolve_side(
+        "b",
+        y_pred_b,
+        model_b,
+        X_b,
+        y_true=y_true,
+        y_prob=y_prob_b,
+        threshold=threshold_b,
+        score=score_b,
+    )
+
+    cat_a = _overlap_table_categorize(y_true, y_pred_a)
+    cat_b = _overlap_table_categorize(y_true, y_pred_b)
+
+    order = ["TP", "FP", "FN", "TN"]
+    idx = {c: i for i, c in enumerate(order)}
+    ai = np.array([idx[c] for c in cat_a])
+    bi = np.array([idx[c] for c in cat_b])
+    counts = np.zeros((4, 4), dtype=int)
+    np.add.at(counts, (ai, bi), 1)
+
+    ct = pd.DataFrame(counts, index=list(order), columns=list(order))
+    ct.index.name = label_a
+    ct.columns.name = label_b
+
+    if verbose:
+        _print_overlap_crosstab_legend(ct, label_a, label_b)
+
+    if normalize:
+        total = ct.values.sum()
+        if total > 0:
+            ct = ct / total
+
+    if mask_impossible:
+        pos = {"TP", "FN"}
+        ct = ct.astype(float)
+        for ra in order:
+            for cb in order:
+                if (ra in pos) != (cb in pos):
+                    ct.loc[ra, cb] = np.nan
+
+    return ct
+
+
+def plot_overlap_crosstab(
+    y_true,
+    y_pred_a=None,
+    y_pred_b=None,
+    *,
+    y_prob_a=None,
+    y_prob_b=None,
+    model_a=None,
+    model_b=None,
+    X_a=None,
+    X_b=None,
+    threshold_a=None,
+    threshold_b=None,
+    score_a=None,
+    score_b=None,
+    label_a="Model A",
+    label_b="Model B",
+    title=None,
+    table_only=False,
+    show_summary=True,
+    show_legend=True,
+    colors=None,
+    cell_fontsize=14,
+    label_fontsize=12,
+    title_fontsize=14,
+    summary_fontsize=11,
+    font=None,
+    figsize=None,
+    save_plot=False,
+    image_path_png=None,
+    image_path_svg=None,
+    image_filename=None,
+    ax=None,
+):
+    """
+    Render a styled 4x4 crosstab figure comparing two classifiers'
+    confusion-matrix categories.
+
+    Calls `overlap_crosstab` internally to compute the joint distribution,
+    then renders it as a matplotlib figure with three cell colorings:
+    diagonal cells (agreement) in green, off-diagonal valid cells (TP and
+    FP swaps) in red, structurally impossible cells in blue-gray. An
+    optional side panel surfaces the derived swap summary (shared
+    TP/FN/TN/FP counts, TP-swap and FP-swap breakdowns). An optional
+    legend strip beneath the matrix labels the color scheme.
+
+    Parameter semantics match `overlap_crosstab` exactly for the
+    prediction-input block (y_pred_*, y_prob_*, model_*, X_*,
+    threshold_*, score_*, label_*).
+
+    Parameters
+    ----------
+    title : str, optional
+        Figure title. If None, defaults to "{label_a} vs {label_b}:
+        Prediction Overlap". Pass "" to suppress.
+    table_only : bool, default False
+        Shortcut for a bare matrix: suppress the title, the side summary
+        panel, and the bottom legend strip. Equivalent to passing
+        title="", show_summary=False, show_legend=False.
+    show_summary : bool, default True
+        Render the right-hand swap-summary text block.
+    show_legend : bool, default True
+        Render the color-legend strip beneath the matrix.
+    colors : dict, optional
+        Override the default cell colors. Keys: "agree", "disagree",
+        "impossible". Unspecified keys keep their defaults.
+    cell_fontsize, label_fontsize, title_fontsize, summary_fontsize : int
+        Font sizes for the cell counts, row/column labels, figure title,
+        and summary text block.
+    font : str or list of str, optional
+        Font family applied to every text element in the figure. Accepts
+        any matplotlib font family string (e.g. "Arial", "Helvetica",
+        "DejaVu Sans", "Times New Roman") or a list of fallbacks. Applied
+        via mpl.rc_context, so it scopes to this call only and does not
+        modify the global rcParams.
+    figsize : tuple of float, optional
+        Figure size in inches. Defaults to (5, 5) when table_only is True,
+        (11, 6.5) when show_summary is True, and (7, 6.5) otherwise.
+    save_plot, image_path_png, image_path_svg, image_filename
+        Standard model_metrics save controls. Applied only when the
+        function creates its own figure.
+    ax : matplotlib.axes.Axes, optional
+        Pre-existing axes to nest the figure inside (for `combine_plots`
+        integration). When supplied, the host ax is released and the slot
+        is carved into a sub-gridspec.
+
+    Returns
+    -------
+    None
+    """
+    from contextlib import nullcontext
+    import matplotlib as mpl
+
+    ct = overlap_crosstab(
+        y_true,
+        y_pred_a=y_pred_a,
+        y_pred_b=y_pred_b,
+        y_prob_a=y_prob_a,
+        y_prob_b=y_prob_b,
+        model_a=model_a,
+        model_b=model_b,
+        X_a=X_a,
+        X_b=X_b,
+        threshold_a=threshold_a,
+        threshold_b=threshold_b,
+        score_a=score_a,
+        score_b=score_b,
+        label_a=label_a,
+        label_b=label_b,
+    )
+
+    # table_only overrides the individual display flags
+    if table_only:
+        show_summary = False
+        show_legend = False
+        title = ""
+
+    # default colors
+    default_colors = {
+        "agree": "#d4edda",
+        "disagree": "#f8d7da",
+        "impossible": "#e2e6ed",
+    }
+    if colors is not None:
+        default_colors.update(colors)
+    colors = default_colors
+
+    # derived stats
+    total = int(ct.values.sum())
+    agree = int(np.trace(ct.values))
+    agree_pct = (agree / total * 100) if total else 0.0
+
+    stats = dict(
+        both_tp=int(ct.loc["TP", "TP"]),
+        both_fp=int(ct.loc["FP", "FP"]),
+        both_fn=int(ct.loc["FN", "FN"]),
+        both_tn=int(ct.loc["TN", "TN"]),
+        b_extra_tp=int(ct.loc["FN", "TP"]),
+        b_lost_tp=int(ct.loc["TP", "FN"]),
+        b_extra_fp=int(ct.loc["TN", "FP"]),
+        b_avoided_fp=int(ct.loc["FP", "TN"]),
+    )
+    stats["net_tp"] = stats["b_extra_tp"] - stats["b_lost_tp"]
+    stats["net_fp"] = stats["b_extra_fp"] - stats["b_avoided_fp"]
+
+    # font override scoped to this call
+    resolved_font = _resolve_font_family(font)
+    font_ctx = (
+        mpl.rc_context({"font.family": resolved_font})
+        if resolved_font
+        else nullcontext()
+    )
+
+    with font_ctx:
+        # figure setup
+        if ax is None:
+            if figsize is None:
+                if table_only:
+                    figsize = (5, 5)
+                elif show_summary:
+                    figsize = (11, 6.5)
+                else:
+                    figsize = (7, 6.5)
+            fig = plt.figure(figsize=figsize)
+            _created_fig = True
+            host_spec = fig.add_gridspec(1, 1)[0, 0]
+        else:
+            fig = ax.figure
+            host_spec = ax.get_subplotspec()
+            ax.remove()
+            _created_fig = False
+
+        # carve sub-gridspec for matrix / summary / legend
+        if show_summary and show_legend:
+            sub_gs = host_spec.subgridspec(
+                2,
+                2,
+                width_ratios=[1.4, 1],
+                height_ratios=[12, 1],
+                hspace=0.05,
+                wspace=0.15,
+            )
+            ax_mat = fig.add_subplot(sub_gs[0, 0])
+            ax_sum = fig.add_subplot(sub_gs[0, 1])
+            ax_leg = fig.add_subplot(sub_gs[1, :])
+        elif show_summary:
+            sub_gs = host_spec.subgridspec(1, 2, width_ratios=[1.4, 1], wspace=0.15)
+            ax_mat = fig.add_subplot(sub_gs[0, 0])
+            ax_sum = fig.add_subplot(sub_gs[0, 1])
+            ax_leg = None
+        elif show_legend:
+            sub_gs = host_spec.subgridspec(2, 1, height_ratios=[12, 1], hspace=0.05)
+            ax_mat = fig.add_subplot(sub_gs[0, 0])
+            ax_sum = None
+            ax_leg = fig.add_subplot(sub_gs[1, 0])
+        else:
+            ax_mat = fig.add_subplot(host_spec)
+            ax_sum = None
+            ax_leg = None
+
+        _draw_crosstab_matrix(
+            ax_mat,
+            ct,
+            label_a,
+            label_b,
+            colors,
+            cell_fontsize,
+            label_fontsize,
+        )
+        if ax_sum is not None:
+            _draw_crosstab_summary(ax_sum, label_b, stats, summary_fontsize)
+        if ax_leg is not None:
+            _draw_crosstab_legend(ax_leg, colors, label_fontsize)
+
+        # title and agreement subtitle
+        if title is None:
+            title = f"{label_a} vs {label_b}: Prediction Overlap"
+        if title:
+            fig.text(
+                0.05,
+                0.96,
+                title,
+                fontsize=title_fontsize + 2,
+                weight="bold",
+                ha="left",
+                va="top",
+            )
+            fig.text(
+                0.05,
+                0.91,
+                f"Both models agree on {agree:,} / {total:,} test cases  "
+                f"({agree_pct:.1f}%)",
+                fontsize=title_fontsize,
+                style="italic",
+                ha="left",
+                va="top",
+            )
+
+        if _created_fig:
+            rect_top = 0.88 if title else 1.0
+            plt.tight_layout(rect=[0, 0, 1, rect_top])
+            save_plot_images(
+                "overlap_crosstab",
+                save_plot,
+                image_path_png,
+                image_path_svg,
+                image_filename=image_filename,
+                fig=fig,
+            )
+            plt.show()
 
 
 ################################################################################

@@ -20,6 +20,8 @@ from model_metrics.model_evaluator import (
     plot_overlap_venns,
     overlap_table,
     overlap_summary,
+    overlap_crosstab,
+    plot_overlap_crosstab,
 )
 
 matplotlib.use("Agg")
@@ -47,6 +49,17 @@ def clf_data():
     model = LogisticRegression(max_iter=1000).fit(X, y)
     y_prob = model.predict_proba(X)[:, 1]
     return X, y, model, y_prob
+
+
+@pytest.fixture
+def two_model_clf_data():
+    """Two trained classifiers on the same data for overlap function tests."""
+    X, y = make_classification(n_samples=200, n_features=5, random_state=42)
+    X = pd.DataFrame(X, columns=[f"f{i}" for i in range(5)])
+    y = pd.Series(y)
+    model_a = LogisticRegression(max_iter=1000, random_state=0).fit(X, y)
+    model_b = LogisticRegression(max_iter=1000, C=0.1, random_state=0).fit(X, y)
+    return X, y, model_a, model_b
 
 
 # ==============================================================================
@@ -1003,3 +1016,198 @@ def test_plot_overlap_venns_y_pred_and_y_prob_raises(clf_data):
             y_pred_b=y_pred,
         )
     plt.close("all")
+
+
+# ==============================================================================
+# overlap_crosstab tests
+# ==============================================================================
+
+
+def test_overlap_crosstab_returns_4x4_dataframe(two_model_clf_data):
+    """Result must be a 4x4 DataFrame indexed by TP/FP/FN/TN."""
+    X, y, model_a, model_b = two_model_clf_data
+    ct = overlap_crosstab(y_true=y, model_a=model_a, model_b=model_b, X_a=X)
+    assert isinstance(ct, pd.DataFrame)
+    assert ct.shape == (4, 4)
+    assert list(ct.index) == ["TP", "FP", "FN", "TN"]
+    assert list(ct.columns) == ["TP", "FP", "FN", "TN"]
+
+
+def test_overlap_crosstab_total_equals_observations(two_model_clf_data):
+    """Sum of all cells must equal the observation count."""
+    X, y, model_a, model_b = two_model_clf_data
+    ct = overlap_crosstab(y_true=y, model_a=model_a, model_b=model_b, X_a=X)
+    assert ct.values.sum() == len(y)
+
+
+def test_overlap_crosstab_index_and_columns_named(two_model_clf_data):
+    """Index name must be label_a, columns name must be label_b."""
+    X, y, model_a, model_b = two_model_clf_data
+    ct = overlap_crosstab(
+        y_true=y,
+        model_a=model_a,
+        model_b=model_b,
+        X_a=X,
+        label_a="LR_A",
+        label_b="LR_B",
+    )
+    assert ct.index.name == "LR_A"
+    assert ct.columns.name == "LR_B"
+
+
+def test_overlap_crosstab_impossible_cells_are_zero(two_model_clf_data):
+    """The 8 structurally impossible cells must always be 0."""
+    X, y, model_a, model_b = two_model_clf_data
+    ct = overlap_crosstab(y_true=y, model_a=model_a, model_b=model_b, X_a=X)
+    pos = {"TP", "FN"}
+    for ra in ct.index:
+        for cb in ct.columns:
+            if (ra in pos) != (cb in pos):
+                assert (
+                    ct.loc[ra, cb] == 0
+                ), f"impossible cell ({ra}, {cb}) = {ct.loc[ra, cb]}, expected 0"
+
+
+def test_overlap_crosstab_y_pred_path(two_model_clf_data):
+    """Binary predictions path produces same shape and total."""
+    X, y, model_a, model_b = two_model_clf_data
+    y_pred_a = model_a.predict(X)
+    y_pred_b = model_b.predict(X)
+    ct = overlap_crosstab(y_true=y, y_pred_a=y_pred_a, y_pred_b=y_pred_b)
+    assert ct.shape == (4, 4)
+    assert ct.values.sum() == len(y)
+
+
+def test_overlap_crosstab_y_prob_path(two_model_clf_data):
+    """Probability path applies the default 0.5 threshold."""
+    X, y, model_a, model_b = two_model_clf_data
+    y_prob_a = model_a.predict_proba(X)[:, 1]
+    y_prob_b = model_b.predict_proba(X)[:, 1]
+    ct = overlap_crosstab(y_true=y, y_prob_a=y_prob_a, y_prob_b=y_prob_b)
+    assert ct.shape == (4, 4)
+    assert ct.values.sum() == len(y)
+
+
+def test_overlap_crosstab_threshold_changes_result(two_model_clf_data):
+    """Different thresholds must produce different crosstabs."""
+    X, y, model_a, model_b = two_model_clf_data
+    y_prob_a = model_a.predict_proba(X)[:, 1]
+    y_prob_b = model_b.predict_proba(X)[:, 1]
+    ct_low = overlap_crosstab(
+        y_true=y,
+        y_prob_a=y_prob_a,
+        y_prob_b=y_prob_b,
+        threshold_a=0.3,
+        threshold_b=0.3,
+    )
+    ct_high = overlap_crosstab(
+        y_true=y,
+        y_prob_a=y_prob_a,
+        y_prob_b=y_prob_b,
+        threshold_a=0.7,
+        threshold_b=0.7,
+    )
+    assert not ct_low.equals(ct_high)
+
+
+def test_overlap_crosstab_three_way_exclusivity_raises(two_model_clf_data):
+    """Supplying more than one prediction source per side raises ValueError."""
+    X, y, model_a, model_b = two_model_clf_data
+    with pytest.raises(ValueError):
+        overlap_crosstab(
+            y_true=y,
+            y_pred_a=model_a.predict(X),
+            y_prob_a=model_a.predict_proba(X)[:, 1],
+            y_pred_b=model_b.predict(X),
+        )
+
+
+def test_overlap_crosstab_normalize_sums_to_one(two_model_clf_data):
+    """With normalize=True, all cells sum to 1.0."""
+    X, y, model_a, model_b = two_model_clf_data
+    ct = overlap_crosstab(
+        y_true=y,
+        model_a=model_a,
+        model_b=model_b,
+        X_a=X,
+        normalize=True,
+    )
+    assert ct.values.sum() == pytest.approx(1.0)
+
+
+def test_overlap_crosstab_mask_impossible_nans_impossible_cells(two_model_clf_data):
+    """With mask_impossible=True, the 8 structurally impossible cells become NaN."""
+    X, y, model_a, model_b = two_model_clf_data
+    ct = overlap_crosstab(
+        y_true=y,
+        model_a=model_a,
+        model_b=model_b,
+        X_a=X,
+        mask_impossible=True,
+    )
+    pos = {"TP", "FN"}
+    for ra in ct.index:
+        for cb in ct.columns:
+            if (ra in pos) != (cb in pos):
+                assert np.isnan(ct.loc[ra, cb])
+            else:
+                assert not np.isnan(ct.loc[ra, cb])
+
+
+def test_overlap_crosstab_verbose_prints_legend(two_model_clf_data, capsys):
+    """verbose=True should print the legend before returning."""
+    X, y, model_a, model_b = two_model_clf_data
+    overlap_crosstab(
+        y_true=y,
+        model_a=model_a,
+        model_b=model_b,
+        X_a=X,
+        label_a="LR",
+        label_b="RF",
+        verbose=True,
+    )
+    captured = capsys.readouterr()
+    assert "overlap_crosstab cells" in captured.out
+    assert "Swap summary" in captured.out
+    assert "LR" in captured.out
+    assert "RF" in captured.out
+
+
+def test_overlap_crosstab_diagonal_equals_agreement(two_model_clf_data):
+    """Diagonal sum must equal the per-observation agreement count."""
+    from model_metrics.metrics_utils import _overlap_table_categorize
+
+    X, y, model_a, model_b = two_model_clf_data
+    y_pred_a = model_a.predict(X)
+    y_pred_b = model_b.predict(X)
+    ct = overlap_crosstab(y_true=y, y_pred_a=y_pred_a, y_pred_b=y_pred_b)
+    cat_a = _overlap_table_categorize(np.asarray(y), y_pred_a)
+    cat_b = _overlap_table_categorize(np.asarray(y), y_pred_b)
+    expected_agreement = int(np.sum(cat_a == cat_b))
+    assert int(np.trace(ct.values)) == expected_agreement
+
+
+def test_overlap_crosstab_x_b_defaults_to_x_a(two_model_clf_data):
+    """X_b=None should default to X_a when both models use the same features."""
+    X, y, model_a, model_b = two_model_clf_data
+    ct_explicit = overlap_crosstab(
+        y_true=y,
+        model_a=model_a,
+        model_b=model_b,
+        X_a=X,
+        X_b=X,
+    )
+    ct_default = overlap_crosstab(
+        y_true=y,
+        model_a=model_a,
+        model_b=model_b,
+        X_a=X,
+    )
+    assert ct_explicit.equals(ct_default)
+
+
+def test_overlap_crosstab_model_without_x_raises(two_model_clf_data):
+    """Supplying a model without a feature matrix raises ValueError."""
+    X, y, model_a, model_b = two_model_clf_data
+    with pytest.raises(ValueError):
+        overlap_crosstab(y_true=y, model_a=model_a, model_b=model_b)

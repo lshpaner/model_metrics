@@ -148,6 +148,35 @@ def clf_data():
     return X, y, model, y_prob
 
 
+@pytest.fixture
+def trained_model(sample_data):
+    """Fixture to train a sample model for testing."""
+    X, y = sample_data
+    model = LogisticRegression()
+    model.fit(X, y)
+    return model
+
+
+@pytest.fixture
+def sample_regression_data():
+    """Fixture for regression testing."""
+    np.random.seed(42)
+    X = pd.DataFrame(np.random.rand(100, 5), columns=["A", "B", "C", "D", "E"])
+    y = 2 * X["A"] + 3 * X["B"] + np.random.randn(100) * 0.5
+    return X, y
+
+
+@pytest.fixture
+def trained_regression_model(sample_regression_data):
+    """Fixture to train a regression model."""
+    X, y = sample_regression_data
+    from sklearn.linear_model import LinearRegression
+
+    model = LinearRegression()
+    model.fit(X, y)
+    return model
+
+
 # ==============================================================================
 # ADDITIONAL TESTS FOR HIGHER COVERAGE
 # ==============================================================================
@@ -2501,6 +2530,252 @@ def test_combine_plots_bad_kwargs_renders_error_cell(mock_show, clf_data):
         n_cols=2,
     )
     mock_show.assert_called_once()
+
+
+# ------------------------------------------------------------------------------
+# show_residual_diagnostics - centroid_type branches
+# ------------------------------------------------------------------------------
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_residual_diagnostics_fitted_centroids_type_groups(
+    mock_show, sample_regression_data
+):
+    """Fitted plot with centroid_type='groups' and a group_category Series."""
+    X, y = sample_regression_data
+    model = LinearRegression().fit(X, y)
+    group_series = pd.Series(np.random.choice(["A", "B"], len(y)), name="grp")
+    show_residual_diagnostics(
+        model,
+        X,
+        y,
+        plot_type="fitted",
+        show_centroids=True,
+        centroid_type="groups",
+        group_category=group_series,
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_residual_diagnostics_fitted_centroids_groups_color_list_long(
+    mock_show, sample_regression_data
+):
+    """Fitted centroids: groups + color list at least as long as groups."""
+    X, y = sample_regression_data
+    model = LinearRegression().fit(X, y)
+    group_series = pd.Series(np.random.choice(["A", "B"], len(y)), name="grp")
+    show_residual_diagnostics(
+        model,
+        X,
+        y,
+        plot_type="fitted",
+        show_centroids=True,
+        centroid_type="groups",
+        group_category=group_series,
+        centroid_kwgs={"c": ["red", "blue"], "marker": "X"},
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_residual_diagnostics_fitted_centroids_groups_color_list_short(
+    mock_show, sample_regression_data
+):
+    """Fitted centroids: color list shorter than groups falls back to colors_group."""
+    X, y = sample_regression_data
+    model = LinearRegression().fit(X, y)
+    group_series = pd.Series(np.random.choice(["A", "B", "C"], len(y)), name="grp")
+    show_residual_diagnostics(
+        model,
+        X,
+        y,
+        plot_type="fitted",
+        show_centroids=True,
+        centroid_type="groups",
+        group_category=group_series,
+        centroid_kwgs={"c": ["red", "blue"]},  # 2 colors, 3 groups
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_residual_diagnostics_fitted_centroids_groups_single_color(
+    mock_show, sample_regression_data
+):
+    """Fitted centroids: c as a single string applies uniformly."""
+    X, y = sample_regression_data
+    model = LinearRegression().fit(X, y)
+    group_series = pd.Series(np.random.choice(["A", "B"], len(y)), name="grp")
+    show_residual_diagnostics(
+        model,
+        X,
+        y,
+        plot_type="fitted",
+        show_centroids=True,
+        centroid_type="groups",
+        group_category=group_series,
+        centroid_kwgs={"c": "red", "marker": "X"},
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_residual_diagnostics_fitted_centroids_groups_color_kwarg(
+    mock_show, sample_regression_data
+):
+    """Fitted centroids: explicit 'color' kwarg (not 'c') passes through unchanged."""
+    X, y = sample_regression_data
+    model = LinearRegression().fit(X, y)
+    group_series = pd.Series(np.random.choice(["A", "B"], len(y)), name="grp")
+    show_residual_diagnostics(
+        model,
+        X,
+        y,
+        plot_type="fitted",
+        show_centroids=True,
+        centroid_type="groups",
+        group_category=group_series,
+        centroid_kwgs={"color": "blue", "marker": "X"},
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_residual_diagnostics_predictors_centroids_type_groups(
+    mock_show, sample_regression_data
+):
+    """Predictors plot with centroid_type='groups' and a group_category Series."""
+    X, y = sample_regression_data
+    model = LinearRegression().fit(X, y)
+    group_series = pd.Series(np.random.choice(["A", "B"], len(y)), name="grp")
+    show_residual_diagnostics(
+        model,
+        X,
+        y,
+        plot_type="predictors",
+        show_centroids=True,
+        centroid_type="groups",
+        group_category=group_series,
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_residual_diagnostics_predictors_centroids_groups_color_list_long(
+    mock_show, sample_regression_data
+):
+    """Predictors centroids: groups + color list at least as long as groups."""
+    X, y = sample_regression_data
+    model = LinearRegression().fit(X, y)
+    group_series = pd.Series(np.random.choice(["A", "B"], len(y)), name="grp")
+    show_residual_diagnostics(
+        model,
+        X,
+        y,
+        plot_type="predictors",
+        show_centroids=True,
+        centroid_type="groups",
+        group_category=group_series,
+        centroid_kwgs={"c": ["red", "blue"], "marker": "X"},
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_residual_diagnostics_predictors_centroids_groups_color_list_short(
+    mock_show, sample_regression_data
+):
+    """Predictors centroids: color list shorter than groups falls back."""
+    X, y = sample_regression_data
+    model = LinearRegression().fit(X, y)
+    group_series = pd.Series(np.random.choice(["A", "B", "C"], len(y)), name="grp")
+    show_residual_diagnostics(
+        model,
+        X,
+        y,
+        plot_type="predictors",
+        show_centroids=True,
+        centroid_type="groups",
+        group_category=group_series,
+        centroid_kwgs={"c": ["red", "blue"]},  # 2 colors, 3 groups
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_residual_diagnostics_predictors_centroids_groups_string_column(
+    mock_show, sample_regression_data
+):
+    """Predictors centroids with group_category as a string column name in X."""
+    X, y = sample_regression_data
+    feature_cols = ["A", "B", "C", "D", "E"]
+    # fit on numpy so sklearn has no feature_names_in_ to validate against
+    model = LinearRegression().fit(X[feature_cols].values, y.values)
+    y_pred = model.predict(X[feature_cols].values)
+
+    X = X.copy()
+    X["grp"] = np.random.choice(["G1", "G2"], len(y))
+
+    show_residual_diagnostics(
+        model=None,  # bypass internal predict
+        X=X,
+        y=y,
+        y_pred=y_pred,
+        plot_type="predictors",
+        show_centroids=True,
+        centroid_type="groups",
+        group_category="grp",
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_residual_diagnostics_predictors_centroids_type_clusters(
+    mock_show, sample_regression_data
+):
+    """Predictors plot with centroid_type='clusters' and explicit n_clusters."""
+    X, y = sample_regression_data
+    model = LinearRegression().fit(X, y)
+    show_residual_diagnostics(
+        model,
+        X,
+        y,
+        plot_type="predictors",
+        show_centroids=True,
+        centroid_type="clusters",
+        n_clusters=3,
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_show_residual_diagnostics_predictors_centroids_clusters_default_n(
+    mock_show, sample_regression_data
+):
+    """Predictors clusters with no n_clusters set (hits the n_clusters=3 default)."""
+    X, y = sample_regression_data
+    model = LinearRegression().fit(X, y)
+    show_residual_diagnostics(
+        model,
+        X,
+        y,
+        plot_type="predictors",
+        show_centroids=True,
+        centroid_type="clusters",
+        save_plot=False,
+    )
+    assert mock_show.called
 
 
 if __name__ == "__main__":
