@@ -5313,3 +5313,101 @@ def combine_plots(
     )
 
     plt.show()
+
+
+def cumaltive_feat_importance_plot():
+    ###TODO: remove reliance on model obj
+
+    # --- 1. Extract feature names ---
+    best_model_obj = model_2022
+
+    try:
+        all_features = np.array(best_model_obj.get_feature_names())
+    except Exception as e:
+        print(f"Falling back to preprocessor: {e}")
+        estimator = best_model_obj.estimator.estimator
+        preprocessor = estimator.named_steps[
+            "preprocess_column_transformer_ColumnTransformer"
+        ]
+        all_features = np.array(preprocessor.get_feature_names_out())
+
+    # --- 2. Apply feature selection mask if present ---
+    estimator = best_model_obj.estimator.estimator
+
+    if any("feature_selection" in step for step in estimator.named_steps.keys()):
+        feature_selector = estimator.named_steps["feature_selection_RFE"]
+        feat_mask = feature_selector.get_support()
+        selected_features = all_features[feat_mask]
+    else:
+        selected_features = all_features
+
+    # --- 3. Extract importances from the final estimator ---
+    raw_importances = best_model_obj.estimator.estimator[-1].get_feature_importance()
+
+    # --- 4. Build sorted DataFrame ---
+    importance_df = (
+        pd.DataFrame(
+            {
+                "feature": selected_features,
+                "importance": raw_importances,
+            }
+        )
+        .sort_values("importance", ascending=False)
+        .reset_index(drop=True)
+    )
+
+    importance_df["importance_pct"] = (
+        importance_df["importance"] / importance_df["importance"].sum()
+    )
+    importance_df["cumulative_pct"] = importance_df["importance_pct"].cumsum()
+
+    # --- 5. Find the 80% cutoff ---
+    cutoff_80 = importance_df[importance_df["cumulative_pct"] <= 0.80]
+    # Include the row that *crosses* 80% so the set is complete
+    n_features_80 = len(cutoff_80) + 1
+    top_features_80 = importance_df.iloc[:n_features_80].copy()
+
+    print(f"\n{n_features_80} features account for 80% of total importance:\n")
+    print(
+        top_features_80[["feature", "importance_pct", "cumulative_pct"]].style.format(
+            {"importance_pct": "{:.2%}", "cumulative_pct": "{:.2%}"}
+        )
+    )
+
+    fig, ax = plt.subplots(figsize=(10, max(4, n_features_80 * 0.6)))
+
+    features_rev = top_features_80["feature"][::-1].values
+    importance_rev = top_features_80["importance_pct"][::-1].values
+    cumulative_rev = top_features_80["cumulative_pct"][
+        ::-1
+    ].values  # hdl first, a1c last
+
+    y_pos = np.arange(len(features_rev))
+
+    bars = ax.barh(y_pos, importance_rev, align="center", color="steelblue")
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(features_rev)
+    ax.set_xlabel("Individual Importance %")
+    ax.set_title(f"Top {n_features_80} features → 80% cumulative importance")
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.0%}"))
+
+    # Annotate each bar with its cumulative %
+    for i, (imp, cum) in enumerate(zip(importance_rev, cumulative_rev)):
+        ax.text(
+            imp + 0.003,
+            i,
+            f"cumulative: {cum:.1%}",
+            va="center",
+            ha="left",
+            fontsize=9,
+            color="darkred",
+            fontweight="bold",
+        )
+
+    # Vertical line at the feature that crosses 80%
+    crossing_importance = importance_rev[cumulative_rev >= 0.80][-1]
+    ax.axvline(x=0, color="none")  # just to set limits properly
+    ax.set_xlim(0, importance_rev.max() * 1.5)  # make room for annotations
+
+    plt.tight_layout()
+    plt.show()
