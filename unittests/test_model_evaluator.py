@@ -18,13 +18,13 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.datasets import make_classification, make_regression
 from sklearn.model_selection import KFold, train_test_split
 
+from model_metrics.delong_test import hanley_mcneil_auc_test
+
 from model_metrics.metrics_utils import (
-    save_plot_images,
     normalize_model_titles,
     get_predictions,
     extract_model_name,
     validate_and_normalize_inputs,
-    hanley_mcneil_auc_test,
     check_heteroskedasticity,
     compute_classification_metrics,
     compute_regression_metrics,
@@ -35,6 +35,8 @@ from model_metrics.metrics_utils import (
     get_feature_importances,
     get_coef_and_intercept,
 )
+
+from model_metrics.plot_utils import save_plot_images
 
 from model_metrics.model_evaluator import (
     summarize_model_performance,

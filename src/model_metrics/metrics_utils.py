@@ -1,5 +1,3 @@
-# model_utils.py
-import os
 import pandas as pd
 import numpy as np
 from scipy.stats import spearmanr, jarque_bera, norm
@@ -21,6 +19,7 @@ from sklearn.metrics import (
     mean_squared_error,
     explained_variance_score,
     r2_score,
+    accuracy_score,
 )
 
 from statsmodels.stats.diagnostic import (
@@ -29,79 +28,110 @@ from statsmodels.stats.diagnostic import (
     het_goldfeldquandt,
 )
 
+# Registry entries: name -> (display label, scorer, higher_is_better, kind)
+#   kind "score" : scorer takes probabilities / continuous scores
+#   kind "label" : scorer takes thresholded 0/1 predictions
+#   kind "value" : scorer takes continuous predictions (regression)
+_CLASSIFICATION_METRICS = {
+    "roc_auc": ("ROC AUC", roc_auc_score, True, "score"),
+    "average_precision": ("Average Precision", average_precision_score, True, "score"),
+    "brier": ("Brier Score (lower is better)", brier_score_loss, False, "score"),
+    "precision": (
+        "Precision",
+        lambda yt, yp: precision_score(yt, yp, zero_division=0),
+        True,
+        "label",
+    ),
+    "recall": (
+        "Recall",
+        lambda yt, yp: recall_score(yt, yp, zero_division=0),
+        True,
+        "label",
+    ),
+    "f1": ("F1", lambda yt, yp: f1_score(yt, yp, zero_division=0), True, "label"),
+    "accuracy": ("Accuracy", accuracy_score, True, "label"),
+}
+_REGRESSION_METRICS = {
+    "r2": ("R\u00b2", r2_score, True, "value"),
+    "mae": ("MAE (lower is better)", mean_absolute_error, False, "value"),
+    "rmse": (
+        "RMSE (lower is better)",
+        lambda yt, yp: np.sqrt(mean_squared_error(yt, yp)),
+        False,
+        "value",
+    ),
+    "mse": ("MSE (lower is better)", mean_squared_error, False, "value"),
+}
+_ALL_METRICS = {**_CLASSIFICATION_METRICS, **_REGRESSION_METRICS}
+_DEFAULT_METRICS = {
+    "classification": ("roc_auc", "average_precision", "brier"),
+    "regression": ("r2", "mae", "rmse"),
+}
+
+
+def _resolve_task(task, model, metrics):
+    """Decide classification vs regression for the feature-performance curve.
+
+    A supplied model is authoritative: predict_proba means classification,
+    otherwise regression. Metrics never override the model. Only in the
+    predictions-only path (no model) is the task inferred from the metric
+    family, and mixing families there is an error.
+    """
+    if task != "auto":
+        return task
+    if model is not None:
+        if hasattr(model, "predict_proba"):
+            return "classification"
+        if hasattr(model, "predict"):
+            return "regression"
+    if metrics is not None:
+        names = [m for m in metrics if isinstance(m, str)]
+        has_reg = any(n in _REGRESSION_METRICS for n in names)
+        has_clf = any(n in _CLASSIFICATION_METRICS for n in names)
+        if has_reg and not has_clf:
+            return "regression"
+        if has_clf and not has_reg:
+            return "classification"
+        if has_reg and has_clf:
+            reg_in = [n for n in names if n in _REGRESSION_METRICS]
+            clf_in = [n for n in names if n in _CLASSIFICATION_METRICS]
+            raise ValueError(
+                "Metrics mix classification and regression families, so the "
+                "task cannot be inferred without a model.\n"
+                f"  Regression metric(s) in your list : {reg_in}\n"
+                f"  Classification metric(s) in your list : {clf_in}\n"
+                "  Fix: pass a single family, or set task= explicitly.\n"
+                f"  Regression options     : {list(_REGRESSION_METRICS)}\n"
+                f"  Classification options : {list(_CLASSIFICATION_METRICS)}"
+            )
+    return "classification"
+
+
+def _validate_metrics_for_task(metrics, task):
+    """Reject metrics that belong to the wrong task family.
+
+    Callables are exempt (their family is unknown). Unknown metric strings are
+    left for the caller's registry lookup to report.
+    """
+    reg = [m for m in metrics if isinstance(m, str) and m in _REGRESSION_METRICS]
+    clf = [m for m in metrics if isinstance(m, str) and m in _CLASSIFICATION_METRICS]
+    if task == "classification" and reg:
+        raise ValueError(
+            f"Regression metric(s) {reg} are not valid for a classification task.\n"
+            f"  Regression-only metrics : {list(_REGRESSION_METRICS)}\n"
+            f"  Valid classification    : {list(_CLASSIFICATION_METRICS)}"
+        )
+    if task == "regression" and clf:
+        raise ValueError(
+            f"Classification metric(s) {clf} are not valid for a regression task.\n"
+            f"  Classification-only metrics : {list(_CLASSIFICATION_METRICS)}\n"
+            f"  Valid regression            : {list(_REGRESSION_METRICS)}"
+        )
+
+
 ################################################################################
 ############################## Helper Functions ################################
 ################################################################################
-
-
-def save_plot_images(
-    filename,
-    save_plot,
-    image_path_png,
-    image_path_svg,
-    image_filename=None,
-    fig=None,
-    dpi=None,
-):
-    """
-    Save the current figure to PNG and/or SVG.
-
-    Saving is triggered when either ``save_plot=True`` or
-    ``image_filename`` is provided explicitly. If ``image_filename``
-    is given it takes precedence over the auto-generated ``filename``.
-
-    Parameters
-    ----------
-    filename : str
-        Auto-generated base filename used when ``image_filename`` is None.
-
-    save_plot : bool
-        If True, saves using the auto-generated ``filename``.
-
-    image_path_png : str or None
-        Directory path where the PNG file should be saved.
-
-    image_path_svg : str or None
-        Directory path where the SVG file should be saved.
-
-    image_filename : str or None, optional
-        Custom filename override. When provided, saving is triggered
-        regardless of ``save_plot`` and this name is used instead of
-        ``filename``.
-
-    fig : matplotlib.figure.Figure or None, optional
-        Figure to save. If None, uses the current active figure.
-
-    dpi : int or None, optional
-        DPI for raster outputs such as PNG.
-    """
-    effective_name = image_filename if image_filename is not None else filename
-    should_save = save_plot or (image_filename is not None)
-
-    if not should_save:
-        return
-
-    if not (image_path_png or image_path_svg):
-        raise ValueError(
-            "No image path provided. Please specify at least one of "
-            "`image_path_png` or `image_path_svg`."
-        )
-
-    fig = fig or plt.gcf()
-
-    if image_path_png:
-        os.makedirs(image_path_png, exist_ok=True)
-        fig.savefig(
-            os.path.join(image_path_png, f"{effective_name}.png"),
-            bbox_inches="tight",
-            dpi=dpi,
-        )
-    if image_path_svg:
-        os.makedirs(image_path_svg, exist_ok=True)
-        fig.savefig(
-            os.path.join(image_path_svg, f"{effective_name}.svg"),
-            bbox_inches="tight",
-        )
 
 
 def normalize_model_titles(model_title, num_models, format_template="Model {i}"):
@@ -278,71 +308,6 @@ def validate_and_normalize_inputs(model, X, y_prob_or_pred):
         model = [None] * num_models
 
     return model, y_prob_or_pred, num_models
-
-
-def hanley_mcneil_auc_test(
-    y_true,
-    y_scores_1,
-    y_scores_2,
-    model_names=None,
-    verbose=True,
-    return_values=False,
-    decimal_places=4,
-):
-    """
-    Hanley & McNeil (1982) large-sample z-test for difference in correlated AUCs.
-    Returns (auc1, auc2, p_value).
-
-    Parameters
-    ----------
-    y_true : array-like
-        True binary class labels.
-    y_scores_1 : array-like
-        Predicted probabilities or decision scores from the first model.
-    y_scores_2 : array-like
-        Predicted probabilities or decision scores from the second model.
-    model_names : list or tuple of str, optional
-        Optional names for the models, used for printed output.
-        Defaults to ("Model 1", "Model 2") if not provided.
-    verbose : bool, default=True
-        If True, prints a formatted summary of the comparison, including AUCs
-        and the computed p-value.
-    return_values : bool, default=False
-        If True, returns the tuple (auc1, auc2, p_value) instead of only
-        printing the results. This is useful for programmatic access or when
-        integrating into other functions such as `show_roc_curve()`.
-
-    Returns
-    -------
-    tuple of floats, optional
-        (auc1, auc2, p_value) — only returned if `return_values=True`.
-    """
-    auc1 = roc_auc_score(y_true, y_scores_1)
-    auc2 = roc_auc_score(y_true, y_scores_2)
-    n1 = np.sum(y_true)
-    n2 = len(y_true) - n1
-    q1 = auc1 / (2 - auc1)
-    q2 = 2 * auc1**2 / (1 + auc1)
-    se = np.sqrt(
-        (auc1 * (1 - auc1) + (n1 - 1) * (q1 - auc1**2) + (n2 - 1) * (q2 - auc1**2))
-        / (n1 * n2)
-    )
-    z = (auc1 - auc2) / se
-    p = 2 * (1 - norm.cdf(abs(z)))
-
-    if model_names is None:
-        model_names = ("Model 1", "Model 2")
-
-    if verbose:
-        print(
-            f"\nHanley & McNeil AUC Comparison (Approximation of DeLong's Test):\n"
-            f"  {model_names[0]} AUC = {auc1:.{decimal_places}f}\n"
-            f"  {model_names[1]} AUC = {auc2:.{decimal_places}f}\n"
-            f"  p-value = {p:.{decimal_places}f}\n"
-        )
-
-    if return_values:
-        return auc1, auc2, p
 
 
 def compute_classification_metrics(y_true, y_pred, y_prob, threshold, decimal_places=3):
