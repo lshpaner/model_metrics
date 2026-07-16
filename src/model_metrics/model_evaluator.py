@@ -5895,7 +5895,7 @@ def show_cumulative_feature_performance(
 ):
     """
     Trace a fitted model's performance as it is restricted to its top-k most
-    important features, WITHOUT retraining. Excluded features are set to
+    important features, WITHOUT ing. Excluded features are set to
     ``missing_value`` (NaN) and the fixed model is re-scored, so the model must
     handle missing values natively (CatBoost, XGBoost, HistGradientBoosting).
 
@@ -6237,7 +6237,7 @@ def show_cumulative_feature_performance(
 
     apply_plot_title(
         title,
-        default_title="Cumulative Feature Performance (top-k, no retrain)",
+        default_title="Cumulative Feature Performance (top-k)",
         text_wrap=text_wrap,
         fontsize=label_fontsize,
         ax=ax,
