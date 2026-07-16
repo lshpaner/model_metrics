@@ -44,7 +44,7 @@ pip install model_metrics
 https://lshpaner.github.io/model_metrics_docs 
 
 
-## 🌐 Author's Website
+## 🌐 Authors' Website(s)
 
 1. [Leon Shpaner](https://www.leonshpaner.com)
 
@@ -73,12 +73,12 @@ If you use `model_metrics` in your research or projects, please consider citing 
 ```bibtex
 
 @software{shpaner_2025_14879819,
-  author       = {Shpaner, Leonid},
+  author       = {Shpaner, Leonid and Funnell, Arthur},
   title        = {Model Metrics},
   month        = feb,
   year         = 2025,
   publisher    = {Zenodo},
-  version      = {0.0.5a9.dev4},
+  version      = {0.0.5a9.dev5},
   doi          = {10.5281/zenodo.14879819},
   url          = {https://doi.org/10.5281/zenodo.14879819}
 }

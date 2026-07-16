@@ -2,9 +2,9 @@ from setuptools import setup, find_packages
 
 setup(
     name="model_metrics",
-    version="0.0.5a9.dev4",
-    author="Leonid Shpaner",
-    author_email="lshpaner@ucla.edu",
+    version="0.0.5a9.dev5",
+    author="Leonid Shpaner, Arthur Funnell",
+    author_email="lshpaner@ucla.edu, alafunnell@gmail.com",
     description="A Python library for model evaluation, performance tracking, and metric visualizations, supporting classification and regression models with robust analytics and reporting.",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",  # Type of the long description

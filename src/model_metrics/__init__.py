@@ -1,8 +1,10 @@
 from .model_calculator import *
 from .model_evaluator import *
 from .metrics_utils import *
+from .feature_selection_utils import *
 from .plot_utils import *
 from .partial_dependence import *
+from .delong_test import *
 from .logo import *
 
 import sys
@@ -23,7 +25,7 @@ PyPI: https://pypi.org/project/model-metrics/
 Documentation: https://lshpaner.github.io/model_metrics_docs/
 
 
-Version: 0.0.5a9.dev4
+Version: 0.0.5a9.dev5
 
 """
 
@@ -31,9 +33,9 @@ Version: 0.0.5a9.dev4
 __doc__ = detailed_doc
 
 
-__version__ = "0.0.5a9.dev4"
-__author__ = "Leonid Shpaner"
-__email__ = "lshpaner@ucla.edu"
+__version__ = "0.0.5a9.dev5"
+__author__ = "Leonid Shpaner, Arthur Funnell"
+__email__ = "lshpaner@ucla.edu, arthur@example.com"
 
 
 # Define the custom help function
