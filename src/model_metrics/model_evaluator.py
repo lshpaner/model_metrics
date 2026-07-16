@@ -28,13 +28,13 @@ from sklearn.metrics import (
     average_precision_score,
 )
 
+from model_metrics.delong_test import delong_roc_test, hanley_mcneil_auc_test
+
 from model_metrics.metrics_utils import (
-    save_plot_images,
     normalize_model_titles,
     get_predictions,
     extract_model_name,
     validate_and_normalize_inputs,
-    hanley_mcneil_auc_test,
     compute_classification_metrics,
     compute_regression_metrics,
     compute_leverage_and_cooks_distance,
@@ -45,7 +45,6 @@ from model_metrics.metrics_utils import (
     get_feature_importances,
     get_coef_and_intercept,
     _VENN_CATEGORY_SPEC,
-    _venn_blend,
     _venn_resolve_side,
     _venn_category_counts,
     _draw_one_venn,
@@ -57,9 +56,21 @@ from model_metrics.metrics_utils import (
     _draw_crosstab_legend,
     _print_overlap_crosstab_legend,
     _resolve_font_family,
+    _ALL_METRICS,
+    _DEFAULT_METRICS,
+    _resolve_task,
+    _validate_metrics_for_task,
+)
+
+from model_metrics.feature_selection_utils import (
+    _rank_features_by_importance,
+    _clean_feature_labels,
+    _plot_perf_series,
+    _retained_fractions,
 )
 
 from model_metrics.plot_utils import (
+    save_plot_images,
     apply_axis_limits,
     apply_plot_title,
     apply_legend,
@@ -885,6 +896,7 @@ def show_roc_curve(
     gridlines=True,
     group_category=None,
     delong=None,
+    hanley_mcneil=None,
     show_operating_point=False,
     operating_point_method="youden",
     operating_point_kwgs=None,
@@ -967,12 +979,18 @@ def show_roc_curve(
         If provided, separate ROC curves are plotted for each group, with AUC
         and class counts (Total, Pos, Neg) shown in the legend.
     - delong: tuple or list of array-like, optional
-        Two predicted probability arrays (e.g., [y_prob_model1, y_prob_model2]) to
-        perform a Hanley & McNeil AUC comparison, a parametric approximation of
-        DeLong's test for correlated ROC curves. The test compares two models
-        evaluated on the same samples to determine whether the difference in AUC
-        is statistically significant. Cannot be used when `group_category` is
-        specified, since AUCs are computed on separate subsets of patients.
+        Two predicted probability arrays (e.g., [y_prob_model1, y_prob_model2])
+        to run the exact DeLong test (delong_roc_test) comparing two correlated
+        ROC AUCs. It accounts for the correlation between the two AUCs, since
+        they are computed on the same samples, and reports whether the
+        difference in AUC is statistically significant. Cannot be used when
+        `group_category` is specified, since AUCs are computed on separate
+        subsets of patients.
+    - hanley_mcneil: tuple or list of array-like, optional
+        Same as `delong`, but runs the Hanley & McNeil parametric approximation
+        (hanley_mcneil_auc_test) instead of the exact test. Cheaper and
+        conservative; prefer `delong` for reported results. Cannot be used when
+        `group_category` is specified.
     - legend_loc: str, optional
         Location for the legend. Standard matplotlib locations like 'lower right',
         'upper left', etc., or 'bottom' to place legend below the plot
@@ -983,8 +1001,9 @@ def show_roc_curve(
           `subplots=True` and `group_category` is provided, if `overlay=True`
           and `group_category` is provided, or if `overlay=True` and only one
           model is provided.
-        - ValueError: If `delong` is provided while `group_category` is specified,
-          since AUCs from different groups cannot be compared using this test.
+        - ValueError: If `delong` or `hanley_mcneil` is provided while
+          `group_category` is specified, since AUCs from different groups cannot
+          be compared using these tests.
     """
 
     # Validate and normalize inputs
@@ -1014,10 +1033,11 @@ def show_roc_curve(
             f"`overlay` are set to `False`."
         )
 
-    if delong is not None and group_category is not None:
+    if (delong is not None or hanley_mcneil is not None) and group_category is not None:
         raise ValueError(
-            f"Cannot run DeLong's (Hanley & McNeil comparison) when `group_category` "
-            f"is specified, because AUCs are computed on separate subsets of patients."
+            "Cannot run DeLong or Hanley & McNeil AUC comparison when "
+            "`group_category` is specified, because AUCs are computed on "
+            "separate subsets of patients."
         )
 
     # Normalize model_title input
@@ -1045,6 +1065,9 @@ def show_roc_curve(
             num_models=len(model), n_cols=n_cols, n_rows=n_rows, figsize=figsize
         )
 
+    _ax_param = (
+        ax  # preserve caller's ax so each default-mode model gets its own figure
+    )
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
@@ -1105,33 +1128,37 @@ def show_roc_curve(
 
                 op_label = f"Op: {op_thresh:.{decimal_places}f} at ({op_fpr:.{decimal_places}f}, {op_tpr:.{decimal_places}f})"
 
-        # Optional: Hanley & McNeil AUC comparison if two probability arrays are provided
-        if delong is not None and idx == 0:
-            try:
-                if not isinstance(delong, (tuple, list)) or len(delong) != 2:
-                    raise ValueError(
-                        "`delong` must be a tuple or list containing two y_prob arrays."
+        # Optional AUC comparison between two probability arrays (idx == 0 only).
+        for _label, _arrays, _test_fn, _errname in (
+            ("delong", delong, delong_roc_test, "DeLong test"),
+            (
+                "hanley_mcneil",
+                hanley_mcneil,
+                hanley_mcneil_auc_test,
+                "Hanley & McNeil AUC comparison",
+            ),
+        ):
+            if _arrays is not None and idx == 0:
+                try:
+                    if not isinstance(_arrays, (tuple, list)) or len(_arrays) != 2:
+                        raise ValueError(
+                            f"`{_label}` must be a tuple or list containing two y_prob arrays."
+                        )
+                    y_prob_1, y_prob_2 = _arrays
+                    if model_title is not None and len(model_title) >= 2:
+                        name1, name2 = model_title[0], model_title[1]
+                    else:
+                        name1, name2 = "Model 1", "Model 2"
+                    _test_fn(
+                        y_true,
+                        y_prob_1,
+                        y_prob_2,
+                        model_names=(name1, name2),
+                        return_values=True,
+                        verbose=True,
                     )
-
-                y_prob_1, y_prob_2 = delong
-
-                # Resolve model names if available
-                if model_title is not None and len(model_title) >= 2:
-                    name1, name2 = model_title[0], model_title[1]
-                else:
-                    name1, name2 = "Model 1", "Model 2"
-
-                hanley_mcneil_auc_test(
-                    y_true,
-                    y_prob_1,
-                    y_prob_2,
-                    model_names=(name1, name2),
-                    return_values=True,
-                    verbose=True,
-                )
-
-            except Exception as e:
-                print(f"Error running Hanley & McNeil AUC comparison: {e}")
+                except Exception as e:
+                    print(f"Error running {_errname}: {e}")
 
         if overlay:
             (line,) = _overlay_ax.plot(
@@ -1240,10 +1267,11 @@ def show_roc_curve(
                 )
             ax.grid(visible=gridlines)
         else:
-            if ax is None:
+            if _ax_param is None:
                 fig, ax = plt.subplots(figsize=figsize or (8, 6))
                 _created_fig = True
             else:
+                ax = _ax_param
                 _created_fig = False
             if group_category is not None:
                 for gr in group_category.unique():
@@ -1548,6 +1576,9 @@ def show_pr_curve(
     if subplots and not overlay:
         _, axes = setup_subplots(len(model), n_cols, n_rows, figsize)
 
+    _ax_param = (
+        ax  # preserve caller's ax so each default-mode model gets its own figure
+    )
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
@@ -1656,10 +1687,11 @@ def show_pr_curve(
             ax.grid(visible=gridlines)
 
         else:
-            if ax is None:
+            if _ax_param is None:
                 fig, ax = plt.subplots(figsize=figsize or (8, 6))
                 _created_fig = True
             else:
+                ax = _ax_param
                 _created_fig = False
             if group_category is not None:
                 for gr in group_category.unique():
@@ -1862,6 +1894,9 @@ def show_lift_chart(
     if subplots and not overlay:
         _, axes = setup_subplots(len(model), n_cols, n_rows, figsize)
 
+    _ax_param = (
+        ax  # preserve caller's ax so each default-mode model gets its own figure
+    )
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
@@ -1913,10 +1948,11 @@ def show_lift_chart(
             apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
             ax.grid(visible=gridlines)
         else:
-            if ax is None:
+            if _ax_param is None:
                 fig, ax = plt.subplots(figsize=figsize or (8, 6))
                 _created_fig = True
             else:
+                ax = _ax_param
                 _created_fig = False
             ax.plot(
                 percentages,
@@ -2089,6 +2125,9 @@ def show_gain_chart(
     if subplots and not overlay:
         _, axes = setup_subplots(len(model), n_cols, n_rows, figsize)
 
+    _ax_param = (
+        ax  # preserve caller's ax so each default-mode model gets its own figure
+    )
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
@@ -2151,10 +2190,11 @@ def show_gain_chart(
             apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
             ax.grid(visible=gridlines)
         else:
-            if ax is None:
+            if _ax_param is None:
                 fig, ax = plt.subplots(figsize=figsize or (8, 6))
                 _created_fig = True
             else:
+                ax = _ax_param
                 _created_fig = False
 
             if show_gini:
@@ -2362,6 +2402,9 @@ def show_calibration_curve(
             _created_fig = True
 
     # Loop over each model
+    _ax_param = (
+        ax  # preserve caller's ax so each default-mode model gets its own figure
+    )
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
@@ -2509,10 +2552,11 @@ def show_calibration_curve(
 
         # STANDARD SINGLE PLOT
         else:
-            if ax is None:
+            if _ax_param is None:
                 fig, ax = plt.subplots(figsize=figsize or (8, 6))
                 _created_fig = True
             else:
+                ax = _ax_param
                 _created_fig = False
             ax.plot(
                 prob_pred,
@@ -2890,6 +2934,9 @@ def plot_threshold_metrics(
         )
 
     # Main loop over models
+    _ax_param = (
+        ax  # preserve caller's ax so each default-mode model gets its own figure
+    )
     for idx, (mod, name, thresh) in enumerate(
         zip(model, model_title, model_thresholds)
     ):
@@ -2921,10 +2968,11 @@ def plot_threshold_metrics(
 
         else:
             # Single plot per model
-            if ax is None:
+            if _ax_param is None:
                 fig, ax = plt.subplots(figsize=figsize or (8, 6))
                 _created_fig = True
             else:
+                ax = _ax_param
                 _created_fig = False
             _plot_single(ax, y_pred_probs, name, thresh)
             apply_plot_title(
@@ -5315,45 +5363,121 @@ def combine_plots(
     plt.show()
 
 
-def cumaltive_feat_importance_plot():
-    ###TODO: remove reliance on model obj
+def show_cumulative_feature_importance(
+    model=None,
+    threshold=0.80,
+    xlabel="Individual Importance %",
+    title=None,
+    text_wrap=None,
+    figsize=None,
+    label_fontsize=12,
+    tick_fontsize=10,
+    bar_color="steelblue",
+    bar_kwgs=None,
+    annotation_color="darkred",
+    show_annotation=True,
+    feature_names=None,
+    clean_names=None,
+    feature_selection_step="feature_selection_RFE",
+    preprocessor_step="preprocess_column_transformer_ColumnTransformer",
+    save_plot=False,
+    image_path_png=None,
+    image_path_svg=None,
+    image_filename=None,
+    return_df=False,
+    return_features=False,
+    ax=None,
+):
+    """
+    Plot the top features that cumulatively account for a target share of
+    total feature importance, annotating each bar with its running cumulative
+    percentage.
 
-    # --- 1. Extract feature names ---
-    best_model_obj = model_2022
+    Importances are resolved from the final estimator via
+    ``get_feature_importance()`` (CatBoost / model_tuner wrapper),
+    ``feature_importances_`` (sklearn trees/ensembles), or ``coef_``
+    magnitude (linear models), in that order.
 
-    try:
-        all_features = np.array(best_model_obj.get_feature_names())
-    except Exception as e:
-        print(f"Falling back to preprocessor: {e}")
-        estimator = best_model_obj.estimator.estimator
-        preprocessor = estimator.named_steps[
-            "preprocess_column_transformer_ColumnTransformer"
-        ]
-        all_features = np.array(preprocessor.get_feature_names_out())
+    Parameters
+    ----------
+    model : estimator
+        A fitted model wrapper exposing ``get_feature_names()`` (or a nested
+        ``estimator.estimator`` pipeline) whose final step exposes one of
+        ``get_feature_importance()``, ``feature_importances_``, or ``coef_``.
+        Required.
+    threshold : float, default=0.80
+        Cumulative-importance cutoff. Features are included up to and
+        including the one that crosses this share.
+    xlabel : str, default="Individual Importance %"
+        Label for the x-axis.
+    title : str or None, default=None
+        Custom title. If None, a default title is used; if "", the title is
+        disabled (matches the rest of the ``show_*`` family).
+    text_wrap : int, optional
+        Maximum width before wrapping the title.
+    figsize : tuple, optional
+        Figure size. Defaults to a height that scales with the number of
+        selected features. Ignored when ``ax`` is provided.
+    label_fontsize : int, default=12
+        Font size for the title and axis label.
+    tick_fontsize : int, default=10
+        Font size for tick labels and bar annotations.
+    bar_color : str, default="steelblue"
+        Bar fill color.
+    annotation_color : str, default="darkred"
+        Color for the cumulative-percentage annotations.
+    show_annotation : bool, default=True
+        Whether to annotate each bar with its running cumulative percentage.
+        When False, the annotations are omitted and the x-axis is tightened,
+        since the extra headroom exists only to fit the annotation text.
+    feature_selection_step : str, default="feature_selection_RFE"
+        Named-step key used to pull the feature-selection mask, when present.
+    preprocessor_step : str, default="preprocess_column_transformer_ColumnTransformer"
+        Named-step key used as the fallback source of feature names.
+    bar_kwgs : dict, optional
+        Extra keyword arguments merged into the bar call (e.g.
+        ``{"edgecolor": "black", "linewidth": 2}``); overrides defaults.
+    clean_names : dict or callable, optional
+        Display relabeling for the bars and printed summary. A dict
+        ``{original_name: label}`` (unmapped names stay as-is) or a callable
+        ``name -> label``. Affects display only; ranking and the returned
+        DataFrame keep the original feature names.
+    save_plot : bool, default=False
+        Whether to save the figure. Ignored when ``ax`` is provided.
+    image_path_png : str, optional
+        Directory for the PNG output.
+    image_path_svg : str, optional
+        Directory for the SVG output.
+    image_filename : str, optional
+        Custom filename. When provided, saving is triggered regardless of
+        ``save_plot``.
+    return_df : bool, default=False
+        If True, return the full sorted importance DataFrame.
+    ax : matplotlib.axes.Axes, optional
+        Existing axis to draw on (e.g. from ``combine_plots``). When provided,
+        the function neither saves nor shows the figure.
 
-    # --- 2. Apply feature selection mask if present ---
-    estimator = best_model_obj.estimator.estimator
+    Returns
+    -------
+    pandas.DataFrame or None
+        The sorted importance DataFrame if ``return_df=True``, else None.
 
-    if any("feature_selection" in step for step in estimator.named_steps.keys()):
-        feature_selector = estimator.named_steps["feature_selection_RFE"]
-        feat_mask = feature_selector.get_support()
-        selected_features = all_features[feat_mask]
-    else:
-        selected_features = all_features
+    Raises
+    ------
+    ValueError
+        If ``model`` is None.
+    AttributeError
+        If the final estimator exposes no supported importance interface.
+    """
+    if model is None:
+        raise ValueError("`model` must be provided.")
 
-    # --- 3. Extract importances from the final estimator ---
-    raw_importances = best_model_obj.estimator.estimator[-1].get_feature_importance()
-
-    # --- 4. Build sorted DataFrame ---
-    importance_df = (
-        pd.DataFrame(
-            {
-                "feature": selected_features,
-                "importance": raw_importances,
-            }
-        )
-        .sort_values("importance", ascending=False)
-        .reset_index(drop=True)
+    # --- Rank features (handles wrappers, plain estimators, and pipelines) ---
+    importance_df = _rank_features_by_importance(
+        model,
+        feature_names=feature_names,
+        feature_selection_step=feature_selection_step,
+        preprocessor_step=preprocessor_step,
     )
 
     importance_df["importance_pct"] = (
@@ -5361,53 +5485,810 @@ def cumaltive_feat_importance_plot():
     )
     importance_df["cumulative_pct"] = importance_df["importance_pct"].cumsum()
 
-    # --- 5. Find the 80% cutoff ---
-    cutoff_80 = importance_df[importance_df["cumulative_pct"] <= 0.80]
-    # Include the row that *crosses* 80% so the set is complete
-    n_features_80 = len(cutoff_80) + 1
-    top_features_80 = importance_df.iloc[:n_features_80].copy()
+    # --- 5. Find the cutoff (include the row that crosses the threshold) ---
+    cutoff = importance_df[importance_df["cumulative_pct"] <= threshold]
+    n_features = len(cutoff) + 1
+    top_features = importance_df.iloc[:n_features].copy()
 
-    print(f"\n{n_features_80} features account for 80% of total importance:\n")
+    # Console summary. Rendered as plain text so it displays correctly outside
+    # notebooks too (the original print(...style.format(...)) only shows a
+    # Styler repr under print()).
+    summary = top_features[["feature", "importance_pct", "cumulative_pct"]].copy()
+    summary["feature"] = _clean_feature_labels(summary["feature"], clean_names)
+    summary["importance_pct"] = summary["importance_pct"].map("{:.2%}".format)
+    summary["cumulative_pct"] = summary["cumulative_pct"].map("{:.2%}".format)
     print(
-        top_features_80[["feature", "importance_pct", "cumulative_pct"]].style.format(
-            {"importance_pct": "{:.2%}", "cumulative_pct": "{:.2%}"}
-        )
+        f"\n{n_features} features account for {threshold:.0%} "
+        f"of total importance:\n"
     )
+    print(summary.to_string(index=False))
 
-    fig, ax = plt.subplots(figsize=(10, max(4, n_features_80 * 0.6)))
+    # --- Figure lifecycle (matches the show_* family) ---
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize or (10, max(4, n_features * 0.6)))
+        _created_fig = True
+    else:
+        fig = ax.get_figure()
+        _created_fig = False
 
-    features_rev = top_features_80["feature"][::-1].values
-    importance_rev = top_features_80["importance_pct"][::-1].values
-    cumulative_rev = top_features_80["cumulative_pct"][
-        ::-1
-    ].values  # hdl first, a1c last
+    features_rev = _clean_feature_labels(
+        top_features["feature"][::-1].values, clean_names
+    )
+    importance_rev = top_features["importance_pct"][::-1].values
+    cumulative_rev = top_features["cumulative_pct"][::-1].values
 
     y_pos = np.arange(len(features_rev))
 
-    bars = ax.barh(y_pos, importance_rev, align="center", color="steelblue")
+    _bar_style = {"color": bar_color}
+    _bar_style.update(bar_kwgs or {})
+    ax.barh(y_pos, importance_rev, align="center", **_bar_style)
     ax.set_yticks(y_pos)
-    ax.set_yticklabels(features_rev)
-    ax.set_xlabel("Individual Importance %")
-    ax.set_title(f"Top {n_features_80} features → 80% cumulative importance")
+    ax.set_yticklabels(features_rev, fontsize=tick_fontsize)
+    ax.set_xlabel(xlabel, fontsize=label_fontsize)
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.0%}"))
 
+    apply_plot_title(
+        title,
+        default_title=(
+            f"Top {n_features} features ({threshold:.0%} cumulative importance)"
+        ),
+        text_wrap=text_wrap,
+        fontsize=label_fontsize,
+        ax=ax,
+    )
+
     # Annotate each bar with its cumulative %
-    for i, (imp, cum) in enumerate(zip(importance_rev, cumulative_rev)):
-        ax.text(
-            imp + 0.003,
-            i,
-            f"cumulative: {cum:.1%}",
-            va="center",
-            ha="left",
-            fontsize=9,
-            color="darkred",
-            fontweight="bold",
+    if show_annotation:
+        for i, (imp, cum) in enumerate(zip(importance_rev, cumulative_rev)):
+            ax.text(
+                imp + 0.003,
+                i,
+                f"cumulative: {cum:.1%}",
+                va="center",
+                ha="left",
+                fontsize=tick_fontsize - 1,
+                color=annotation_color,
+                fontweight="bold",
+            )
+        ax.set_xlim(0, importance_rev.max() * 1.5)  # room for annotations
+    else:
+        ax.set_xlim(0, importance_rev.max() * 1.05)  # snug when no annotations
+
+    if _created_fig:
+        plt.tight_layout()
+        save_plot_images(
+            "cumulative_feature_importance",
+            save_plot,
+            image_path_png,
+            image_path_svg,
+            image_filename=image_filename,
+            fig=fig,
+        )
+        plt.show()
+
+    # `top_features` are the selected features within the threshold; return
+    # their original names (not cleaned) so they stay usable for indexing X.
+    selected = top_features["feature"].tolist()
+    if return_features and return_df:
+        return {"features": selected, "df": importance_df}
+    if return_features:
+        return selected
+    if return_df:
+        return importance_df
+
+
+def show_feature_pareto(
+    model=None,
+    threshold=0.80,
+    display="bars",
+    top_n=None,
+    feature_names=None,
+    clean_names=None,
+    feature_selection_step="feature_selection_RFE",
+    preprocessor_step="preprocess_column_transformer_ColumnTransformer",
+    title=None,
+    text_wrap=None,
+    xlabel="Feature",
+    bar_ylabel="Individual importance %",
+    line_ylabel="Cumulative %",
+    figsize=None,
+    label_fontsize=12,
+    tick_fontsize=10,
+    bar_color="steelblue",
+    line_color="darkred",
+    bar_kwgs=None,
+    curve_kwgs=None,
+    threshold_kwgs=None,
+    smooth=True,
+    xtick_rotation=45,
+    mark_threshold=True,
+    legend_loc="center right",
+    save_plot=False,
+    image_path_png=None,
+    image_path_svg=None,
+    image_filename=None,
+    return_df=False,
+    return_features=False,
+    ax=None,
+):
+    """
+    Pareto chart of feature importance: descending individual-importance bars on
+    the left axis with a smooth cumulative-importance curve on the right axis,
+    plus a threshold reference line and its crossover marker.
+
+    Shares the ranking and label helpers with ``show_cumulative_feature_importance``,
+    so it works with model_tuner wrappers, plain sklearn estimators, and
+    pipelines, and honors ``feature_names`` / ``clean_names`` the same way.
+
+    Parameters
+    ----------
+    model : estimator
+        Fitted model or wrapper. Required.
+    threshold : float, default=0.80
+        Cumulative reference level (drawn as a horizontal line; crossover marked).
+    display : {"bars", "curve"}, default="bars"
+        "bars" is the classic Pareto: descending importance bars with a
+        cumulative curve on a right axis. "curve" is the concentration-curve
+        form: cumulative % of features on x versus cumulative % of importance on
+        y, one smooth curve from the origin, no bars, with a diagonal marking
+        uniform importance.
+    top_n : int, optional
+        Show only the top-N features (recommended for wide models). Cumulative
+        percentages remain relative to all features.
+    feature_names : sequence, optional
+        Explicit names when the model does not carry them.
+    clean_names : dict or callable, optional
+        Display relabeling for the x-axis tick labels (dict ``{orig: label}`` or
+        callable). Display only.
+    bar_kwgs : dict, optional
+        Extra keyword arguments merged into the bar call (bars mode).
+    curve_kwgs : dict, optional
+        Extra keyword arguments merged into the cumulative curve, e.g.
+        ``{"linewidth": 3}`` to thicken it; overrides the defaults.
+    threshold_kwgs : dict, optional
+        Extra keyword arguments merged into the threshold and crossover
+        guide lines, e.g. ``{"linewidth": 2}``; overrides the defaults.
+    smooth : bool, default=True
+        Smooth the cumulative curve with a monotone PCHIP interpolation. Falls
+        back to a straight polyline when there are too few points or SciPy is
+        unavailable.
+    mark_threshold : bool, default=True
+        Draw the threshold reference line and the crossover guide line, and print
+        a one-line console summary of how many features reach ``threshold``. The
+        count is printed rather than annotated on the plot to avoid crowding the
+        crossover.
+    return_df : bool, default=False
+        Return the sorted importance DataFrame (feature, importance,
+        importance_pct, cumulative_pct).
+    ax : matplotlib.axes.Axes, optional
+        Existing axis (e.g. from ``combine_plots``); a twin axis is created on
+        it and the function neither saves nor shows.
+
+    Returns
+    -------
+    pandas.DataFrame or None
+    """
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+
+    if model is None:
+        raise ValueError("`model` must be provided.")
+
+    importance_df = _rank_features_by_importance(
+        model,
+        feature_names=feature_names,
+        feature_selection_step=feature_selection_step,
+        preprocessor_step=preprocessor_step,
+    )
+    total = importance_df["importance"].sum()
+    importance_df["importance_pct"] = importance_df["importance"] / total
+    importance_df["cumulative_pct"] = importance_df["importance_pct"].cumsum()
+
+    if display not in ("bars", "curve"):
+        raise ValueError(f"display must be 'bars' or 'curve', got {display!r}.")
+
+    plot_df = importance_df if top_n is None else importance_df.iloc[:top_n].copy()
+    n_total = len(importance_df)
+    n = len(plot_df)
+    x = np.arange(n)
+    labels = _clean_feature_labels(plot_df["feature"].values, clean_names)
+    ind = plot_df["importance_pct"].values
+    cum = plot_df["cumulative_pct"].values
+
+    # Console summary (kept off the plot to avoid crowding the crossover).
+    if mark_threshold:
+        _reached = np.where(importance_df["cumulative_pct"].values >= threshold)[0]
+        _n_reach = int(_reached[0]) + 1 if len(_reached) else len(importance_df)
+        print(
+            f"\n{_n_reach} features reach {threshold:.0%} of cumulative importance.\n"
         )
 
-    # Vertical line at the feature that crosses 80%
-    crossing_importance = importance_rev[cumulative_rev >= 0.80][-1]
-    ax.axvline(x=0, color="none")  # just to set limits properly
-    ax.set_xlim(0, importance_rev.max() * 1.5)  # make room for annotations
+    # --- Figure lifecycle (matches the show_* family) ---
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize or (max(7, n * 0.7), 5))
+        _created_fig = True
+    else:
+        fig = ax.get_figure()
+        _created_fig = False
 
-    plt.tight_layout()
-    plt.show()
+    if display == "bars":
+        # Left axis: individual-importance bars
+        _bar_style = {"color": bar_color, "width": 0.8}
+        _bar_style.update(bar_kwgs or {})
+        ax.bar(x, ind, **_bar_style)
+        ax.set_xlabel(xlabel, fontsize=label_fontsize)
+        ax.set_ylabel(bar_ylabel, fontsize=label_fontsize, color=bar_color)
+        ax.set_xticks(x)
+        ax.set_xticklabels(
+            labels, rotation=xtick_rotation, ha="right", fontsize=tick_fontsize
+        )
+        ax.tick_params(axis="y", labelsize=tick_fontsize, labelcolor=bar_color)
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
+        ax.set_axisbelow(True)
+        ax.grid(True, axis="y", alpha=0.3)
+
+        # Right axis: cumulative-importance curve
+        ax2 = ax.twinx()
+        xs, ys = x, cum
+        if smooth and n >= 3:
+            try:
+                from scipy.interpolate import PchipInterpolator
+
+                xs = np.linspace(x.min(), x.max(), 200)
+                ys = PchipInterpolator(x, cum)(xs)
+            except Exception:
+                xs, ys = x, cum
+        _curve_style = {"color": line_color, "linewidth": 2}
+        _curve_style.update(curve_kwgs or {})
+        ax2.plot(xs, ys, **_curve_style)
+        ax2.plot(x, cum, "o", color=_curve_style.get("color", line_color), markersize=5)
+        ax2.set_ylabel(line_ylabel, fontsize=label_fontsize, color=line_color)
+        ax2.set_ylim(0, 1.02)
+        ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
+        ax2.tick_params(axis="y", labelsize=tick_fontsize, labelcolor=line_color)
+
+        if mark_threshold:
+            _thr_style = {"color": "black", "linewidth": 1, "linestyle": "--"}
+            _thr_style.update(threshold_kwgs or {})
+            ax2.axhline(threshold, **_thr_style)
+            crossed = np.where(cum >= threshold)[0]
+            if len(crossed):
+                k = int(crossed[0])
+                ax.axvline(k, **_thr_style)
+
+        legend_ax = ax2
+        handles = [
+            Patch(color=bar_color, label=bar_ylabel),
+            Line2D([0], [0], color=line_color, marker="o", label=line_ylabel),
+        ]
+
+    else:  # display == "curve": percent-percent concentration curve, no bars
+        # x = cumulative fraction of features, y = cumulative fraction of
+        # importance, both starting at the origin.
+        fx = np.concatenate([[0.0], (np.arange(n) + 1) / n_total])
+        fy = np.concatenate([[0.0], cum])
+        cxs, cys = fx, fy
+        if smooth and len(fx) >= 3:
+            try:
+                from scipy.interpolate import PchipInterpolator
+
+                cxs = np.linspace(0.0, fx.max(), 200)
+                cys = PchipInterpolator(fx, fy)(cxs)
+            except Exception:
+                cxs, cys = fx, fy
+        ax.plot(
+            [0, 1],
+            [0, 1],
+            color="gray",
+            linestyle=":",
+            linewidth=1,
+            label="Uniform importance",
+        )
+        _curve_style = {"color": line_color, "linewidth": 2}
+        _curve_style.update(curve_kwgs or {})
+        ax.plot(cxs, cys, label="Cumulative importance", **_curve_style)
+        ax.plot(fx, fy, "o", color=_curve_style.get("color", line_color), markersize=4)
+        ax.set_xlabel("Cumulative % of features", fontsize=label_fontsize)
+        ax.set_ylabel("Cumulative % of importance", fontsize=label_fontsize)
+        ax.set_xlim(0, 1.0)
+        ax.set_ylim(0, 1.02)
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
+        ax.tick_params(labelsize=tick_fontsize)
+        ax.set_axisbelow(True)
+        ax.grid(True, alpha=0.3)
+
+        if mark_threshold:
+            crossed = np.where(cum >= threshold)[0]
+            if len(crossed):
+                k = int(crossed[0])
+                fx_cross = (k + 1) / n_total
+                _thr_style = {"color": "black", "linewidth": 1, "linestyle": "--"}
+                _thr_style.update(threshold_kwgs or {})
+                ax.axhline(threshold, **_thr_style)
+                ax.axvline(fx_cross, **_thr_style)
+
+        legend_ax = ax
+        handles = None
+
+    apply_plot_title(
+        title,
+        default_title=f"Feature Importance Pareto ({threshold:.0%} reference)",
+        text_wrap=text_wrap,
+        fontsize=label_fontsize,
+        ax=ax,
+    )
+
+    if handles is not None:
+        apply_legend(
+            legend_loc=legend_loc,
+            fontsize=tick_fontsize,
+            ax=legend_ax,
+            handles=handles,
+            labels=[h.get_label() for h in handles],
+        )
+    else:
+        apply_legend(legend_loc=legend_loc, fontsize=tick_fontsize, ax=legend_ax)
+
+    if _created_fig:
+        plt.tight_layout()
+        save_plot_images(
+            "feature_pareto",
+            save_plot,
+            image_path_png,
+            image_path_svg,
+            image_filename=image_filename,
+            fig=fig,
+        )
+        plt.show()
+
+    # Selected features = those up to and including the threshold crossover.
+    _crossed = np.where(importance_df["cumulative_pct"].values >= threshold)[0]
+    _k = int(_crossed[0]) + 1 if len(_crossed) else len(importance_df)
+    selected = importance_df["feature"].iloc[:_k].tolist()
+    if return_features and return_df:
+        return {"features": selected, "df": importance_df}
+    if return_features:
+        return selected
+    if return_df:
+        return importance_df
+
+
+def show_cumulative_feature_performance(
+    model=None,
+    X=None,
+    y=None,
+    y_probs=None,
+    metrics=None,
+    task="auto",
+    display="absolute",
+    x_as_percent=False,
+    smooth=False,
+    threshold=0.5,
+    proba_func=None,
+    step=1,
+    order=None,
+    feature_selection_step="feature_selection_RFE",
+    preprocessor_step="preprocess_column_transformer_ColumnTransformer",
+    missing_value=np.nan,
+    title=None,
+    text_wrap=None,
+    xlabel="Number of top features retained",
+    ylabel="Score",
+    figsize=None,
+    label_fontsize=12,
+    tick_fontsize=10,
+    legend_loc="best",
+    curve_kwgs=None,
+    retain_kwgs=None,
+    retain_threshold=None,
+    retain_metric=None,
+    retention_levels=(0.90, 0.95, 0.99),
+    return_retention=False,
+    save_plot=False,
+    image_path_png=None,
+    image_path_svg=None,
+    image_filename=None,
+    return_df=False,
+    return_features=False,
+    ax=None,
+):
+    """
+    Trace a fitted model's performance as it is restricted to its top-k most
+    important features, WITHOUT retraining. Excluded features are set to
+    ``missing_value`` (NaN) and the fixed model is re-scored, so the model must
+    handle missing values natively (CatBoost, XGBoost, HistGradientBoosting).
+
+    Works for classification and regression, supports score-, threshold-, and
+    regression-based metrics, and can return both the raw per-k scores and a
+    retention summary (how many features retain what fraction of full-model
+    performance).
+
+    Parameters
+    ----------
+    model : estimator, optional
+        Fitted model / wrapper. Uses ``predict_proba`` for classification and
+        ``predict`` for regression. Provide either ``model`` (+ ``X``) or
+        ``y_probs``, not both.
+    X : pandas.DataFrame, optional
+        Evaluation features for the ablation mode. Columns must match the
+        ranked feature names.
+    y : array-like
+        True labels/targets. Required in both modes.
+    y_probs : dict, optional
+        Precomputed-predictions mode: maps feature-count to a prediction vector
+        (positive-class probabilities for classification, predicted values for
+        regression), e.g. ``{1: pred_top1, 2: pred_top2, ...}``. When given,
+        the model/X are unused and no ablation runs.
+    metrics : sequence of str or callable, optional
+        Metrics to trace. Strings resolve against the built-in registry
+        (classification: roc_auc, average_precision, brier, precision, recall,
+        f1, accuracy; regression: r2, mae, rmse, mse). Callables take
+        ``(y_true, y_score)``. Defaults to the task's standard set.
+    task : {"auto", "classification", "regression"}, default="auto"
+        Auto-detected from the requested metrics, then from the model
+        (``predict_proba`` implies classification).
+    display : {"absolute", "cumulative_gains"}, default="absolute"
+        "absolute" plots raw metric values against feature count.
+        "cumulative_gains" plots each metric as a fraction of its full-model
+        value (retained performance), rising toward a 100% ceiling, which is
+        the cumulative-gains flavor of the same sweep. In "absolute" mode, when
+        R2 is plotted alongside error metrics (MAE, RMSE), R2 is placed on a
+        separate right-hand axis so its ~[0, 1] range stays legible next to the
+        target-unit error metrics.
+    x_as_percent : bool, default=False
+        Plot the x-axis as the cumulative fraction of all features (0-100%)
+        instead of a raw feature count. Combines with either ``display`` mode.
+    curve_kwgs : dict, optional
+        Extra keyword arguments merged into every metric curve, e.g.
+        ``{"linewidth": 3}`` to thicken the lines; overrides the defaults.
+    retain_kwgs : dict, optional
+        Extra keyword arguments merged into the retain-threshold marker
+        lines, e.g. ``{"linewidth": 2}``; overrides the defaults.
+    smooth : bool, default=False
+        Smooth each metric curve with a monotone PCHIP interpolation (markers
+        stay on the real points). Falls back to straight segments with too few
+        points or without SciPy. Pairs naturally with ``x_as_percent=True``.
+    threshold : float, default=0.5
+        Probability cutoff used to binarize scores for label-based metrics
+        (precision, recall, f1, accuracy).
+    proba_func : callable, optional
+        Custom function returning scores/predictions for a given X. Overrides
+        the model's own ``predict_proba`` / ``predict``.
+    step : int, default=1
+        Evaluate every ``step`` features; the full count is always included.
+    order : sequence of str, optional
+        Explicit feature ordering (highest importance first).
+    missing_value : scalar, default=numpy.nan
+        Value written into excluded columns.
+    title : str or None, default=None
+        Custom plot title. None uses the default; "" disables the title.
+    retain_threshold : float, optional
+        If set, annotates the smallest k retaining this fraction of the full
+        score on ``retain_metric``.
+    retain_metric : str, optional
+        Metric for the retain-threshold marker. Defaults to the first
+        higher-is-better metric.
+    retention_levels : sequence of float, default=(0.90, 0.95, 0.99)
+        Levels used to build the retention summary table.
+    return_retention : bool, default=False
+        If True, compute and return the retention summary (min features to
+        retain each level, per metric).
+    return_df : bool, default=False
+        If True, return the raw per-k scores table.
+    return_features : bool, default=False
+        If True, return the selected feature list: the top-k features that reach
+        ``retain_threshold`` on the primary metric, or the full importance-ranked
+        list when ``retain_threshold`` is None. Model mode only (the y_probs path
+        has no feature names).
+    ax : matplotlib.axes.Axes, optional
+        Existing axis (e.g. from ``combine_plots``); suppresses save/show.
+
+    Returns
+    -------
+    pandas.DataFrame, list, dict, or None
+        With a single flag set, returns that object directly (scores DataFrame,
+        retention DataFrame, or feature list). With several set, returns a dict
+        keyed by ``"scores"``, ``"retention"``, and/or ``"features"``. With none
+        set, returns None.
+    """
+    if y is None:
+        raise ValueError("`y` (true labels/targets) is required.")
+    if (y_probs is None) == (model is None):
+        raise ValueError(
+            "Provide exactly one of `y_probs` (precomputed per-k predictions) "
+            "or `model` (+ `X`, for the internal NaN-ablation sweep)."
+        )
+
+    task = _resolve_task(task, model, metrics)
+    if metrics is None:
+        metrics = _DEFAULT_METRICS[task]
+    _validate_metrics_for_task(metrics, task)
+
+    # --- Resolve metrics (shared by both modes) ---
+    resolved = []  # (label, func, higher_is_better, kind)
+    for m in metrics:
+        if callable(m):
+            kind = "value" if task == "regression" else "score"
+            resolved.append((getattr(m, "__name__", "metric"), m, True, kind))
+        elif m in _ALL_METRICS:
+            resolved.append(_ALL_METRICS[m])
+        else:
+            raise ValueError(f"Unknown metric '{m}'. Known: {list(_ALL_METRICS)}")
+
+    def _score_row(k, scores):
+        scores = np.asarray(scores)
+        row = {"n_features": k}
+        for label, func, _, kind in resolved:
+            if kind == "label":
+                preds = (scores >= threshold).astype(int)
+                row[label] = func(y, preds)
+            else:
+                row[label] = func(y, scores)
+        return row
+
+    # Feature ranking is only available in model mode (Mode B); stays None in
+    # the y_probs path, which has no feature names.
+    ordered_features = None
+
+    # ================================================================== #
+    # Mode A: precomputed predictions                                    #
+    # ================================================================== #
+    if y_probs is not None:
+        if not isinstance(y_probs, dict):
+            raise TypeError(
+                "y_probs must be a dict mapping n_features (int) to a "
+                "prediction array, e.g. {1: pred_1, 2: pred_2, ...}."
+            )
+        results_df = pd.DataFrame([_score_row(k, y_probs[k]) for k in sorted(y_probs)])
+
+    # ================================================================== #
+    # Mode B: model + X, NaN-ablation sweep                              #
+    # ================================================================== #
+    else:
+        if not isinstance(X, pd.DataFrame):
+            raise TypeError(
+                "X must be a pandas DataFrame so features can be blanked by name."
+            )
+        if order is not None:
+            ordered_features = list(order)
+        else:
+            ordered_features = _rank_features_by_importance(
+                model,
+                feature_selection_step=feature_selection_step,
+                preprocessor_step=preprocessor_step,
+            )["feature"].tolist()
+
+        missing = [f for f in ordered_features if f not in X.columns]
+        if missing:
+            raise ValueError(
+                "These ranked features are not columns of X, so they cannot be "
+                f"blanked: {missing[:5]}{' ...' if len(missing) > 5 else ''}. "
+                "NaN-ablation requires the model's features to be the columns of X."
+            )
+
+        def _predict(X_in):
+            if proba_func is not None:
+                return np.asarray(proba_func(X_in))
+            if task == "regression":
+                return np.asarray(model.predict(X_in))
+            p = np.asarray(model.predict_proba(X_in))
+            return p[:, 1] if p.ndim == 2 else p
+
+        n_total = len(ordered_features)
+        ks = list(range(step, n_total, step))
+        if n_total not in ks:
+            ks.append(n_total)
+
+        rows = []
+        for k in ks:
+            X_k = X.copy()
+            for col in ordered_features[k:]:
+                X_k[col] = missing_value
+            rows.append(_score_row(k, _predict(X_k)))
+        results_df = pd.DataFrame(rows)
+
+    if display not in ("absolute", "cumulative_gains"):
+        raise ValueError(
+            f"display must be 'absolute' or 'cumulative_gains', got {display!r}."
+        )
+
+    # Fractions of full-model performance, needed for the gains view, the
+    # retention summary, and the retain-threshold marker.
+    need_frac = (
+        display == "cumulative_gains"
+        or return_retention
+        or retain_threshold is not None
+    )
+    frac_df = _retained_fractions(results_df, resolved) if need_frac else None
+
+    # --- Retention summary (how many features retain what fraction) ---
+    retention_df = None
+    if return_retention:
+        summary = {}
+        for L in retention_levels:
+            summary[f"{L:.0%}"] = {
+                label: (
+                    int(results_df["n_features"][frac_df[label] >= L].iloc[0])
+                    if (frac_df[label] >= L).any()
+                    else np.nan
+                )
+                for label, _, _, _ in resolved
+            }
+        retention_df = pd.DataFrame(summary).T
+        retention_df.index.name = "retain_level"
+        print("\nFeatures needed to retain each performance level:\n")
+        print(retention_df.to_string())
+
+    # --- Figure lifecycle (matches the show_* family) ---
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize or (8, 5))
+        _created_fig = True
+    else:
+        fig = ax.get_figure()
+        _created_fig = False
+
+    # X-axis values: feature count, or cumulative fraction of all features.
+    total_feats = int(results_df["n_features"].max())
+    x_vals = (
+        results_df["n_features"] / total_feats
+        if x_as_percent
+        else results_df["n_features"]
+    )
+    if x_as_percent:
+        _xlabel = (
+            "Cumulative % of features"
+            if xlabel == "Number of top features retained"
+            else xlabel
+        )
+    else:
+        _xlabel = xlabel
+
+    _curve_style = dict(curve_kwgs or {})
+    _split_r2 = False
+    _legend_pairs = None  # (handles, labels) when a merged legend is needed
+    if display == "cumulative_gains":
+        for label, _, _, _ in resolved:
+            _plot_perf_series(ax, x_vals, frac_df[label], label, smooth, **_curve_style)
+        ax.axhline(1.0, color="gray", linestyle=":", linewidth=1)  # full-model ceiling
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
+        _default_ylabel = "% of full-model performance"
+    else:
+        # R2 sits on ~[0, 1] while error metrics (MAE, RMSE) are in target units.
+        # When both are present in absolute mode, one shared axis flattens R2 to
+        # a line near zero, so give R2 its own right-hand axis. Colors are forced
+        # by metric order so the split matches the single-axis coloring.
+        _R2 = "R\u00b2"
+        _has_r2 = any(lbl == _R2 for lbl, _, _, _ in resolved)
+        _others = [r for r in resolved if r[0] != _R2]
+        _split_r2 = _has_r2 and len(_others) >= 1
+
+        if _split_r2:
+            _cycle = plt.rcParams["axes.prop_cycle"].by_key().get("color", [])
+            _auto_color = "color" not in _curve_style
+            _color_of = {
+                lbl: (_cycle[i % len(_cycle)] if _cycle else None)
+                for i, (lbl, _, _, _) in enumerate(resolved)
+            }
+            ax_r2 = ax.twinx()
+            _handles = {}
+            for label, _, _, _ in _others:
+                style = dict(_curve_style)
+                if _auto_color:
+                    style["color"] = _color_of[label]
+                _handles[label] = _plot_perf_series(
+                    ax, x_vals, results_df[label], label, smooth, **style
+                )
+            _r2_style = dict(_curve_style)
+            if _auto_color:
+                _r2_style["color"] = _color_of[_R2]
+            _handles[_R2] = _plot_perf_series(
+                ax_r2, x_vals, results_df[_R2], _R2, smooth, **_r2_style
+            )
+            _r2_color = _handles[_R2].get_color()
+            ax_r2.set_ylabel(_R2, fontsize=label_fontsize, color=_r2_color)
+            ax_r2.tick_params(axis="y", labelsize=tick_fontsize, labelcolor=_r2_color)
+            # merged legend in metric order (handles live on two axes)
+            _legend_pairs = (
+                [_handles[lbl] for lbl, _, _, _ in resolved],
+                [lbl for lbl, _, _, _ in resolved],
+            )
+        else:
+            for label, _, _, _ in resolved:
+                _plot_perf_series(
+                    ax, x_vals, results_df[label], label, smooth, **_curve_style
+                )
+        _default_ylabel = ylabel
+
+    if x_as_percent:
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
+    ax.set_xlabel(_xlabel, fontsize=label_fontsize)
+    ax.set_ylabel(
+        _default_ylabel if ylabel == "Score" else ylabel, fontsize=label_fontsize
+    )
+    ax.tick_params(labelsize=tick_fontsize)
+    ax.grid(True, alpha=0.3)
+
+    if retain_threshold is not None:
+        rm = retain_metric
+        if rm is None:
+            rm = next((lbl for lbl, _, hib, _ in resolved if hib), resolved[0][0])
+        else:
+            rm = _ALL_METRICS.get(rm, (rm,))[0]
+        if rm in frac_df.columns:
+            hit = results_df["n_features"][frac_df[rm] >= retain_threshold]
+            if not hit.empty:
+                k_star = int(hit.iloc[0])
+                x_star = k_star / total_feats if x_as_percent else k_star
+                _retain_style = {"color": "black", "linewidth": 1, "linestyle": "--"}
+                _retain_style.update(retain_kwgs or {})
+                ax.axvline(x_star, **_retain_style)
+                if display == "cumulative_gains":
+                    ax.axhline(retain_threshold, **_retain_style)
+                ax.text(
+                    x_star,
+                    ax.get_ylim()[0],
+                    f" {k_star} feats retain {retain_threshold:.0%} of {rm}",
+                    va="bottom",
+                    ha="left",
+                    fontsize=tick_fontsize - 1,
+                    color="black",
+                )
+
+    apply_plot_title(
+        title,
+        default_title="Cumulative Feature Performance (top-k, no retrain)",
+        text_wrap=text_wrap,
+        fontsize=label_fontsize,
+        ax=ax,
+    )
+    if _legend_pairs is not None:
+        apply_legend(
+            legend_loc=legend_loc,
+            fontsize=tick_fontsize,
+            ax=ax,
+            handles=_legend_pairs[0],
+            labels=_legend_pairs[1],
+        )
+    else:
+        apply_legend(legend_loc=legend_loc, fontsize=tick_fontsize, ax=ax)
+
+    if _created_fig:
+        plt.tight_layout()
+        save_plot_images(
+            "cumulative_feature_performance",
+            save_plot,
+            image_path_png,
+            image_path_svg,
+            image_filename=image_filename,
+            fig=fig,
+        )
+        plt.show()
+
+    outputs = {}
+    if return_df:
+        outputs["scores"] = results_df
+    if return_retention:
+        outputs["retention"] = retention_df
+    if return_features:
+        if ordered_features is None:
+            raise ValueError(
+                "return_features requires model mode (a feature ranking); it is "
+                "unavailable in the y_probs path, which carries no feature names."
+            )
+        if retain_threshold is not None and frac_df is not None:
+            rm = retain_metric
+            if rm is None:
+                rm = next((lbl for lbl, _, hib, _ in resolved if hib), resolved[0][0])
+            else:
+                rm = _ALL_METRICS.get(rm, (rm,))[0]
+            hit = results_df["n_features"][frac_df[rm] >= retain_threshold]
+            k_star = int(hit.iloc[0]) if not hit.empty else len(ordered_features)
+            outputs["features"] = ordered_features[:k_star]
+        else:
+            outputs["features"] = list(ordered_features)
+    if not outputs:
+        return None
+    if len(outputs) == 1:
+        return next(iter(outputs.values()))
+    return outputs

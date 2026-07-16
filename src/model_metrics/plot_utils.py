@@ -2,6 +2,95 @@ import matplotlib.pyplot as plt
 import textwrap
 import math
 import numpy as np
+import os
+
+
+def save_plot_images(
+    filename,
+    save_plot,
+    image_path_png,
+    image_path_svg,
+    image_filename=None,
+    fig=None,
+    dpi=None,
+    bbox_inches="tight",
+):
+    """
+    Save a matplotlib figure.
+
+    Saving is triggered when ``save_plot=True`` or ``image_filename`` is given.
+
+    Two ways to name the output, which can be combined:
+
+    * ``image_filename`` WITH an extension (e.g. ``"figure.pdf"`` or
+      ``"out/figure.tiff"``) is saved verbatim in that format. No output
+      directory is required, and any extension matplotlib supports works.
+    * ``image_path_png`` / ``image_path_svg`` save ``<stem>.png`` / ``<stem>.svg``
+      into those directories, where the stem is taken from ``image_filename``
+      (without its extension) or, if none was given, from ``filename``.
+
+    Parameters
+    ----------
+    filename : str
+        Auto-generated base stem used when ``image_filename`` is None.
+    save_plot : bool
+        Trigger saving with the auto stem into the PNG/SVG directories.
+    image_path_png, image_path_svg : str or None
+        Output directories for the legacy PNG / SVG outputs.
+    image_filename : str or None
+        Custom name. With an extension it is saved verbatim (any format);
+        without one it is used as the stem for the directory outputs. Providing
+        it triggers saving regardless of ``save_plot``.
+    fig : matplotlib.figure.Figure or None
+        Figure to save. Defaults to the current figure.
+    dpi : int or None
+        DPI for raster formats (ignored by vector formats).
+    bbox_inches : str, default="tight"
+        Passed through to ``savefig``.
+
+    Raises
+    ------
+    ValueError
+        If saving was requested but nothing is saveable (a bare stem with no
+        extension and no output directory).
+    """
+    should_save = save_plot or (image_filename is not None)
+    if not should_save:
+        return
+
+    fig = fig or plt.gcf()
+
+    # Determine the stem for directory-based (png/svg) outputs.
+    name_for_stem = image_filename if image_filename is not None else filename
+    stem, ext = (
+        os.path.splitext(os.path.basename(name_for_stem)) if name_for_stem else ("", "")
+    )
+
+    targets = []
+
+    # 1) Verbatim save when image_filename carries an extension (any format).
+    if image_filename is not None and ext:
+        targets.append(image_filename)
+
+    # 2) Legacy directory + stem outputs.
+    if image_path_png:
+        targets.append(os.path.join(image_path_png, f"{stem}.png"))
+    if image_path_svg:
+        targets.append(os.path.join(image_path_svg, f"{stem}.svg"))
+
+    if not targets:
+        raise ValueError(
+            "Cannot save figure: saving was requested but nothing is saveable. "
+            f"`image_filename={image_filename!r}` has no file extension and no "
+            "`image_path_png` / `image_path_svg` was given. Add an extension "
+            "(e.g. '.png', '.jpg', '.pdf', '.svg') or pass an output directory."
+        )
+
+    for path in targets:
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        fig.savefig(path, bbox_inches=bbox_inches, dpi=dpi)
 
 
 def apply_axis_limits(ax, xlim=None, ylim=None):
