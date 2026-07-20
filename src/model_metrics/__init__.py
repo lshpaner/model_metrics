@@ -25,7 +25,7 @@ PyPI: https://pypi.org/project/model-metrics/
 Documentation: https://lshpaner.github.io/model_metrics_docs/
 
 
-Version: 0.0.5a9.dev6
+Version: 0.0.6a2
 
 """
 
@@ -33,9 +33,9 @@ Version: 0.0.5a9.dev6
 __doc__ = detailed_doc
 
 
-__version__ = "0.0.5a9.dev6"
+__version__ = "0.0.6a2"
 __author__ = "Leonid Shpaner, Arthur Funnell"
-__email__ = "lshpaner@ucla.edu, arthur@example.com"
+__email__ = "lshpaner@ucla.edu, alafunnell@gmail.com"
 
 
 # Define the custom help function
