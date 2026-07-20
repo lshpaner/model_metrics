@@ -1,5 +1,9 @@
-import pandas as pd
+"""Feature-selection helpers shared by the feature functions in
+model_evaluator: importance resolution, ranking, and label cleaning, plus
+the performance-sweep plotting and retention utilities."""
+
 import numpy as np
+import pandas as pd
 
 
 def _resolve_feature_importance_values(estimator):
@@ -137,25 +141,31 @@ def _clean_feature_labels(names, clean_names):
     return [clean_names.get(n, n) for n in names]
 
 
-def _plot_perf_series(ax, xv, yv, label, smooth, **plot_kwgs):
-    """Plot one metric curve, optionally PCHIP-smoothed with markers at the
-    real points. Falls back to a straight polyline when smoothing is off, there
-    are too few points, or SciPy is unavailable. Extra keyword arguments (e.g.
-    ``linewidth``) are passed through to the line."""
+def _plot_perf_series(ax, xv, yv, label, smooth, curve_kwgs=None, marker_kwgs=None):
+    """Plot one metric curve, optionally PCHIP-smoothed, with markers at the real
+    points. ``curve_kwgs`` styles the line (e.g. ``linewidth``); ``marker_kwgs``
+    styles the point markers (defaults to a size-5 circle inheriting the line
+    color). Both are already-resolved flat dicts for this single curve. Falls
+    back to a straight polyline when smoothing is off, there are too few points,
+    or SciPy is unavailable. Returns the line handle."""
     xv = np.asarray(xv, dtype=float)
     yv = np.asarray(yv, dtype=float)
+    ck = dict(curve_kwgs or {})
+    mk = {"marker": "o", "markersize": 5}
+    mk.update(marker_kwgs or {})
     if smooth and len(xv) >= 3:
         try:
             from scipy.interpolate import PchipInterpolator
 
             xs = np.linspace(xv.min(), xv.max(), 200)
             ys = PchipInterpolator(xv, yv)(xs)
-            (line,) = ax.plot(xs, ys, label=label, **plot_kwgs)
-            ax.plot(xv, yv, "o", color=line.get_color(), markersize=5)
+            (line,) = ax.plot(xs, ys, label=label, **ck)
+            mk.setdefault("color", line.get_color())          # markers follow line color
+            ax.plot(xv, yv, linestyle="None", **mk)
             return line
         except Exception:
             pass
-    (line,) = ax.plot(xv, yv, marker="o", label=label, **plot_kwgs)
+    (line,) = ax.plot(xv, yv, label=label, **{**ck, **mk})
     return line
 
 
@@ -175,3 +185,102 @@ def _retained_fractions(results_df, resolved):
         else:
             frac[label] = fv / results_df[label].replace(0, np.nan)
     return frac
+
+
+def _infer_groups_from_column_transformer(ct, names):
+    """Map one-hot / expanded output columns back to their source column.
+
+    Uses the fitted ColumnTransformer's own ``transformers_`` (the input column
+    list per branch) and matches each output name against those columns by
+    longest prefix, so names containing spaces or underscores (e.g.
+    ``cat__CKD Stage_CKD Stage 4``) resolve correctly without string splitting.
+    Returns ``{output_name: source_column}``; unmatched names map to themselves.
+    """
+    mapping = {}
+    branches = []  # (prefix, [input columns])
+    for tname, _trans, cols in getattr(ct, "transformers_", []):
+        if cols is None or isinstance(cols, str):
+            continue
+        try:
+            cols = list(cols)
+        except TypeError:
+            continue
+        branches.append((f"{tname}__", [str(c) for c in cols]))
+
+    for n in names:
+        src = None
+        for prefix, cols in branches:
+            if not n.startswith(prefix):
+                continue
+            rest = n[len(prefix):]
+            # longest matching input column wins ("CKD Stage" over "CKD")
+            cands = [c for c in cols if rest == c or rest.startswith(c + "_")]
+            if cands:
+                src = max(cands, key=len)
+                break
+        mapping[n] = src if src is not None else n
+    return mapping
+
+
+def _resolve_feature_groups(feature_groups, names, column_transformer=None):
+    """Normalize ``feature_groups`` into a ``{feature: parent}`` dict.
+
+    Accepts a dict (unmapped names keep themselves), a callable
+    ``name -> parent``, or ``"auto"`` to infer from ``column_transformer``.
+    Returns None when ``feature_groups`` is None (no grouping).
+    """
+    if feature_groups is None:
+        return None
+    names = [str(n) for n in names]
+    if isinstance(feature_groups, str):
+        if feature_groups != "auto":
+            raise ValueError(
+                f"feature_groups must be a dict, a callable, or 'auto'; "
+                f"got {feature_groups!r}."
+            )
+        if column_transformer is None:
+            raise ValueError(
+                "feature_groups='auto' requires `column_transformer=` (the "
+                "fitted ColumnTransformer) so output columns can be mapped "
+                "back to their source columns."
+            )
+        return _infer_groups_from_column_transformer(column_transformer, names)
+    if callable(feature_groups):
+        return {n: feature_groups(n) for n in names}
+    if isinstance(feature_groups, dict):
+        return {n: feature_groups.get(n, n) for n in names}
+    raise ValueError(
+        "feature_groups must be a dict, a callable, or 'auto'; got "
+        f"{type(feature_groups).__name__}."
+    )
+
+
+def _group_importance_df(importance_df, mapping):
+    """Collapse an importance table to parent groups, summing within each.
+
+    One-hot expansion splits a categorical's importance across its level
+    columns; summing restores the variable-level importance. Ties are broken by
+    the group's best-ranked member so ordering stays stable.
+    """
+    df = importance_df.copy()
+    df["_order"] = np.arange(len(df))
+    df["feature"] = [mapping.get(f, f) for f in df["feature"]]
+    grouped = (
+        df.groupby("feature", as_index=False)
+        .agg(importance=("importance", "sum"), _order=("_order", "min"))
+        .sort_values(["importance", "_order"], ascending=[False, True])
+        .drop(columns="_order")
+        .reset_index(drop=True)
+    )
+    return grouped
+
+
+def _expand_groups(group_names, mapping):
+    """Return the underlying feature columns for each parent group name."""
+    members = {}
+    for feat, parent in mapping.items():
+        members.setdefault(parent, []).append(feat)
+    out = []
+    for g in group_names:
+        out.extend(members.get(g, [g]))
+    return out
