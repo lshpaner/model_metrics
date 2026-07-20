@@ -11,6 +11,23 @@ authors = [
     { name = "Leonid Shpaner", email = "lshpaner@ucla.edu" },
     { name = "Arthur Funnell", email = "alafunnell@gmail.com" }
 ]
+keywords = [
+    "model-evaluation",
+    "machine-learning",
+    "metrics",
+    "visualization",
+    "classification",
+    "regression",
+    "roc-curve",
+    "precision-recall",
+    "calibration",
+    "confusion-matrix",
+    "feature-importance",
+    "feature-selection",
+    "threshold-tuning",
+    "model-performance",
+    "scikit-learn",
+]
 requires-python = ">=3.8"
 dependencies = [
     "matplotlib>=3.5.3,<3.11",
@@ -28,7 +45,10 @@ dependencies = [
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent"
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
 # Correct place for URLs under [project.urls]
