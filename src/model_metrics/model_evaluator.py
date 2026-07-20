@@ -5397,12 +5397,12 @@ def show_cumulative_feature_importance(
     Plot the top features that cumulatively account for a target share of
     total feature importance, annotating each bar with its running cumulative
     percentage.
- 
+
     Importances are resolved from the final estimator via
     ``get_feature_importance()`` (CatBoost / model_tuner wrapper),
     ``feature_importances_`` (sklearn trees/ensembles), or ``coef_``
     magnitude (linear models), in that order.
- 
+
     Parameters
     ----------
     model : estimator
@@ -5469,12 +5469,12 @@ def show_cumulative_feature_importance(
     ax : matplotlib.axes.Axes, optional
         Existing axis to draw on (e.g. from ``combine_plots``). When provided,
         the function neither saves nor shows the figure.
- 
+
     Returns
     -------
     pandas.DataFrame or None
         The sorted importance DataFrame if ``return_df=True``, else None.
- 
+
     Raises
     ------
     ValueError
@@ -5484,7 +5484,7 @@ def show_cumulative_feature_importance(
     """
     if model is None:
         raise ValueError("`model` must be provided.")
- 
+
     # --- Rank features (handles wrappers, plain estimators, and pipelines) ---
     importance_df = _rank_features_by_importance(
         model,
@@ -5492,7 +5492,7 @@ def show_cumulative_feature_importance(
         feature_selection_step=feature_selection_step,
         preprocessor_step=preprocessor_step,
     )
- 
+
     # Optional roll-up of one-hot / expanded columns into their parent variable,
     # summing the split importance back together.
     _group_map = _resolve_feature_groups(
@@ -5500,17 +5500,17 @@ def show_cumulative_feature_importance(
     )
     if _group_map is not None:
         importance_df = _group_importance_df(importance_df, _group_map)
- 
+
     importance_df["importance_pct"] = (
         importance_df["importance"] / importance_df["importance"].sum()
     )
     importance_df["cumulative_pct"] = importance_df["importance_pct"].cumsum()
- 
+
     # --- 5. Find the cutoff (include the row that crosses the threshold) ---
     cutoff = importance_df[importance_df["cumulative_pct"] <= threshold]
     n_features = len(cutoff) + 1
     top_features = importance_df.iloc[:n_features].copy()
- 
+
     # Console summary. Rendered as plain text so it displays correctly outside
     # notebooks too (the original print(...style.format(...)) only shows a
     # Styler repr under print()).
@@ -5523,7 +5523,7 @@ def show_cumulative_feature_importance(
         f"of total importance:\n"
     )
     print(summary.to_string(index=False))
- 
+
     # --- Figure lifecycle (matches the show_* family) ---
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize or (10, max(4, n_features * 0.6)))
@@ -5531,13 +5531,15 @@ def show_cumulative_feature_importance(
     else:
         fig = ax.get_figure()
         _created_fig = False
- 
-    features_rev = _clean_feature_labels(top_features["feature"][::-1].values, clean_names)
+
+    features_rev = _clean_feature_labels(
+        top_features["feature"][::-1].values, clean_names
+    )
     importance_rev = top_features["importance_pct"][::-1].values
     cumulative_rev = top_features["cumulative_pct"][::-1].values
- 
+
     y_pos = np.arange(len(features_rev))
- 
+
     _bar_style = {"color": bar_color}
     _bar_style.update(bar_kwgs or {})
     ax.barh(y_pos, importance_rev, align="center", **_bar_style)
@@ -5545,7 +5547,7 @@ def show_cumulative_feature_importance(
     ax.set_yticklabels(features_rev, fontsize=tick_fontsize)
     ax.set_xlabel(xlabel, fontsize=label_fontsize)
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.0%}"))
- 
+
     apply_plot_title(
         title,
         default_title=(
@@ -5555,7 +5557,7 @@ def show_cumulative_feature_importance(
         fontsize=label_fontsize,
         ax=ax,
     )
- 
+
     # Annotate each bar with its cumulative %
     if show_annotation:
         for i, (imp, cum) in enumerate(zip(importance_rev, cumulative_rev)):
@@ -5572,7 +5574,7 @@ def show_cumulative_feature_importance(
         ax.set_xlim(0, importance_rev.max() * 1.5)  # room for annotations
     else:
         ax.set_xlim(0, importance_rev.max() * 1.05)  # snug when no annotations
- 
+
     if _created_fig:
         plt.tight_layout()
         save_plot_images(
@@ -5584,7 +5586,7 @@ def show_cumulative_feature_importance(
             fig=fig,
         )
         plt.show()
- 
+
     # `top_features` are the selected features within the threshold; return
     # their original names (not cleaned) so they stay usable for indexing X.
     selected = top_features["feature"].tolist()
@@ -5594,8 +5596,8 @@ def show_cumulative_feature_importance(
         return selected
     if return_df:
         return importance_df
- 
- 
+
+
 def show_feature_pareto(
     model=None,
     threshold=0.80,
@@ -5636,11 +5638,11 @@ def show_feature_pareto(
     Pareto chart of feature importance: descending individual-importance bars on
     the left axis with a smooth cumulative-importance curve on the right axis,
     plus a threshold reference line and its crossover marker.
- 
+
     Shares the ranking and label helpers with ``show_cumulative_feature_importance``,
     so it works with model_tuner wrappers, plain sklearn estimators, and
     pipelines, and honors ``feature_names`` / ``clean_names`` the same way.
- 
+
     Parameters
     ----------
     model : estimator
@@ -5692,38 +5694,38 @@ def show_feature_pareto(
     ax : matplotlib.axes.Axes, optional
         Existing axis (e.g. from ``combine_plots``); a twin axis is created on
         it and the function neither saves nor shows.
- 
+
     Returns
     -------
     pandas.DataFrame or None
     """
     from matplotlib.lines import Line2D
     from matplotlib.patches import Patch
- 
+
     if model is None:
         raise ValueError("`model` must be provided.")
- 
+
     importance_df = _rank_features_by_importance(
         model,
         feature_names=feature_names,
         feature_selection_step=feature_selection_step,
         preprocessor_step=preprocessor_step,
     )
- 
+
     # Optional roll-up of one-hot / expanded columns into their parent variable.
     _group_map = _resolve_feature_groups(
         feature_groups, importance_df["feature"].tolist(), column_transformer
     )
     if _group_map is not None:
         importance_df = _group_importance_df(importance_df, _group_map)
- 
+
     total = importance_df["importance"].sum()
     importance_df["importance_pct"] = importance_df["importance"] / total
     importance_df["cumulative_pct"] = importance_df["importance_pct"].cumsum()
- 
+
     if display not in ("bars", "curve"):
         raise ValueError(f"display must be 'bars' or 'curve', got {display!r}.")
- 
+
     plot_df = importance_df if top_n is None else importance_df.iloc[:top_n].copy()
     n_total = len(importance_df)
     n = len(plot_df)
@@ -5731,13 +5733,15 @@ def show_feature_pareto(
     labels = _clean_feature_labels(plot_df["feature"].values, clean_names)
     ind = plot_df["importance_pct"].values
     cum = plot_df["cumulative_pct"].values
- 
+
     # Console summary (kept off the plot to avoid crowding the crossover).
     if mark_threshold:
         _reached = np.where(importance_df["cumulative_pct"].values >= threshold)[0]
         _n_reach = int(_reached[0]) + 1 if len(_reached) else len(importance_df)
-        print(f"\n{_n_reach} features reach {threshold:.0%} of cumulative importance.\n")
- 
+        print(
+            f"\n{_n_reach} features reach {threshold:.0%} of cumulative importance.\n"
+        )
+
     # --- Figure lifecycle (matches the show_* family) ---
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize or (max(7, n * 0.7), 5))
@@ -5745,7 +5749,7 @@ def show_feature_pareto(
     else:
         fig = ax.get_figure()
         _created_fig = False
- 
+
     if display == "bars":
         # Left axis: individual-importance bars
         _bar_style = {"color": bar_color, "width": 0.8}
@@ -5754,19 +5758,21 @@ def show_feature_pareto(
         ax.set_xlabel(xlabel, fontsize=label_fontsize)
         ax.set_ylabel(bar_ylabel, fontsize=label_fontsize, color=bar_color)
         ax.set_xticks(x)
-        ax.set_xticklabels(labels, rotation=xtick_rotation, ha="right", fontsize=tick_fontsize)
+        ax.set_xticklabels(
+            labels, rotation=xtick_rotation, ha="right", fontsize=tick_fontsize
+        )
         ax.tick_params(axis="y", labelsize=tick_fontsize, labelcolor=bar_color)
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
         ax.set_axisbelow(True)
         ax.grid(True, axis="y", alpha=0.3)
- 
+
         # Right axis: cumulative-importance curve
         ax2 = ax.twinx()
         xs, ys = x, cum
         if smooth and n >= 3:
             try:
                 from scipy.interpolate import PchipInterpolator
- 
+
                 xs = np.linspace(x.min(), x.max(), 200)
                 ys = PchipInterpolator(x, cum)(xs)
             except Exception:
@@ -5779,7 +5785,7 @@ def show_feature_pareto(
         ax2.set_ylim(0, 1.02)
         ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
         ax2.tick_params(axis="y", labelsize=tick_fontsize, labelcolor=line_color)
- 
+
         if mark_threshold:
             _thr_style = {"color": "black", "linewidth": 1, "linestyle": "--"}
             _thr_style.update(threshold_kwgs or {})
@@ -5788,13 +5794,13 @@ def show_feature_pareto(
             if len(crossed):
                 k = int(crossed[0])
                 ax.axvline(k, **_thr_style)
- 
+
         legend_ax = ax2
         handles = [
             Patch(color=bar_color, label=bar_ylabel),
             Line2D([0], [0], color=line_color, marker="o", label=line_ylabel),
         ]
- 
+
     else:  # display == "curve": percent-percent concentration curve, no bars
         # x = cumulative fraction of features, y = cumulative fraction of
         # importance, both starting at the origin.
@@ -5804,13 +5810,19 @@ def show_feature_pareto(
         if smooth and len(fx) >= 3:
             try:
                 from scipy.interpolate import PchipInterpolator
- 
+
                 cxs = np.linspace(0.0, fx.max(), 200)
                 cys = PchipInterpolator(fx, fy)(cxs)
             except Exception:
                 cxs, cys = fx, fy
-        ax.plot([0, 1], [0, 1], color="gray", linestyle=":", linewidth=1,
-                label="Uniform importance")
+        ax.plot(
+            [0, 1],
+            [0, 1],
+            color="gray",
+            linestyle=":",
+            linewidth=1,
+            label="Uniform importance",
+        )
         _curve_style = {"color": line_color, "linewidth": 2}
         _curve_style.update(curve_kwgs or {})
         ax.plot(cxs, cys, label="Cumulative importance", **_curve_style)
@@ -5824,7 +5836,7 @@ def show_feature_pareto(
         ax.tick_params(labelsize=tick_fontsize)
         ax.set_axisbelow(True)
         ax.grid(True, alpha=0.3)
- 
+
         if mark_threshold:
             crossed = np.where(cum >= threshold)[0]
             if len(crossed):
@@ -5834,10 +5846,10 @@ def show_feature_pareto(
                 _thr_style.update(threshold_kwgs or {})
                 ax.axhline(threshold, **_thr_style)
                 ax.axvline(fx_cross, **_thr_style)
- 
+
         legend_ax = ax
         handles = None
- 
+
     apply_plot_title(
         title,
         default_title=f"Feature Importance Pareto ({threshold:.0%} reference)",
@@ -5845,15 +5857,18 @@ def show_feature_pareto(
         fontsize=label_fontsize,
         ax=ax,
     )
- 
+
     if handles is not None:
         apply_legend(
-            legend_loc=legend_loc, fontsize=tick_fontsize, ax=legend_ax,
-            handles=handles, labels=[h.get_label() for h in handles],
+            legend_loc=legend_loc,
+            fontsize=tick_fontsize,
+            ax=legend_ax,
+            handles=handles,
+            labels=[h.get_label() for h in handles],
         )
     else:
         apply_legend(legend_loc=legend_loc, fontsize=tick_fontsize, ax=legend_ax)
- 
+
     if _created_fig:
         plt.tight_layout()
         save_plot_images(
@@ -5865,7 +5880,7 @@ def show_feature_pareto(
             fig=fig,
         )
         plt.show()
- 
+
     # Selected features = those up to and including the threshold crossover.
     _crossed = np.where(importance_df["cumulative_pct"].values >= threshold)[0]
     _k = int(_crossed[0]) + 1 if len(_crossed) else len(importance_df)
@@ -5876,8 +5891,8 @@ def show_feature_pareto(
         return selected
     if return_df:
         return importance_df
-    
-    
+
+
 def show_cumulative_feature_performance(
     model=None,
     X=None,
@@ -5927,12 +5942,12 @@ def show_cumulative_feature_performance(
     important features, WITHOUT retraining. Excluded features are set to
     ``missing_value`` (NaN) and the fixed model is re-scored, so the model must
     handle missing values natively (CatBoost, XGBoost, HistGradientBoosting).
- 
+
     Works for classification and regression, supports score-, threshold-, and
     regression-based metrics, and can return both the raw per-k scores and a
     retention summary (how many features retain what fraction of full-model
     performance).
- 
+
     Parameters
     ----------
     model : estimator, optional
@@ -6053,7 +6068,7 @@ def show_cumulative_feature_performance(
         has no feature names).
     ax : matplotlib.axes.Axes, optional
         Existing axis (e.g. from ``combine_plots``); suppresses save/show.
- 
+
     Returns
     -------
     pandas.DataFrame, list, dict, or None
@@ -6069,12 +6084,12 @@ def show_cumulative_feature_performance(
             "Provide exactly one of `y_probs` (precomputed per-k predictions) "
             "or `model` (+ `X`, for the internal NaN-ablation sweep)."
         )
- 
+
     task = _resolve_task(task, model, metrics)
     if metrics is None:
         metrics = _DEFAULT_METRICS[task]
     _validate_metrics_for_task(metrics, task)
- 
+
     # --- Resolve metrics (shared by both modes) ---
     resolved = []  # (label, func, higher_is_better, kind)
     for m in metrics:
@@ -6084,10 +6099,8 @@ def show_cumulative_feature_performance(
         elif m in _ALL_METRICS:
             resolved.append(_ALL_METRICS[m])
         else:
-            raise ValueError(
-                f"Unknown metric '{m}'. Known: {list(_ALL_METRICS)}"
-            )
- 
+            raise ValueError(f"Unknown metric '{m}'. Known: {list(_ALL_METRICS)}")
+
     def _score_row(k, scores):
         scores = np.asarray(scores)
         row = {"n_features": k}
@@ -6098,11 +6111,11 @@ def show_cumulative_feature_performance(
             else:
                 row[label] = func(y, scores)
         return row
- 
+
     # Feature ranking is only available in model mode (Mode B); stays None in
     # the y_probs path, which has no feature names.
     ordered_features = None
- 
+
     # ================================================================== #
     # Mode A: precomputed predictions                                    #
     # ================================================================== #
@@ -6113,7 +6126,7 @@ def show_cumulative_feature_performance(
                 "prediction array, e.g. {1: pred_1, 2: pred_2, ...}."
             )
         results_df = pd.DataFrame([_score_row(k, y_probs[k]) for k in sorted(y_probs)])
- 
+
     # ================================================================== #
     # Mode B: model + X, NaN-ablation sweep                              #
     # ================================================================== #
@@ -6132,7 +6145,7 @@ def show_cumulative_feature_performance(
                 preprocessor_step=preprocessor_step,
             )
             ordered_features = _rank_df["feature"].tolist()
- 
+
         # Optional grouping: roll one-hot / expanded columns up to their parent
         # variable so each step of the sweep adds a whole variable rather than a
         # single category level. `ordered_features` then holds group names, and
@@ -6154,7 +6167,7 @@ def show_cumulative_feature_performance(
                 ordered_features = _group_importance_df(_rank_df, _group_map)[
                     "feature"
                 ].tolist()
- 
+
         # Validate against X: grouped names are validated via their members.
         _check = (
             _expand_groups(ordered_features, _group_map)
@@ -6168,7 +6181,7 @@ def show_cumulative_feature_performance(
                 f"blanked: {missing[:5]}{' ...' if len(missing) > 5 else ''}. "
                 "NaN-ablation requires the model's features to be the columns of X."
             )
- 
+
         def _predict(X_in):
             if proba_func is not None:
                 return np.asarray(proba_func(X_in))
@@ -6176,12 +6189,12 @@ def show_cumulative_feature_performance(
                 return np.asarray(model.predict(X_in))
             p = np.asarray(model.predict_proba(X_in))
             return p[:, 1] if p.ndim == 2 else p
- 
+
         n_total = len(ordered_features)
         ks = list(range(step, n_total, step))
         if n_total not in ks:
             ks.append(n_total)
- 
+
         # Features of X that never appear in the ranking (possible when an
         # explicit, partial `order` is given) are never retained: they are
         # blanked at every k. Otherwise they would silently stay in play and the
@@ -6197,7 +6210,7 @@ def show_cumulative_feature_performance(
                 f"\nNote: {len(_unlisted)} feature(s) of X are not in the "
                 "ranking and are held out (blanked) at every step.\n"
             )
- 
+
         rows = []
         for k in ks:
             X_k = X.copy()
@@ -6214,12 +6227,12 @@ def show_cumulative_feature_performance(
             row["features"] = list(ordered_features[:k])  # the top-k retained, in order
             rows.append(row)
         results_df = pd.DataFrame(rows)
- 
+
     if display not in ("absolute", "cumulative_gains"):
         raise ValueError(
             f"display must be 'absolute' or 'cumulative_gains', got {display!r}."
         )
- 
+
     # `retain` is a convenience that couples the metric and its threshold into one
     # dict, e.g. retain={"average_precision": 0.98}. When given, it supersedes the
     # separate `retain_metric` / `retain_threshold` arguments. Single-key
@@ -6242,7 +6255,7 @@ def show_cumulative_feature_performance(
                 f"{list(retain)}. Pass one entry, e.g. {{'roc_auc': 0.98}}."
             )
         retain_metric, retain_threshold = next(iter(retain.items()))
- 
+
     # Validate the retain metric (from either `retain` or `retain_metric`) is
     # actually being evaluated, so a typo fails loudly instead of silently
     # skipping the marker or raising an opaque KeyError later.
@@ -6256,7 +6269,7 @@ def show_cumulative_feature_performance(
                 f"metrics {_valid_keys}. Add it to `metrics=` or pick one of "
                 "those."
             )
- 
+
     # Fractions of full-model performance, needed for the gains view, the
     # retention summary, and the retain-threshold marker.
     need_frac = (
@@ -6266,20 +6279,20 @@ def show_cumulative_feature_performance(
         or include_retained_pct
     )
     frac_df = _retained_fractions(results_df, resolved) if need_frac else None
- 
+
     # Optional: report each metric as a percentage of its full-model value, so
     # "how many features retain what share of performance" reads straight off
     # the scores table alongside the raw values.
     if include_retained_pct and frac_df is not None:
         for label, _, _, _ in resolved:
             results_df[f"{label} (% of full)"] = frac_df[label] * 100
- 
+
     # Keep `features` as the final column, whichever optional columns were added.
     if "features" in results_df.columns:
         results_df = results_df[
             [c for c in results_df.columns if c != "features"] + ["features"]
         ]
- 
+
     # --- Retention summary (how many features retain what fraction) ---
     retention_df = None
     if return_retention:
@@ -6297,7 +6310,7 @@ def show_cumulative_feature_performance(
         retention_df.index.name = "retain_level"
         print("\nFeatures needed to retain each performance level:\n")
         print(retention_df.to_string())
- 
+
     # --- Figure lifecycle (matches the show_* family) ---
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize or (8, 5))
@@ -6305,7 +6318,7 @@ def show_cumulative_feature_performance(
     else:
         fig = ax.get_figure()
         _created_fig = False
- 
+
     # X-axis values: feature count, or cumulative fraction of all features.
     total_feats = int(results_df["n_features"].max())
     x_vals = (
@@ -6321,18 +6334,22 @@ def show_cumulative_feature_performance(
         )
     else:
         _xlabel = xlabel
- 
+
     # curve_kwgs / marker_kwgs each accept a flat dict (applied to every curve)
     # or a per-metric mapping {metric_key: {...}}. Per-metric is detected when all
     # values are themselves dicts. Keys are the input metric keys (e.g. "roc_auc").
     _valid_keys = [mm for mm in metrics if isinstance(mm, str)]
-    _label_to_key = {r[0]: mm for mm, r in zip(metrics, resolved) if isinstance(mm, str)}
- 
+    _label_to_key = {
+        r[0]: mm for mm, r in zip(metrics, resolved) if isinstance(mm, str)
+    }
+
     def _is_per_metric(kw):
-        return isinstance(kw, dict) and len(kw) > 0 and all(
-            isinstance(v, dict) for v in kw.values()
+        return (
+            isinstance(kw, dict)
+            and len(kw) > 0
+            and all(isinstance(v, dict) for v in kw.values())
         )
- 
+
     for _nm, _kw in (("curve_kwgs", curve_kwgs), ("marker_kwgs", marker_kwgs)):
         if _is_per_metric(_kw):
             _bad = [k for k in _kw if k not in _valid_keys]
@@ -6341,20 +6358,24 @@ def show_cumulative_feature_performance(
                     f"`{_nm}` has unknown metric keys {_bad}; valid keys: "
                     f"{_valid_keys}."
                 )
- 
+
     def _style_for(kw, label):
         if not kw:
             return {}
         if _is_per_metric(kw):
             return dict(kw.get(_label_to_key.get(label, label), {}))
         return dict(kw)  # flat: same style for every curve
- 
+
     _split_r2 = False
     _legend_pairs = None  # (handles, labels) when a merged legend is needed
     if display == "cumulative_gains":
         for label, _, _, _ in resolved:
             _plot_perf_series(
-                ax, x_vals, frac_df[label], label, smooth,
+                ax,
+                x_vals,
+                frac_df[label],
+                label,
+                smooth,
                 curve_kwgs=_style_for(curve_kwgs, label),
                 marker_kwgs=_style_for(marker_kwgs, label),
             )
@@ -6371,7 +6392,7 @@ def show_cumulative_feature_performance(
         _has_r2 = any(lbl == _R2 for lbl, _, _, _ in resolved)
         _others = [r for r in resolved if r[0] != _R2]
         _split_r2 = _has_r2 and len(_others) >= 1
- 
+
         if _split_r2:
             _cycle = plt.rcParams["axes.prop_cycle"].by_key().get("color", [])
             _color_of = {
@@ -6384,14 +6405,24 @@ def show_cumulative_feature_performance(
                 _ck = _style_for(curve_kwgs, label)
                 _ck.setdefault("color", _color_of[label])  # explicit color wins
                 _handles[label] = _plot_perf_series(
-                    ax, x_vals, results_df[label], label, smooth,
-                    curve_kwgs=_ck, marker_kwgs=_style_for(marker_kwgs, label),
+                    ax,
+                    x_vals,
+                    results_df[label],
+                    label,
+                    smooth,
+                    curve_kwgs=_ck,
+                    marker_kwgs=_style_for(marker_kwgs, label),
                 )
             _ck_r2 = _style_for(curve_kwgs, _R2)
             _ck_r2.setdefault("color", _color_of[_R2])
             _handles[_R2] = _plot_perf_series(
-                ax_r2, x_vals, results_df[_R2], _R2, smooth,
-                curve_kwgs=_ck_r2, marker_kwgs=_style_for(marker_kwgs, _R2),
+                ax_r2,
+                x_vals,
+                results_df[_R2],
+                _R2,
+                smooth,
+                curve_kwgs=_ck_r2,
+                marker_kwgs=_style_for(marker_kwgs, _R2),
             )
             _r2_color = _handles[_R2].get_color()
             ax_r2.set_ylabel(_R2, fontsize=label_fontsize, color=_r2_color)
@@ -6404,19 +6435,25 @@ def show_cumulative_feature_performance(
         else:
             for label, _, _, _ in resolved:
                 _plot_perf_series(
-                    ax, x_vals, results_df[label], label, smooth,
+                    ax,
+                    x_vals,
+                    results_df[label],
+                    label,
+                    smooth,
                     curve_kwgs=_style_for(curve_kwgs, label),
                     marker_kwgs=_style_for(marker_kwgs, label),
                 )
         _default_ylabel = ylabel
- 
+
     if x_as_percent:
         ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
     ax.set_xlabel(_xlabel, fontsize=label_fontsize)
-    ax.set_ylabel(_default_ylabel if ylabel == "Score" else ylabel, fontsize=label_fontsize)
+    ax.set_ylabel(
+        _default_ylabel if ylabel == "Score" else ylabel, fontsize=label_fontsize
+    )
     ax.tick_params(labelsize=tick_fontsize)
     ax.grid(True, alpha=0.3)
- 
+
     if retain_threshold is not None:
         rm = retain_metric
         if rm is None:
@@ -6442,10 +6479,10 @@ def show_cumulative_feature_performance(
                     fontsize=tick_fontsize - 1,
                     color="black",
                 )
- 
+
     apply_plot_title(
         title,
-        default_title="Cumulative Feature Performance (top-k, no retrain)",
+        default_title="Cumulative Feature Performance (top-k)",
         text_wrap=text_wrap,
         fontsize=label_fontsize,
         ax=ax,
@@ -6460,7 +6497,7 @@ def show_cumulative_feature_performance(
         )
     else:
         apply_legend(legend_loc=legend_loc, fontsize=tick_fontsize, ax=ax)
- 
+
     if _created_fig:
         plt.tight_layout()
         save_plot_images(
@@ -6472,7 +6509,7 @@ def show_cumulative_feature_performance(
             fig=fig,
         )
         plt.show()
- 
+
     outputs = {}
     if return_df:
         outputs["scores"] = results_df
