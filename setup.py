@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="model_metrics",
-    version="0.0.6a1",
+    version="0.0.5a9.dev6",
     author="Leonid Shpaner, Arthur Funnell",
     author_email="lshpaner@ucla.edu, alafunnell@gmail.com",
     description="A Python library for model evaluation, performance tracking, and metric visualizations, supporting classification and regression models with robust analytics and reporting.",
