@@ -1,5 +1,6 @@
 from .model_calculator import *
 from .model_evaluator import *
+from .model_registry import *
 from .metrics_utils import *
 from .feature_selection_utils import *
 from .plot_utils import *
