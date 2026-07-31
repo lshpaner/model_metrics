@@ -37,6 +37,12 @@ requirements_local:
 venv_dep_setup_local: venv requirements_local	# for local set-up
 venv_dep_setup_gpu: venv requirements_gpu     # for server/gpu set-up
 
+.PHONY: mlflow_ui
+mlflow_ui:
+	MLFLOW_ALLOW_FILE_STORE=true $(PYTHON_INTERPRETER) -m mlflow ui \
+		--backend-store-uri $(CURDIR)/mlruns/ \
+		--host 0.0.0.0 --port 5501
+
 ################################################################################
 ###########################  Dataset Script Generation #########################
 ################################################################################
@@ -57,6 +63,8 @@ create_folders:
 	mkdir -p model_files/images/svg_images
 	mkdir -p model_files/single_model_lr_results/images/png_images
 	mkdir -p model_files/single_model_lr_results/images/svg_images
+	mkdir -p mlruns/
+
 ################################################################################
 ##########################  Modeling Script Generation #########################
 ################################################################################
@@ -101,11 +109,40 @@ random_forest:
 	--model-type rf \
 	2>&1 | tee model_files/results/random_forest.txt
 
-run_all_classification_models: single_model_lasso_reg single_model_logistic_reg \
-            logistic_regression decision_tree random_forest  
+run_all_classification_models: logistic_regression decision_tree \
+            random_forest
 
 ################################################################################
 ############################## Model Evaluation ################################
+################################################################################
+
+## Evaluate Logistic Regression
+.PHONY: eval_logistic_regression
+eval_logistic_regression:
+	$(PYTHON_INTERPRETER) \
+	py_scripts/eval_adult_income.py \
+	--model-type lr \
+	2>&1 | tee model_files/results/logistic_regression_eval.txt
+
+## Evaluate Decision Tree
+.PHONY: eval_decision_tree
+eval_decision_tree:
+	$(PYTHON_INTERPRETER) \
+	py_scripts/eval_adult_income.py \
+	--model-type dt \
+	2>&1 | tee model_files/results/decision_tree_eval.txt
+
+## Evaluate Random Forest Classifier
+.PHONY: eval_random_forest
+eval_random_forest:
+	$(PYTHON_INTERPRETER) \
+	py_scripts/eval_adult_income.py \
+	--model-type rf \
+	2>&1 | tee model_files/results/random_forest_eval.txt
+
+eval_all_classification_models: eval_logistic_regression eval_decision_tree \
+            eval_random_forest
+
 ################################################################################
 
 .PHONY: model_evaluation_classification
@@ -116,6 +153,11 @@ model_evaluation_classification:
 
 run_all_models: run_all_regression_models run_all_classification_models
 evaluate_classification_models: model_evaluation_classification 
+
+## Train then evaluate every model
+train_eval_all_classification_models: run_all_classification_models \
+            eval_all_classification_models
+
 
 ################################################################################
 ############################## Model Explanation ###############################

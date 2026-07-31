@@ -2,7 +2,7 @@
 # pip install --upgrade pip setuptools wheel
 
 build>=0.10.0, <=1.2.2.post1
-eda_toolkit==0.0.22
+eda_toolkit==0.0.30
 ipywidgets>=7.6.0, <=8.1.5
 -e .
 matplotlib>=3.5.3, <=3.10.0
