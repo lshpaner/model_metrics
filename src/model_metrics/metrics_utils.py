@@ -310,6 +310,82 @@ def validate_and_normalize_inputs(model, X, y_prob_or_pred):
     return model, y_prob_or_pred, num_models
 
 
+def _y_for_model(y, idx, n_models, n_expected=None, name=None):
+    """
+    Resolve the target vector belonging to a single model.
+
+    Most calls score every model against one shared ``y``. External
+    validation breaks that assumption: each set of predictions comes from a
+    different cohort, so ``y`` must be a per-model list whose entries differ
+    in both content and length. This helper accepts either form.
+
+    A per-model list is recognized only when ``y`` is a list/tuple, there is
+    more than one model, its length equals the model count, and every element
+    is itself array-like. A plain list of scalar labels therefore falls
+    through to the shared-``y`` behavior even when its length coincides with
+    the model count.
+
+    Parameters
+    ----------
+    y : array-like, or list/tuple of array-like
+        Shared target vector, or one target vector per model.
+    idx : int
+        Index of the current model in the loop.
+    n_models : int
+        Total number of models being evaluated.
+    n_expected : int, optional
+        Expected length of the resolved target, normally the length of this
+        model's prediction vector. When given, a mismatch raises rather than
+        surfacing later as an opaque scikit-learn error.
+    name : str, optional
+        Model title used in the mismatch message.
+
+    Returns
+    -------
+    array-like
+        The resolved target vector. Single-column DataFrames are squeezed to
+        a Series; everything else is returned unchanged so downstream pandas
+        operations (``.values``, boolean masking) keep working.
+
+    Raises
+    ------
+    ValueError
+        If ``n_expected`` is given and does not match the resolved length.
+    """
+    per_model = (
+        isinstance(y, (list, tuple))
+        and n_models > 1
+        and len(y) == n_models
+        and all(hasattr(el, "__len__") and not isinstance(el, (str, bytes)) for el in y)
+    )
+    y_i = y[idx] if per_model else y
+
+    if isinstance(y_i, pd.DataFrame) and y_i.shape[1] == 1:
+        y_i = y_i.iloc[:, 0]
+
+    if n_expected is not None and y_i is not None:
+        try:
+            n_actual = len(y_i)
+        except TypeError:
+            n_actual = None
+        if n_actual is not None and n_actual != n_expected:
+            label = f" '{name}'" if name else f" at index {idx}"
+            hint = (
+                ""
+                if per_model
+                else (
+                    " A single `y` is shared across all models; pass a list of "
+                    "targets (one per model) when the models are scored on "
+                    "different cohorts."
+                )
+            )
+            raise ValueError(
+                f"Length mismatch for model{label}: y has {n_actual} rows but "
+                f"the predictions have {n_expected}.{hint}"
+            )
+    return y_i
+
+
 def compute_classification_metrics(y_true, y_pred, y_prob, threshold, decimal_places=3):
     """Compute classification performance metrics."""
     return {
@@ -1514,30 +1590,3 @@ def get_coef_and_intercept(model):
     if isinstance(model, Pipeline) and hasattr(model[-1], "coef_"):
         return model[-1].coef_, getattr(model[-1], "intercept_", None)
     return None, None
-
-def _y_for_model(y, idx, n_models, n_expected, name):
-    """
-    Resolve the ground-truth array for model `idx`.
-
-    A list/tuple of length n_models is treated as per-model
-    ground truth (different cohorts, possibly different
-    lengths). Anything else is a single shared y used by every
-    model.
-    """
-    is_per_model = (
-        isinstance(y, (list, tuple))
-        and len(y) == n_models
-        and n_models > 1
-        and all(hasattr(v, "__len__") for v in y)
-    )
-    y_i = y[idx] if is_per_model else y
-
-    if isinstance(y_i, pd.DataFrame) and y_i.shape[1] == 1:
-        y_i = y_i.iloc[:, 0]
-
-    if len(y_i) != n_expected:
-        raise ValueError(
-            f"Length mismatch for {name}: y has {len(y_i)} rows, "
-            f"predictions have {n_expected}."
-        )
-    return y_i
