@@ -1514,3 +1514,30 @@ def get_coef_and_intercept(model):
     if isinstance(model, Pipeline) and hasattr(model[-1], "coef_"):
         return model[-1].coef_, getattr(model[-1], "intercept_", None)
     return None, None
+
+def _y_for_model(y, idx, n_models, n_expected, name):
+    """
+    Resolve the ground-truth array for model `idx`.
+
+    A list/tuple of length n_models is treated as per-model
+    ground truth (different cohorts, possibly different
+    lengths). Anything else is a single shared y used by every
+    model.
+    """
+    is_per_model = (
+        isinstance(y, (list, tuple))
+        and len(y) == n_models
+        and n_models > 1
+        and all(hasattr(v, "__len__") for v in y)
+    )
+    y_i = y[idx] if is_per_model else y
+
+    if isinstance(y_i, pd.DataFrame) and y_i.shape[1] == 1:
+        y_i = y_i.iloc[:, 0]
+
+    if len(y_i) != n_expected:
+        raise ValueError(
+            f"Length mismatch for {name}: y has {len(y_i)} rows, "
+            f"predictions have {n_expected}."
+        )
+    return y_i

@@ -35,6 +35,7 @@ from model_metrics.metrics_utils import (
     get_predictions,
     extract_model_name,
     validate_and_normalize_inputs,
+    _y_for_model,
     compute_classification_metrics,
     compute_regression_metrics,
     compute_leverage_and_cooks_distance,
@@ -176,8 +177,18 @@ def summarize_model_performance(
     if model is not None and not isinstance(model, list):
         model = [model]
 
+    # Normalize prediction inputs to a list of arrays. A bare list of scalars
+    # is one model's predictions, not a list of models, so wrap it before any
+    # length is read off it.
     if isinstance(y_prob, np.ndarray):
         y_prob = [y_prob]
+    elif isinstance(y_prob, list) and y_prob and np.isscalar(y_prob[0]):
+        y_prob = [np.asarray(y_prob)]
+
+    if isinstance(y_pred, np.ndarray):
+        y_pred = [y_pred]
+    elif isinstance(y_pred, list) and y_pred and np.isscalar(y_pred[0]):
+        y_pred = [np.asarray(y_pred)]
 
     model_type = model_type.lower()
     if model_type not in ["classification", "regression"]:
@@ -186,7 +197,19 @@ def summarize_model_performance(
     if model_type == "classification" and overall_only:
         raise ValueError("'overall_only' only applies to regression models")
 
-    models = model if isinstance(model, list) else [model]
+    # When no estimator is supplied, the number of models is the number of
+    # prediction arrays passed. `[model]` would collapse that to one entry and
+    # silently evaluate only the first set of predictions.
+    if model is None:
+        if y_prob is not None:
+            models = [None] * len(y_prob)
+        elif y_pred is not None:
+            models = [None] * len(y_pred)
+        else:
+            models = [None]
+    else:
+        models = model if isinstance(model, list) else [model]
+
     metrics_data = []
 
     # --- Normalize model titles ---
@@ -202,7 +225,7 @@ def summarize_model_performance(
 
         if model_type == "classification":
             if X is None:
-                y_true = y
+                y_true = _y_for_model(y, i, len(models), len(y_prob[i]), name)
                 y_prob_m = y_prob[i]
                 threshold = custom_threshold or (
                     model_threshold[name]
@@ -686,7 +709,7 @@ def show_confusion_matrix(
 
         # use y_prob_curr to avoid clobbering the function-level y_prob param.
         if X is None:
-            y_true = y
+            y_true = _y_for_model(y, idx, len(model), len(y_probs[idx]), name)
             y_prob_curr = y_probs[idx]
             threshold = 0.5
             if custom_threshold:
@@ -1076,7 +1099,7 @@ def show_roc_curve(
     ):
         # use y_prob_curr to avoid clobbering the function-level y_prob param.
         if X is None:
-            y_true = y
+            y_true = _y_for_model(y, idx, len(model), len(y_probs[idx]), name)
             y_prob_curr = y_probs[idx]
         else:
             y_true, y_prob_curr, _, _ = get_predictions(
@@ -1587,7 +1610,7 @@ def show_pr_curve(
     ):
         # use y_prob_curr to avoid clobbering the function-level y_prob param.
         if X is None:
-            y_true = y
+            y_true = _y_for_model(y, idx, len(model), len(y_probs[idx]), name)
             y_prob_curr = y_probs[idx]
         else:
             y_true, y_prob_curr, _, _ = get_predictions(
@@ -1910,7 +1933,8 @@ def show_lift_chart(
             y_prob_curr = mod.predict_proba(X)[:, 1]
 
         sorted_indices = np.argsort(y_prob_curr)[::-1]
-        y_true_sorted = np.array(y)[sorted_indices]
+        y_true = _y_for_model(y, idx, len(model), len(y_prob_curr), name)
+        y_true_sorted = np.asarray(y_true).ravel()[sorted_indices]
 
         cumulative_gains = np.cumsum(y_true_sorted) / np.sum(y_true_sorted)
         percentages = np.linspace(
@@ -2140,7 +2164,8 @@ def show_gain_chart(
             y_prob_curr = mod.predict_proba(X)[:, 1]
 
         sorted_indices = np.argsort(y_prob_curr)[::-1]
-        y_true_sorted = np.array(y)[sorted_indices]
+        y_true = _y_for_model(y, idx, len(model), len(y_prob_curr), name)
+        y_true_sorted = np.asarray(y_true).ravel()[sorted_indices]
 
         cumulative_gains = np.cumsum(y_true_sorted) / np.sum(y_true_sorted)
         percentages = np.linspace(0, 1, len(y_true_sorted))
@@ -2413,7 +2438,7 @@ def show_calibration_curve(
     ):
         # use y_prob_curr to avoid clobbering the function-level y_prob param.
         if X is None:
-            y_true = y
+            y_true = _y_for_model(y, idx, len(model), len(y_probs[idx]), name)
             y_prob_curr = y_probs[idx]
         else:
             y_true, y_prob_curr, _, _ = get_predictions(
@@ -2639,7 +2664,6 @@ def show_calibration_curve(
 ################## Classification Metrics Threshold Trade-Off ##################
 ################################################################################
 
-
 def plot_threshold_metrics(
     model=None,
     X_test=None,
@@ -2654,9 +2678,15 @@ def plot_threshold_metrics(
     gridlines=True,
     baseline_thresh=True,
     curve_kwgs=None,
+    model_colors=None,
+    metric_colors=None,
+    metric_linestyles=None,
     baseline_kwgs=None,
     threshold_kwgs=None,
     lookup_kwgs=None,
+    legend_loc="bottom",
+    legend_ncol=3,
+    legend_bbox_to_anchor=None,
     save_plot=False,
     image_path_png=None,
     image_path_svg=None,
@@ -2681,6 +2711,14 @@ def plot_threshold_metrics(
     models are provided, each model's threshold curves are plotted together
     in a shared or individual axes depending on the display mode selected.
 
+    Color encoding depends on the layout. With a single curve set (single
+    plot, subplots, or a one-model overlay) each metric gets its own color,
+    matching the familiar red/green/blue/purple scheme. In a multi-model
+    overlay, color instead encodes the model and each metric is given a
+    distinct linestyle, so two cohorts drawn on one axes stay separable.
+    Both mappings are overridable via `model_colors`, `metric_colors`, and
+    `metric_linestyles`.
+
     Parameters
     ----------
     model : estimator or list of estimators, optional
@@ -2688,8 +2726,11 @@ def plot_threshold_metrics(
         Required if `y_prob` is not provided.
     X_test : array-like, optional
         Feature matrix for testing. Required if `model` is provided.
-    y_test : array-like of shape (n_samples,)
-        True binary labels. Required.
+    y_test : array-like, or list of array-like
+        True binary labels. Required. When a list matching the number of
+        models is supplied alongside `y_prob`, each entry is treated as
+        that model's own ground truth, allowing models evaluated on
+        different cohorts (and different row counts) to be overlaid.
     y_prob : array-like or list of array-like, optional
         Predicted probabilities for the positive class. Can be provided
         instead of `model` and `X_test`. If multiple models are being
@@ -2713,10 +2754,24 @@ def plot_threshold_metrics(
     gridlines : bool, default=True
         Whether to display gridlines.
     baseline_thresh : bool, default=True
-        If True, draws a vertical reference line at threshold = 0.5.
-    curve_kwgs : dict, optional
-        Keyword arguments passed to all metric curves
-        (e.g., {"linestyle": "-", "linewidth": 1}).
+        If True, draws a vertical reference line at threshold = 0.5. In
+        overlay mode the line is drawn once, not once per model.
+    curve_kwgs : dict or list of dict, optional
+        Styling applied to the metric curves. A flat dict (e.g.
+        `{"linewidth": 2}`) is applied to every curve of every model. A dict
+        keyed by model title, or a list aligned with the models, applies
+        per-model styling. Values set here override the automatic color and
+        linestyle assignment.
+    model_colors : sequence of color specs, optional
+        Colors used per model in a multi-model overlay. Cycled if shorter
+        than the model count. Ignored when color encodes the metric.
+    metric_colors : dict, optional
+        Metric-to-color mapping used when color encodes the metric. Keys are
+        "F1 Score", "Recall", "Precision", "Specificity". Unspecified keys
+        keep their defaults.
+    metric_linestyles : dict, optional
+        Metric-to-linestyle mapping used when color encodes the model. Same
+        keys as `metric_colors`. Unspecified keys keep their defaults.
     baseline_kwgs : dict, optional
         Keyword arguments for styling the baseline threshold line
         (default: black dotted line).
@@ -2727,6 +2782,18 @@ def plot_threshold_metrics(
         Keyword arguments for styling the lookup threshold line when
         `lookup_metric` and `lookup_value` are provided
         (default: gray dashed line).
+    legend_loc : str, default="bottom"
+        Legend location. Standard matplotlib locations, or "bottom" to place
+        the legend beneath the axes.
+    legend_ncol : int, default=3
+        Number of legend columns. A multi-model overlay produces four
+        entries per model plus the reference lines, so raising this (or
+        lowering it and giving the figure more height) keeps the legend from
+        running past the axes width.
+    legend_bbox_to_anchor : tuple, optional
+        Explicit anchor for the legend when `legend_loc="bottom"`. Defaults
+        to a value that scales with the number of legend rows, so multi-model
+        overlays clear the x-axis label automatically.
     save_plot : bool, default=False
         If True, saves the plot to disk.
     image_path_png : str, optional
@@ -2746,7 +2813,9 @@ def plot_threshold_metrics(
     model_threshold : float or list of float, optional
         A model-specific threshold or list of thresholds (one per model) to
         highlight with a vertical line. If a scalar is passed it is broadcast
-        to all models.
+        to all models. In overlay mode, distinct thresholds are each drawn
+        and labeled with their model name; a threshold shared by every model
+        is drawn once.
     overlay : bool, default=False
         If True, plot all models on a single shared axes. Cannot be used
         with `subplots=True`.
@@ -2817,7 +2886,57 @@ def plot_threshold_metrics(
     else:
         model_thresholds = [model_threshold] * num_models
 
-    curve_kwgs = curve_kwgs or {"linestyle": "-", "linewidth": 1}
+    METRIC_ORDER = ["F1 Score", "Recall", "Precision", "Specificity"]
+
+    _metric_colors = {
+        "F1 Score": "red",
+        "Recall": "green",
+        "Precision": "blue",
+        "Specificity": "purple",
+    }
+    _metric_colors.update(metric_colors or {})
+
+    _metric_linestyles = {
+        "F1 Score": "-",
+        "Recall": "--",
+        "Precision": "-.",
+        "Specificity": (0, (1, 1)),
+    }
+    _metric_linestyles.update(metric_linestyles or {})
+
+    _model_colors = list(
+        model_colors
+        or [
+            "#1b1b1b",
+            "#C1440E",
+            "#2E6F9E",
+            "#4C8C3B",
+            "#8E5AA8",
+            "#B58B00",
+        ]
+    )
+
+    # Color encodes the model only when several models share one axes;
+    # otherwise the familiar per-metric coloring is kept.
+    color_by_model = bool(overlay) and num_models > 1
+
+    # curve_kwgs accepts a flat dict (applied to every curve), a dict keyed by
+    # model title, or a list aligned with the models. The flat form is detected
+    # by its values not being dicts, so the legacy {"linewidth": 1} style keeps
+    # working rather than silently resolving to empty per-model styles.
+    if isinstance(curve_kwgs, list):
+        curve_styles = list(curve_kwgs)
+    elif isinstance(curve_kwgs, dict) and curve_kwgs:
+        if all(isinstance(v, dict) for v in curve_kwgs.values()):
+            curve_styles = [curve_kwgs.get(name, {}) for name in model_title]
+        else:
+            curve_styles = [dict(curve_kwgs) for _ in range(num_models)]
+    else:
+        curve_styles = [{} for _ in range(num_models)]
+
+    if len(curve_styles) < num_models:
+        curve_styles += [{}] * (num_models - len(curve_styles))
+
     baseline_kwgs = baseline_kwgs or {
         "linestyle": ":",
         "linewidth": 1.5,
@@ -2836,6 +2955,14 @@ def plot_threshold_metrics(
         "color": "gray",
         "alpha": 0.7,
     }
+
+    # A threshold shared by every model is a property of the figure, not of any
+    # one curve, so it is drawn once instead of stacking identical verticals.
+    _shared_threshold = (
+        overlay
+        and num_models > 1
+        and len({t for t in model_thresholds if t is not None}) <= 1
+    )
 
     # Set up subplot grid if needed
     if subplots:
@@ -2866,35 +2993,71 @@ def plot_threshold_metrics(
             _, ax_overlay = plt.subplots(figsize=figsize or (8, 6))
             _created_fig = True
 
-    def _plot_single(ax, y_pred_probs, name, thresh):
-        """Plot one model's threshold curves onto the given axes."""
-        precision, recall, thresholds = precision_recall_curve(y_test, y_pred_probs)
+    def _apply_legend(target_ax, n_entries):
+        """Place the legend, sizing the bottom anchor to the row count."""
+        if legend_loc != "bottom":
+            apply_legend(legend_loc, fontsize=tick_fontsize, ax=target_ax)
+            return
+        n_rows_legend = math.ceil(n_entries / max(legend_ncol, 1))
+        anchor = legend_bbox_to_anchor or (0.5, -0.15 - 0.06 * (n_rows_legend - 1))
+        apply_legend(
+            legend_loc="bottom",
+            fontsize=tick_fontsize,
+            ax=target_ax,
+            ncol=legend_ncol,
+            frameon=False,
+            bbox_to_anchor=anchor,
+        )
+
+    def _plot_single(ax, y_pred_probs, name, thresh, y_true, idx=0):
+        """Plot one model's threshold curves onto the given axes.
+
+        Returns the number of legend entries this call contributed, so the
+        caller can size the legend once all models have been drawn.
+        """
+        precision, recall, thresholds = precision_recall_curve(y_true, y_pred_probs)
         f1_scores = 2 * (precision * recall) / (precision + recall + 1e-9)
-        fpr, _, roc_thresholds = roc_curve(y_test, y_pred_probs)
+        fpr, _, roc_thresholds = roc_curve(y_true, y_pred_probs)
         specificity = 1 - fpr
 
-        ax.plot(thresholds, f1_scores[:-1], label="F1 Score", color="red", **curve_kwgs)
-        ax.plot(thresholds, recall[:-1], label="Recall", color="green", **curve_kwgs)
-        ax.plot(
-            thresholds, precision[:-1], label="Precision", color="blue", **curve_kwgs
-        )
-        ax.plot(
-            roc_thresholds,
-            specificity,
-            label="Specificity",
-            color="purple",
-            **curve_kwgs,
-        )
+        series = {
+            "F1 Score": (thresholds, f1_scores[:-1]),
+            "Recall": (thresholds, recall[:-1]),
+            "Precision": (thresholds, precision[:-1]),
+            "Specificity": (roc_thresholds, specificity),
+        }
 
-        if baseline_thresh:
+        n_entries = 0
+        for metric in METRIC_ORDER:
+            xs, ys = series[metric]
+            style = dict(curve_styles[idx])
+            style.setdefault("linewidth", 1)
+            if color_by_model:
+                style.setdefault("color", _model_colors[idx % len(_model_colors)])
+                style.setdefault("linestyle", _metric_linestyles[metric])
+                label = f"{name} - {metric}"
+            else:
+                style.setdefault("color", _metric_colors[metric])
+                style.setdefault("linestyle", "-")
+                label = metric
+            ax.plot(xs, ys, label=label, **style)
+            n_entries += 1
+
+        # Reference lines belong to the axes, not the model. In an overlay they
+        # are emitted on the first pass only, otherwise every model stacks an
+        # identical vertical and a duplicate legend entry on top of the last.
+        draw_refs = (not overlay) or idx == 0
+
+        if baseline_thresh and draw_refs:
             ax.axvline(x=0.5, **baseline_kwgs, label="Threshold = 0.5")
+            n_entries += 1
 
-        if thresh is not None:
-            ax.axvline(
-                x=thresh,
-                **threshold_kwgs,
-                label=f"Model Threshold: {round(thresh, decimal_places)}",
-            )
+        if thresh is not None and (draw_refs or not _shared_threshold):
+            thresh_label = f"Model Threshold: {round(thresh, decimal_places)}"
+            if overlay and not _shared_threshold:
+                thresh_label = f"{name} Threshold: {round(thresh, decimal_places)}"
+            ax.axvline(x=thresh, **threshold_kwgs, label=thresh_label)
+            n_entries += 1
 
         if lookup_metric and lookup_value is not None:
             metric_dict = {
@@ -2909,14 +3072,14 @@ def plot_threshold_metrics(
                 best_threshold = metric_thresholds[closest_idx]
                 print(
                     f"Best threshold for target {lookup_metric} of "
-                    f"{round(lookup_value, decimal_places)} is "
+                    f"{round(lookup_value, decimal_places)} for {name} is "
                     f"{round(best_threshold, decimal_places)}"
                 )
-                ax.axvline(
-                    x=best_threshold,
-                    label=f"Best Threshold: {round(best_threshold, decimal_places)}",
-                    **lookup_kwgs,
-                )
+                best_label = f"Best Threshold: {round(best_threshold, decimal_places)}"
+                if overlay and num_models > 1:
+                    best_label = f"{name} Best: {round(best_threshold, decimal_places)}"
+                ax.axvline(x=best_threshold, label=best_label, **lookup_kwgs)
+                n_entries += 1
             else:
                 print(
                     f"Invalid lookup metric: {lookup_metric}. Choose from "
@@ -2927,40 +3090,37 @@ def plot_threshold_metrics(
         ax.set_ylabel("Metrics", fontsize=label_fontsize)
         ax.tick_params(axis="both", labelsize=tick_fontsize)
         ax.grid(visible=gridlines)
-        apply_legend(
-            legend_loc="bottom",
-            fontsize=tick_fontsize,
-            ax=ax,
-            ncol=3,
-            frameon=False,
-            bbox_to_anchor=(0.5, -0.15),
-        )
+        return n_entries
 
     # Main loop over models
     _ax_param = (
         ax  # preserve caller's ax so each default-mode model gets its own figure
     )
+    _overlay_entries = 0
     for idx, (mod, name, thresh) in enumerate(
         zip(model, model_title, model_thresholds)
     ):
         if X_test is None:
             y_pred_probs = y_probs[idx]
+            y_true_i = _y_for_model(y_test, idx, num_models, len(y_pred_probs), name)
         else:
             _, y_pred_probs, _, _ = get_predictions(
                 mod, X_test, y_test, None, None, None
             )
+            y_true_i = y_test
 
         if overlay:
-            _plot_single(ax_overlay, y_pred_probs, name, thresh)
-            # Prefix curve labels with model name for overlay disambiguation
-            for line in ax_overlay.get_lines():
-                lbl = line.get_label()
-                if lbl in {"F1 Score", "Recall", "Precision", "Specificity"}:
-                    line.set_label(f"{name} - {lbl}")
+            # Labels are set at draw time, so no post-hoc renaming pass. The
+            # legend is applied once after the loop, which is what previously
+            # left the final model's entries unprefixed.
+            _overlay_entries += _plot_single(
+                ax_overlay, y_pred_probs, name, thresh, y_true_i, idx
+            )
 
         elif subplots:
             ax = axes[idx]
-            _plot_single(ax, y_pred_probs, name, thresh)
+            n_entries = _plot_single(ax, y_pred_probs, name, thresh, y_true_i, idx)
+            _apply_legend(ax, n_entries)
             apply_plot_title(
                 title,
                 default_title=f"Threshold Metrics: {name}",
@@ -2977,7 +3137,8 @@ def plot_threshold_metrics(
             else:
                 ax = _ax_param
                 _created_fig = False
-            _plot_single(ax, y_pred_probs, name, thresh)
+            n_entries = _plot_single(ax, y_pred_probs, name, thresh, y_true_i, idx)
+            _apply_legend(ax, n_entries)
             apply_plot_title(
                 title,
                 default_title=(
@@ -3010,6 +3171,7 @@ def plot_threshold_metrics(
 
     # Finalise overlay
     if overlay:
+        _apply_legend(ax_overlay, _overlay_entries)
         apply_plot_title(
             title,
             default_title="Threshold Metrics: Overlay",
@@ -3051,7 +3213,6 @@ def plot_threshold_metrics(
             image_filename=image_filename,
         )
         plt.show()
-
 
 ################################################################################
 # Model Comparison Venn Diagrams for Confusion Matrix
@@ -4429,7 +4590,9 @@ def show_residual_diagnostics(
             y_pred_m = y_pred[idx]
 
         # Calculate residuals
-        y_true = np.asarray(y).ravel()
+        y_true = np.asarray(
+            _y_for_model(y, idx, len(model), len(y_pred_m), name)
+        ).ravel()
         y_pred_arr = np.asarray(y_pred_m).ravel()
         residuals = y_true - y_pred_arr
 
@@ -4903,7 +5066,9 @@ def show_residual_diagnostics(
             else:
                 y_pred_m = y_pred[idx]
 
-            y_true = np.asarray(y).ravel()
+            y_true = np.asarray(
+                _y_for_model(y, idx, len(model), len(y_pred_m), name)
+            ).ravel()
             y_pred_arr = np.asarray(y_pred_m).ravel()
             residuals = y_true - y_pred_arr
 

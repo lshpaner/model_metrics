@@ -19,9 +19,12 @@ Configuration
 Two settings, both optional, both overridable by environment variable or by
 calling ``configure()`` before first use:
 
-    MODEL_REGISTRY_ROOT     directory to walk (default: this file's parent's
-                            parent, i.e. the project root)
+    MODEL_REGISTRY_ROOT     directory to walk (default: the working directory,
+                            walking up to the repository root to find an
+                            mlruns/ tree)
     MODEL_REGISTRY_TARGET   outcome token to strip from names (default: none)
+    MODEL_REGISTRY_STORES   comma-separated store prefixes eligible to win a
+                            metric comparison (default: none, no constraint)
 
 The target token exists because artifact folders are conventionally named
 ``<algo>_<TARGET>``. Setting it to your outcome name turns ``cat_outcome``
@@ -46,6 +49,29 @@ VARIANT:
     variant : cat_orig, cat_smote, cat_orig_no_sex, ...   (the MLflow run name)
 
 ``variant`` is the addressable key. ``algo`` is what you group by.
+
+Stores
+------
+The INDEX is always global: available(), rank(), load(), load_all() and
+variants() see every model under PROJECT_ROOT, so nothing is hidden.
+
+STORES constrains only the metric-based selectors, best_per_algo() and
+load_best_per_algo(), so a superseded store cannot win a comparison it was
+never meant to be in. Prefixes are project-relative and matched on WHOLE path
+segments: "mlruns/models" matches "mlruns/models/12345" but NOT
+"mlruns/models_old/12345".
+
+Default is empty, meaning no constraint. Set it either way:
+
+    export MODEL_REGISTRY_STORES=mlruns/models        # before import
+    set_stores("mlruns/models")                       # at runtime
+    set_stores()                                      # clear it
+
+    best_per_algo(stores="mlruns/models")             # one call only
+
+store_summary() shows every store on disk with its model count and whether it
+is currently eligible, so you can see what is being excluded before trusting a
+result.
 
 Selection
 ---------
@@ -145,6 +171,45 @@ TARGET = os.environ.get("MODEL_REGISTRY_TARGET", "")
 
 MODEL_FILE = os.environ.get("MODEL_REGISTRY_FILE", "model.pkl")
 
+
+def _parse_stores(value) -> tuple:
+    """
+    Normalize a stores setting into a tuple of POSIX-style prefixes.
+
+    Accepts a single string, a comma-separated string, or any iterable of
+    either, so that the environment variable form and the call form behave
+    identically:
+
+        "mlruns/models"
+        "mlruns/models,mlruns/archive"
+        ("mlruns/models", "mlruns/archive")
+        ("mlruns/models,mlruns/archive",)
+    """
+    if not value:
+        return ()
+    parts = [value] if isinstance(value, str) else list(value)
+
+    out = []
+    for part in parts:
+        for piece in str(part).split(","):
+            piece = piece.strip().replace("\\", "/").strip("/")
+            if piece:
+                out.append(piece)
+    return tuple(out)
+
+
+# Restrict which tracking stores may WIN a metric comparison.
+#
+# The index is always global: available(), rank(), load(), load_all() and
+# variants() see every model on disk, so nothing is hidden. STORES constrains
+# only best_per_algo() and load_best_per_algo(), so a superseded store such as
+# mlruns/models_old cannot win a comparison it was never meant to be in.
+#
+# Prefixes are project-relative and matched on WHOLE path segments, so
+# "mlruns/models" matches "mlruns/models/12345" but not
+# "mlruns/models_old/12345". Empty means no constraint.
+STORES = _parse_stores(os.environ.get("MODEL_REGISTRY_STORES", ""))
+
 # Directory names never worth walking into.
 SKIP_DIRS = {".git", "node_modules", ".ipynb_checkpoints", ".venv", "__pycache__"}
 
@@ -154,6 +219,7 @@ def configure(
     target: Optional[str] = None,
     model_file: Optional[str] = None,
     loader=None,
+    stores=None,
 ) -> None:
     """
     Override configuration at runtime and drop the cached index.
@@ -162,7 +228,7 @@ def configure(
 
         model_registry.configure(target="outcome")
     """
-    global PROJECT_ROOT, TARGET, MODEL_FILE, LOADER
+    global PROJECT_ROOT, TARGET, MODEL_FILE, LOADER, STORES
     if root is not None:
         PROJECT_ROOT = Path(root)
     if target is not None:
@@ -171,7 +237,30 @@ def configure(
         MODEL_FILE = model_file
     if loader is not None:
         LOADER = loader
+    if stores is not None:
+        STORES = _parse_stores(stores)
     refresh()
+
+
+def set_stores(*prefixes) -> tuple:
+    """
+    Restrict which stores may win a metric comparison. Returns the new value.
+
+        set_stores("mlruns/models")                    # only the live store
+        set_stores("mlruns/models", "mlruns/archive")  # two of them
+        set_stores()                                   # clear the constraint
+    """
+    global STORES
+    if len(prefixes) == 1 and not isinstance(prefixes[0], str):
+        STORES = _parse_stores(prefixes[0])
+    else:
+        STORES = _parse_stores(prefixes)
+    return STORES
+
+
+def stores() -> tuple:
+    """The store prefixes currently constraining metric-based selection."""
+    return STORES
 
 
 def refresh() -> None:
@@ -805,6 +894,73 @@ def _index() -> List[ModelEntry]:
 # ---------------------------------------------------------------------------
 
 
+def _rel_store(entry: "ModelEntry") -> str:
+    """The entry's store root as a project-relative POSIX path."""
+    try:
+        return entry.store_root.resolve().relative_to(
+            PROJECT_ROOT.resolve()
+        ).as_posix()
+    except ValueError:
+        return entry.store_root.as_posix()
+
+
+def _in_stores(entry: "ModelEntry", prefixes: tuple = None) -> bool:
+    """
+    True if the entry's store sits under one of the given prefixes.
+
+    Matching is on whole path segments, so "mlruns/models" accepts
+    "mlruns/models" and "mlruns/models/12345" but rejects
+    "mlruns/models_old/12345". A substring test would wrongly accept the
+    latter, which is the exact confusion this setting exists to prevent.
+    """
+    prefixes = STORES if prefixes is None else _parse_stores(prefixes)
+    if not prefixes:
+        return True
+
+    parts = _rel_store(entry).split("/")
+    for prefix in prefixes:
+        want = prefix.split("/")
+        if parts[: len(want)] == want:
+            return True
+    return False
+
+
+def store_summary() -> pd.DataFrame:
+    """
+    One row per tracking store on disk, with how many models it holds and
+    whether it is eligible to win a metric comparison.
+
+    Use this to see what STORES is actually excluding before trusting a
+    best_per_algo() result.
+    """
+    rows = {}
+    for e in _index():
+        rel = _rel_store(e)
+        row = rows.setdefault(
+            rel,
+            {
+                "store": rel,
+                "models": 0,
+                "experiments": set(),
+                "eligible": _in_stores(e),
+            },
+        )
+        row["models"] += 1
+        row["experiments"].add(e.experiment_name)
+
+    return pd.DataFrame(
+        [
+            {
+                "store": r["store"],
+                "models": r["models"],
+                "experiments": ", ".join(sorted(r["experiments"])),
+                "eligible": r["eligible"],
+            }
+            for r in sorted(rows.values(), key=lambda r: r["store"])
+        ]
+    )
+
+
 def _matches(name: str) -> List[ModelEntry]:
     """Entries whose variant, algo, run_id, or qualified key matches `name`."""
     return [e for e in _index() if name in (e.variant, e.algo, e.run_id, e.key)]
@@ -969,6 +1125,7 @@ def _best_entries(
     experiment: Optional[str] = None,
     per_experiment: bool = True,
     ascending: bool = False,
+    stores: Optional[tuple] = None,
 ) -> tuple:
     """(resolved_metric, {group_key: winning ModelEntry})."""
     key = resolve_metric(metric)
@@ -978,6 +1135,22 @@ def _best_entries(
         entries = [
             e for e in entries if experiment in (e.experiment_id, e.experiment_name)
         ]
+
+    # Store constraint applies here and nowhere else: an excluded store stays
+    # fully visible to available(), rank() and load(), it just cannot win.
+    active = STORES if stores is None else _parse_stores(stores)
+    if active:
+        eligible = [e for e in entries if _in_stores(e, active)]
+        if not eligible:
+            seen = sorted({_rel_store(e) for e in entries})
+            raise LookupError(
+                f"No runs logged '{key}' in stores {list(active)}.\n"
+                f"Stores that do have it: {seen}\n"
+                "Widen the constraint with set_stores(...) or pass "
+                "stores=() to ignore it."
+            )
+        entries = eligible
+
     if not entries:
         raise LookupError(f"No runs logged '{key}'.")
 
@@ -1004,6 +1177,7 @@ def best_per_algo(
     experiment: Optional[str] = None,
     per_experiment: bool = True,
     ascending: bool = False,
+    stores: Optional[tuple] = None,
 ) -> pd.DataFrame:
     """
     The winning run for each algo, ranked by `metric`. Inspect before loading.
@@ -1011,11 +1185,14 @@ def best_per_algo(
     per_experiment=True keeps runs from different experiments in separate
     groups instead of letting them compete.
     """
-    key, winners = _best_entries(metric, experiment, per_experiment, ascending)
+    key, winners = _best_entries(
+        metric, experiment, per_experiment, ascending, stores
+    )
 
     rows = [
         {
             "algo": e.algo,
+            "store": _rel_store(e),
             "winner": e.variant,
             "experiment": e.experiment_name,
             key: e.metrics[key],
@@ -1025,6 +1202,7 @@ def best_per_algo(
                 for o in _index()
                 if o.algo == e.algo
                 and key in o.metrics
+                and _in_stores(o, STORES if stores is None else _parse_stores(stores))
                 and (not per_experiment or o.experiment_name == e.experiment_name)
             ),
             **{m: v for m, v in e.metrics.items() if m != key},
@@ -1042,6 +1220,7 @@ def load_best_per_algo(
     per_experiment: bool = True,
     ascending: bool = False,
     qualified: bool = False,
+    stores: Optional[tuple] = None,
 ) -> Dict[str, object]:
     """
     Load the top run for each algo by `metric`.
@@ -1050,7 +1229,9 @@ def load_best_per_algo(
     the test set and the winning score is optimistically biased. Fine for
     exploration. For anything you report, pin the variant by name.
     """
-    _, winners = _best_entries(metric, experiment, per_experiment, ascending)
+    _, winners = _best_entries(
+        metric, experiment, per_experiment, ascending, stores
+    )
     out = {}
     for e in winners.values():
         out[e.key if qualified else e.algo] = _load_model(e.path)
@@ -1363,19 +1544,18 @@ def diagnose() -> None:
     print(f"model file   : {MODEL_FILE}")
     print(f"loader       : {backend()}")
     print(f"yaml parser  : {'PyYAML' if _yaml is not None else 'builtin (flat)'}")
+    print(f"stores filter: {list(STORES) or '(none, all eligible)'}")
     try:
         entries = _index()
     except RuntimeError as exc:
         print()
         print(exc)
         return
-    print(f"project root : {PROJECT_ROOT}")
-    print(f"target token : {TARGET or '(none)'}")
-    print(f"model file   : {MODEL_FILE}")
-    print(f"loader       : {backend()}")
     print(f"sklearn shims: {shimmed() or '(none applied yet)'}")
     print(f"state repairs: {repaired() or '(none applied yet)'}")
-    print(f"stores       : {sorted({str(e.store_root) for e in entries})}")
+    print()
+    print(store_summary().to_string(index=False))
+    print()
     print(f"experiments  : {experiments()}")
     print(f"models       : {len(entries)}")
     print(f"algos        : {algos()}")
