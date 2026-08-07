@@ -6,6 +6,7 @@ from .feature_selection_utils import *
 from .plot_utils import *
 from .partial_dependence import *
 from .delong_test import *
+from .align_features import *
 from .logo import *
 
 import sys

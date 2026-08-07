@@ -33,7 +33,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 try:
     from model_metrics import registry as mr
 except ImportError:  # pragma: no cover - local development layout
-    from model_metrics import model_registry as mr
+    import model_metrics.model_registry as mr
 
 
 TARGET = "income"
@@ -230,6 +230,7 @@ def store(tmp_path, data):
 def _isolate_registry():
     """Drop cached index and load state so tests cannot leak into each other."""
     yield
+    mr.set_stores()
     mr.refresh()
 
 
@@ -856,6 +857,136 @@ def test_load_selected_loads_the_named_models(configured):
     selection = mr.select_on_validation((configured["X"], configured["y"]))
     models = mr.load_selected(selection)
     assert set(models) == {"cat", "lr", "xgb"}
+
+
+# --------------------------------------------------------------------------- #
+# Store scoping                                                               #
+# --------------------------------------------------------------------------- #
+@pytest.fixture
+def multi_store(tmp_path, data):
+    """Three stores sharing one experiment name, with stale scores inflated.
+
+    Mirrors the situation the setting exists for: a superseded store kept on
+    disk for reference would otherwise win every comparison, because grouping
+    is by experiment name and the name is identical across stores. The third
+    store has a confusable prefix, so substring matching would wrongly admit
+    it where segment matching does not.
+    """
+    X, y, num = data
+    pipe = _fit_pipeline(X, y, num)
+
+    def store(name, run_id, run_name, algo, auc, start):
+        exp = tmp_path / "mlruns" / name / "1"
+        exp.mkdir(parents=True, exist_ok=True)
+        (exp / "meta.yaml").write_text("experiment_id: '1'\nname: income_model\n")
+        _write_run(
+            exp, run_id, run_name, algo, pipe, {"test roc_auc": auc}, start
+        )
+
+    store("models", "r_live_lr", "lr_orig_training", "lr", 0.80, 3000)
+    store("models", "r_live_rf", "rf_orig_training", "rf", 0.79, 2900)
+    store("models_old", "r_old_lr", "lr_old_training", "lr", 0.95, 1000)
+    store("models_old", "r_old_rf", "rf_old_training", "rf", 0.94, 900)
+    store("models_group_split", "r_gs_lr", "lr_gs_training", "lr", 0.99, 500)
+
+    mr.configure(root=tmp_path, target=TARGET, stores=())
+    return tmp_path
+
+
+def test_stores_defaults_to_no_constraint(configured):
+    assert mr.stores() == ()
+
+
+def test_unconstrained_selection_lets_a_stale_store_win(multi_store):
+    """Without the constraint the superseded store wins on inflated scores."""
+    df = mr.best_per_algo(metric="test roc_auc")
+    winners = dict(zip(df["algo"], df["winner"]))
+    assert winners["lr"] == "lr_gs_training"
+    assert winners["rf"] == "rf_old_training"
+
+
+def test_set_stores_restricts_the_winner(multi_store):
+    mr.set_stores("mlruns/models")
+    df = mr.best_per_algo(metric="test roc_auc")
+    winners = dict(zip(df["algo"], df["winner"]))
+    assert winners["lr"] == "lr_orig_training"
+    assert winners["rf"] == "rf_orig_training"
+
+
+def test_store_matching_is_segment_wise_not_substring(multi_store):
+    """'mlruns/models' must not admit 'mlruns/models_group_split'."""
+    mr.set_stores("mlruns/models")
+    df = mr.best_per_algo(metric="test roc_auc")
+    assert set(df["store"]) == {"mlruns/models"}
+
+
+def test_stores_accepts_several_prefixes(multi_store):
+    mr.set_stores("mlruns/models", "mlruns/models_old")
+    df = mr.best_per_algo(metric="test roc_auc")
+    assert set(df["store"]) <= {"mlruns/models", "mlruns/models_old"}
+    # the old store still wins where it is allowed to compete
+    assert dict(zip(df["algo"], df["winner"]))["lr"] == "lr_old_training"
+
+
+def test_stores_can_be_passed_per_call(multi_store):
+    """A one-off override leaves the global setting untouched."""
+    df = mr.best_per_algo(metric="test roc_auc", stores="mlruns/models")
+    assert set(df["store"]) == {"mlruns/models"}
+    assert mr.stores() == ()
+
+
+def test_set_stores_with_no_arguments_clears_the_constraint(multi_store):
+    mr.set_stores("mlruns/models")
+    assert mr.stores() == ("mlruns/models",)
+    mr.set_stores()
+    assert mr.stores() == ()
+
+
+def test_index_stays_global_under_a_store_constraint(multi_store):
+    """An excluded store must remain visible and loadable, just not winning."""
+    mr.set_stores("mlruns/models")
+    assert len(mr.variants()) == 5
+    assert "lr_old_training" in mr.variants()
+    assert mr.load("lr_old_training") is not None
+
+
+def test_n_candidates_respects_the_store_constraint(multi_store):
+    mr.set_stores("mlruns/models")
+    df = mr.best_per_algo(metric="test roc_auc")
+    assert set(df["n_candidates"]) == {1}
+
+
+def test_unknown_store_raises_and_names_what_is_available(multi_store):
+    mr.set_stores("mlruns/does_not_exist")
+    with pytest.raises(LookupError, match="mlruns/models"):
+        mr.best_per_algo(metric="test roc_auc")
+
+
+def test_store_summary_flags_eligibility(multi_store):
+    mr.set_stores("mlruns/models")
+    summary = mr.store_summary()
+    eligible = dict(zip(summary["store"], summary["eligible"]))
+    assert eligible["mlruns/models"] is True
+    assert eligible["mlruns/models_old"] is False
+    assert eligible["mlruns/models_group_split"] is False
+    assert summary.loc[
+        summary["store"] == "mlruns/models", "models"
+    ].iloc[0] == 2
+
+
+def test_store_summary_lists_every_store_regardless(multi_store):
+    mr.set_stores("mlruns/models")
+    assert len(mr.store_summary()) == 3
+
+
+def test_stores_env_style_comma_string(multi_store):
+    mr.set_stores("mlruns/models,mlruns/models_old")
+    assert mr.stores() == ("mlruns/models", "mlruns/models_old")
+
+
+def test_configure_accepts_stores(multi_store):
+    mr.configure(stores=("mlruns/models",))
+    assert mr.stores() == ("mlruns/models",)
 
 
 # --------------------------------------------------------------------------- #
