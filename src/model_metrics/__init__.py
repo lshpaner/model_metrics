@@ -7,6 +7,7 @@ from .plot_utils import *
 from .partial_dependence import *
 from .delong_test import *
 from .align_features import *
+from .funnel_plot import *
 from .logo import *
 
 import sys
@@ -27,7 +28,7 @@ PyPI: https://pypi.org/project/model-metrics/
 Documentation: https://lshpaner.github.io/model_metrics_docs/
 
 
-Version: 0.0.6a3
+Version: 0.0.5a9.dev10
 
 """
 
@@ -35,7 +36,7 @@ Version: 0.0.6a3
 __doc__ = detailed_doc
 
 
-__version__ = "0.0.6a3"
+__version__ = "0.0.5a9.dev10"
 __author__ = "Leonid Shpaner, Arthur Funnell"
 __email__ = "lshpaner@ucla.edu, alafunnell@gmail.com"
 
