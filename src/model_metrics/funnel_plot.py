@@ -1,30 +1,3 @@
-"""
-Risk-adjusted funnel plot, generalized over grouping unit and outcome.
-
-Works for any provider level (center, surgeon, region) and any binary
-outcome, given one row per case with:
-    - a grouping id column
-    - a 0/1 outcome column
-    - a model risk column (predicted probability)
-
-The observed-over-expected (O/E) ratio per group is plotted against the
-group's case volume, with exact Poisson control limits that widen for
-low-volume groups. Points outside the chosen limit are risk-adjusted
-outliers.
-
-Example
--------
-    g = funnel_plot(
-        df_pred_death,
-        id_col="physicianid",
-        y_col="y_true",
-        p_col="y_pred_proba",
-        unit_label="surgeon",
-        outcome_label="death_in_6mon",
-    )
-    outliers = g[g["outlier"]].sort_values("oe")
-"""
-
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
@@ -37,12 +10,12 @@ from .plot_utils import (
 )
 
 
-def group_oe(df, id_col, y_col, p_col, min_volume=1):
+def group_oe(df, group_col, y_col, p_col, min_volume=1):
     """
     Aggregate to one row per group: observed, expected, volume, O/E.
     Groups below min_volume are dropped (small-n instability control).
     """
-    g = df.groupby(id_col).agg(
+    g = df.groupby(group_col).agg(
         observed=(y_col, "sum"),
         expected=(p_col, "sum"),
         n=(y_col, "size"),
@@ -85,7 +58,7 @@ def estimate_phi(g):
 
 def funnel_plot(
     df,
-    id_col="centerid",
+    group_col,
     y_col="y_true",
     p_col="y_pred_proba",
     unit_label="center",
@@ -133,9 +106,10 @@ def funnel_plot(
     Parameters
     ----------
     df : pandas.DataFrame
-        One row per case, containing id_col, y_col and p_col.
-    id_col : str
-        Grouping unit column (center, surgeon, region, and so on).
+        One row per case, containing group_col, y_col and p_col.
+    group_col : str
+        Grouping unit column, required. Center, surgeon, region, school,
+        branch, and so on.
     y_col : str
         Binary observed outcome column (0/1).
     p_col : str
@@ -168,14 +142,14 @@ def funnel_plot(
     -------
     g : pandas.DataFrame
         Per-group observed, expected, volume (n), O/E and outlier flag,
-        indexed by id_col. Flagged groups are g[g["outlier"]].
+        indexed by group_col. Flagged groups are g[g["outlier"]].
     """
     if len(limit_alphas) > len(limit_linestyles):
         raise ValueError(
             "limit_linestyles must be at least as long as limit_alphas."
         )
 
-    g = group_oe(df, id_col, y_col, p_col, min_volume=min_volume)
+    g = group_oe(df, group_col, y_col, p_col, min_volume=min_volume)
     if g.empty:
         raise ValueError(
             f"No groups remain after min_volume={min_volume} filtering."
@@ -243,7 +217,7 @@ def funnel_plot(
     x_label = (
         xlabel
         if xlabel is not None
-        else f"{unit_label.capitalize()} volume (number of procedures)"
+        else f"{unit_label.capitalize()} volume (number of cases)"
     )
 
     ax.set_xlabel(x_label, fontsize=label_fontsize)
