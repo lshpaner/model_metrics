@@ -81,14 +81,8 @@ def funnel_plot(
     text_wrap=None,
     gridlines=False,
     grid_kwgs=None,
-    inlier_color="steelblue",
-    outlier_color="crimson",
-    limit_color="grey",
-    limit_linestyles=("-", ":"),
-    target_color="black",
-    target_linestyle="--",
-    marker_size=25,
-    outlier_marker_size=45,
+    curve_kwgs=None,
+    point_kwgs=None,
     show_legend=True,
     legend_loc="upper right",
     legend_fontsize=8,
@@ -122,7 +116,30 @@ def funnel_plot(
         Two-sided alpha used to flag outliers against each group's own
         expected count. 0.002 is the 99.8% (three-sigma) limit.
     limit_alphas : sequence of float
-        Alphas for the drawn control bands, paired with limit_linestyles.
+        Alphas for the drawn control bands. Two-sided, so 0.05 draws the
+        95% band.
+    curve_kwgs : dict, optional
+        Line styling, merged over the defaults. Keys:
+
+        * ``"target"`` : kwargs for the O/E = 1 reference line.
+        * ``"limits"`` : one dict applied to every band, or a list of dicts
+          paired positionally with ``limit_alphas``.
+
+        Values go straight to ``ax.plot``, so anything it accepts works
+        (``color``, ``ls``, ``lw``, ``alpha``, ``label``, and so on)::
+
+            curve_kwgs={
+                "target": {"color": "black", "ls": "--"},
+                "limits": [{"ls": "-"}, {"ls": ":", "color": "firebrick"}],
+            }
+    point_kwgs : dict, optional
+        Marker styling, merged over the defaults. Keys ``"inlier"`` and
+        ``"outlier"``, with values passed to ``ax.scatter``::
+
+            point_kwgs={
+                "inlier": {"color": "#4C72B0", "s": 30, "alpha": 0.7},
+                "outlier": {"color": "#C44E52", "s": 80, "marker": "D"},
+            }
     overdispersion : bool
         Inflate the limits by sqrt(phi) using estimate_phi().
     annotate_outliers : bool
@@ -144,10 +161,51 @@ def funnel_plot(
         Per-group observed, expected, volume (n), O/E and outlier flag,
         indexed by group_col. Flagged groups are g[g["outlier"]].
     """
-    if len(limit_alphas) > len(limit_linestyles):
+    curve_kwgs = curve_kwgs or {}
+    point_kwgs = point_kwgs or {}
+
+    target_style = {
+        "color": "black",
+        "ls": "--",
+        "lw": 1,
+        "label": "Expected (O/E = 1)",
+        **curve_kwgs.get("target", {}),
+    }
+
+    limits_user = curve_kwgs.get("limits", {})
+    if isinstance(limits_user, dict):
+        limits_user = [limits_user] * len(limit_alphas)
+    elif len(limits_user) < len(limit_alphas):
         raise ValueError(
-            "limit_linestyles must be at least as long as limit_alphas."
+            "curve_kwgs['limits'] must be a dict or a list at least as long "
+            f"as limit_alphas ({len(limit_alphas)} bands)."
         )
+
+    default_linestyles = ("-", ":", "-.")
+    limit_styles = [
+        {
+            "color": "grey",
+            "lw": 1,
+            "ls": default_linestyles[i % len(default_linestyles)],
+            "label": f"{(1 - alpha) * 100:g}% limit",
+            **limits_user[i],
+        }
+        for i, alpha in enumerate(limit_alphas)
+    ]
+
+    inlier_style = {
+        "s": 25,
+        "color": "steelblue",
+        "label": "Within limits",
+        **point_kwgs.get("inlier", {}),
+    }
+    outlier_style = {
+        "s": 45,
+        "color": "crimson",
+        "zorder": 5,
+        "label": "Outlier",
+        **point_kwgs.get("outlier", {}),
+    }
 
     g = group_oe(df, group_col, y_col, p_col, min_volume=min_volume)
     if g.empty:
@@ -171,37 +229,17 @@ def funnel_plot(
         fig = ax.figure
         owns_fig = False
 
-    ax.axhline(
-        1.0,
-        color=target_color,
-        lw=1,
-        ls=target_linestyle,
-        label="Expected (O/E = 1)",
-    )
+    ax.axhline(1.0, **target_style)
 
-    for alpha, ls in zip(limit_alphas, limit_linestyles):
+    for alpha, style in zip(limit_alphas, limit_styles):
         lo, hi = poisson_limits(exp_grid, alpha, phi)
-        band_label = f"{(1 - alpha) * 100:g}% limit"
-        ax.plot(vol_grid, hi, color=limit_color, lw=1, ls=ls, label=band_label)
-        ax.plot(vol_grid, lo, color=limit_color, lw=1, ls=ls)
+        ax.plot(vol_grid, hi, **style)
+        ax.plot(vol_grid, lo, **{**style, "label": "_nolegend_"})
 
     inl = g[~g["outlier"]]
     out = g[g["outlier"]]
-    ax.scatter(
-        inl["n"],
-        inl["oe"],
-        s=marker_size,
-        color=inlier_color,
-        label="Within limits",
-    )
-    ax.scatter(
-        out["n"],
-        out["oe"],
-        s=outlier_marker_size,
-        color=outlier_color,
-        zorder=5,
-        label="Outlier",
-    )
+    ax.scatter(inl["n"], inl["oe"], **inlier_style)
+    ax.scatter(out["n"], out["oe"], **outlier_style)
 
     if annotate_outliers:
         for gid, row in out.iterrows():
