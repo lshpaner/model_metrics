@@ -1,3 +1,30 @@
+"""
+Risk-adjusted funnel plot, generalized over grouping unit and outcome.
+
+Works for any provider level (center, surgeon, region) and any binary
+outcome, given one row per case with:
+    - a grouping id column
+    - a 0/1 outcome column
+    - a model risk column (predicted probability)
+
+The observed-over-expected (O/E) ratio per group is plotted against the
+group's case volume, with exact Poisson control limits that widen for
+low-volume groups. Points outside the chosen limit are risk-adjusted
+outliers.
+
+Example
+-------
+    g = funnel_plot(
+        df_pred_death,
+        group_col="physicianid",
+        y_col="y_true",
+        p_col="y_pred_proba",
+        unit_label="surgeon",
+        outcome_label="death_in_6mon",
+    )
+    outliers = g[g["outlier"]].sort_values("oe")
+"""
+
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
@@ -163,6 +190,20 @@ def funnel_plot(
     """
     curve_kwgs = curve_kwgs or {}
     point_kwgs = point_kwgs or {}
+
+    unknown = set(curve_kwgs) - {"target", "limits"}
+    if unknown:
+        raise ValueError(
+            f"Unrecognized curve_kwgs keys: {sorted(unknown)}. "
+            "Valid keys are 'target' and 'limits'."
+        )
+
+    unknown = set(point_kwgs) - {"inlier", "outlier"}
+    if unknown:
+        raise ValueError(
+            f"Unrecognized point_kwgs keys: {sorted(unknown)}. "
+            "Valid keys are 'inlier' and 'outlier'."
+        )
 
     target_style = {
         "color": "black",
