@@ -168,7 +168,10 @@ def funnel_plot(
                 "outlier": {"color": "#C44E52", "s": 80, "marker": "D"},
             }
     overdispersion : bool
-        Inflate the limits by sqrt(phi) using estimate_phi().
+        Inflate the limits by sqrt(phi) using estimate_phi(). The estimated
+        phi is appended to the title, custom or default, so a custom title
+        does not hide it. title="" suppresses the title and the phi with it.
+        Also stored on the returned frame as g.attrs["phi"].
     annotate_outliers : bool
         Label flagged points with their group id. Off by default; the
         returned frame is usually easier to read.
@@ -222,18 +225,6 @@ def funnel_plot(
             f"as limit_alphas ({len(limit_alphas)} bands)."
         )
 
-    default_linestyles = ("-", ":", "-.")
-    limit_styles = [
-        {
-            "color": "grey",
-            "lw": 1,
-            "ls": default_linestyles[i % len(default_linestyles)],
-            "label": f"{(1 - alpha) * 100:g}% limit",
-            **limits_user[i],
-        }
-        for i, alpha in enumerate(limit_alphas)
-    ]
-
     inlier_style = {
         "s": 25,
         "color": "steelblue",
@@ -255,6 +246,19 @@ def funnel_plot(
         )
 
     phi = estimate_phi(g) if overdispersion else 1.0
+    g.attrs["phi"] = phi
+
+    default_linestyles = ("-", ":", "-.")
+    limit_styles = [
+        {
+            "color": "grey",
+            "lw": 1,
+            "ls": default_linestyles[i % len(default_linestyles)],
+            "label": f"{(1 - alpha) * 100:g}% limit",
+            **limits_user[i],
+        }
+        for i, alpha in enumerate(limit_alphas)
+    ]
 
     rate = g["observed"].sum() / g["n"].sum()  # overall event rate
     vol_grid = np.linspace(g["n"].min(), g["n"].max(), n_grid)
@@ -293,6 +297,14 @@ def funnel_plot(
             )
 
     disp = f"  (phi={phi:.2f})" if overdispersion else ""
+    default_title = f"{outcome_label}: risk-adjusted {unit_label} funnel"
+
+    # phi is appended to whatever title is in use, so a custom title does not
+    # hide the fact that the limits have been inflated. title="" still wins.
+    resolved_title = default_title if title is None else title
+    if resolved_title != "":
+        resolved_title += disp
+
     x_label = (
         xlabel
         if xlabel is not None
@@ -302,8 +314,8 @@ def funnel_plot(
     ax.set_xlabel(x_label, fontsize=label_fontsize)
     ax.set_ylabel(ylabel, fontsize=label_fontsize)
     apply_plot_title(
-        title,
-        f"{outcome_label}: risk-adjusted {unit_label} funnel{disp}",
+        resolved_title,
+        default_title,
         text_wrap=text_wrap,
         fontsize=title_fontsize,
         ax=ax,
