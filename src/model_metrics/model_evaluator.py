@@ -2810,12 +2810,13 @@ def plot_threshold_metrics(
         `lookup_metric`.
     decimal_places : int, default=4
         Number of decimal places for reported thresholds.
-    model_threshold : float or list of float, optional
-        A model-specific threshold or list of thresholds (one per model) to
-        highlight with a vertical line. If a scalar is passed it is broadcast
-        to all models. In overlay mode, distinct thresholds are each drawn
-        and labeled with their model name; a threshold shared by every model
-        is drawn once.
+    model_threshold : float, sequence of float, or dict, optional
+        A model-specific threshold to highlight with a vertical line. A
+        scalar is broadcast to all models. A sequence must be aligned with
+        the models and match their count. A dict must be keyed by model
+        title, with an entry for every model. In overlay mode, distinct
+        thresholds are each drawn and labeled with their model name; a
+        threshold shared by every model is drawn once.
     overlay : bool, default=False
         If True, plot all models on a single shared axes. Cannot be used
         with `subplots=True`.
@@ -2846,6 +2847,13 @@ def plot_threshold_metrics(
         If only one of `lookup_metric` or `lookup_value` is provided.
     ValueError
         If both `overlay=True` and `subplots=True` are set.
+    KeyError
+        If `model_threshold` is a dict lacking an entry for any model title.
+    ValueError
+        If `model_threshold` is a sequence whose length does not match the
+        number of models.
+    TypeError
+        If `model_threshold` is not a number, sequence, or dict.
     """
 
     if overlay and subplots:

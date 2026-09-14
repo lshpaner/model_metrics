@@ -387,7 +387,13 @@ def _y_for_model(y, idx, n_models, n_expected=None, name=None):
 
 
 def compute_classification_metrics(y_true, y_pred, y_prob, threshold, decimal_places=3):
-    """Compute classification performance metrics."""
+    """Compute classification performance metrics.
+
+    Raises
+    ------
+    ValueError
+        If `y_true` contains a single class.
+    """
     if len(np.unique(y_true)) < 2:
         raise ValueError(
             "y_true contains a single class; classification metrics are "
