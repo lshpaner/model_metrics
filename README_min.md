@@ -27,7 +27,7 @@ Additionally, `model_metrics` depends on the following packages, which will be a
 - `scikit-learn`: version `1.0.2` or higher
 - `scipy`: version `1.7.3` or higher
 - `statsmodels`: version `0.13` or higher, but capped below `0.15`
-- `shap`: version `0.41.0` or higher, but capped below `0.52`
+- `shap`: version `0.41.0` or higher, but capped below `0.53`
 - `tqdm`: version `4.66.4` or higher
 
 ## 💾 Installation
@@ -78,7 +78,7 @@ If you use `model_metrics` in your research or projects, please consider citing 
   month        = feb,
   year         = 2025,
   publisher    = {Zenodo},
-  version      = {0.0.6a5},
+  version      = {0.0.6a6},
   doi          = {10.5281/zenodo.14879819},
   url          = {https://doi.org/10.5281/zenodo.14879819}
 }

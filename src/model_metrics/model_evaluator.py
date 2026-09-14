@@ -2881,10 +2881,29 @@ def plot_threshold_metrics(
     # Normalize model_threshold into a list aligned with models
     if model_threshold is None:
         model_thresholds = [None] * num_models
-    elif isinstance(model_threshold, list):
-        model_thresholds = model_threshold
+    elif isinstance(model_threshold, dict):
+        missing = [t for t in model_title if t not in model_threshold]
+        if missing:
+            raise KeyError(
+                f"model_threshold has no entry for {missing}. "
+                f"Keys provided: {list(model_threshold)}. "
+                f"Model titles: {list(model_title)}."
+            )
+        model_thresholds = [model_threshold[t] for t in model_title]
+    elif isinstance(model_threshold, (list, tuple, np.ndarray)):
+        if len(model_threshold) != num_models:
+            raise ValueError(
+                f"model_threshold has {len(model_threshold)} entries but "
+                f"{num_models} models were provided."
+            )
+        model_thresholds = list(model_threshold)
+    elif isinstance(model_threshold, (int, float, np.floating)):
+        model_thresholds = [float(model_threshold)] * num_models
     else:
-        model_thresholds = [model_threshold] * num_models
+        raise TypeError(
+            f"model_threshold must be a number, sequence, or dict keyed by "
+            f"model title, got {type(model_threshold).__name__}."
+        )
 
     METRIC_ORDER = ["F1 Score", "Recall", "Precision", "Specificity"]
 

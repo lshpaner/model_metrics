@@ -489,7 +489,6 @@ def test_compute_classification_metrics_no_positive_predictions():
 
 
 def test_compute_classification_metrics_single_class():
-
     y_true = np.zeros(10)
     y_pred = np.zeros(10)
     y_prob = np.zeros(10)

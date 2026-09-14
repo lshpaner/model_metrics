@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "model_metrics"
-version = "0.0.6a5"
+version = "0.0.6a6"
 description = "A Python library for model evaluation, performance tracking, and metric visualizations, supporting classification and regression models with robust analytics and reporting."
 readme = { file = "README_min.md", content-type = "text/markdown" }
 authors = [
@@ -38,7 +38,7 @@ dependencies = [
     "scikit-learn>=1.0.2",
     "scipy>=1.7.3",
     "statsmodels>=0.13,<0.15",
-    "shap>=0.41.0,<0.52",
+    "shap>=0.41.0,<0.53",
     "tqdm>=4.66.4",
 ]
 

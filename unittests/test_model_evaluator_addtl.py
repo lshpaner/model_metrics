@@ -390,6 +390,226 @@ def test_plot_threshold_metrics_overlay_external_ax(clf_data):
     assert len(ax.lines) > 0
 
 
+# ==============================================================================
+# plot_threshold_metrics — model_threshold normalization
+# ==============================================================================
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_threshold_metrics_model_threshold_scalar(mock_show, clf_data):
+    """A scalar model_threshold broadcasts to every model."""
+    X, y, model, y_prob = clf_data
+    y_prob2 = np.random.rand(len(y))
+    plot_threshold_metrics(
+        y_prob=[y_prob, y_prob2],
+        y_test=y,
+        model_title=["M1", "M2"],
+        model_threshold=0.35,
+        subplots=True,
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_threshold_metrics_model_threshold_list(mock_show, clf_data):
+    """A list model_threshold is applied positionally."""
+    X, y, model, y_prob = clf_data
+    y_prob2 = np.random.rand(len(y))
+    plot_threshold_metrics(
+        y_prob=[y_prob, y_prob2],
+        y_test=y,
+        model_title=["M1", "M2"],
+        model_threshold=[0.3, 0.4],
+        subplots=True,
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_threshold_metrics_model_threshold_tuple(mock_show, clf_data):
+    """A tuple is accepted on the same path as a list."""
+    X, y, model, y_prob = clf_data
+    y_prob2 = np.random.rand(len(y))
+    plot_threshold_metrics(
+        y_prob=[y_prob, y_prob2],
+        y_test=y,
+        model_title=["M1", "M2"],
+        model_threshold=(0.3, 0.4),
+        subplots=True,
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_threshold_metrics_model_threshold_ndarray(mock_show, clf_data):
+    """A numpy array is accepted on the sequence path."""
+    X, y, model, y_prob = clf_data
+    y_prob2 = np.random.rand(len(y))
+    plot_threshold_metrics(
+        y_prob=[y_prob, y_prob2],
+        y_test=y,
+        model_title=["M1", "M2"],
+        model_threshold=np.array([0.3, 0.4]),
+        subplots=True,
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_threshold_metrics_model_threshold_dict(mock_show, clf_data):
+    """A dict keyed by model title resolves per model."""
+    X, y, model, y_prob = clf_data
+    y_prob2 = np.random.rand(len(y))
+    plot_threshold_metrics(
+        y_prob=[y_prob, y_prob2],
+        y_test=y,
+        model_title=["M1", "M2"],
+        model_threshold={"M1": 0.3, "M2": 0.4},
+        subplots=True,
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_threshold_metrics_model_threshold_dict_order_independent(
+    mock_show, clf_data
+):
+    """Dict resolution follows model_title, not insertion order."""
+    X, y, model, y_prob = clf_data
+    y_prob2 = np.random.rand(len(y))
+    fig, ax = plt.subplots()
+    plot_threshold_metrics(
+        y_prob=[y_prob, y_prob2],
+        y_test=y,
+        model_title=["M1", "M2"],
+        model_threshold={"M2": 0.4, "M1": 0.3},
+        baseline_thresh=False,
+        overlay=True,
+        ax=ax,
+        save_plot=False,
+    )
+    # One vertical per model, drawn at the title-matched value
+    vlines = [
+        line.get_xdata()[0]
+        for line in ax.lines
+        if len(set(line.get_xdata())) == 1
+    ]
+    assert 0.3 in vlines and 0.4 in vlines
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_threshold_metrics_model_threshold_dict_superset_ok(
+    mock_show, clf_data
+):
+    """Extra dict keys that match no model are ignored."""
+    X, y, model, y_prob = clf_data
+    y_prob2 = np.random.rand(len(y))
+    plot_threshold_metrics(
+        y_prob=[y_prob, y_prob2],
+        y_test=y,
+        model_title=["M1", "M2"],
+        model_threshold={"M1": 0.3, "M2": 0.4, "M3": 0.5},
+        subplots=True,
+        save_plot=False,
+    )
+    assert mock_show.called
+
+
+def test_plot_threshold_metrics_model_threshold_dict_missing_key_raises(clf_data):
+    """A dict missing an entry for any model title raises KeyError."""
+    X, y, model, y_prob = clf_data
+    y_prob2 = np.random.rand(len(y))
+    with pytest.raises(KeyError):
+        plot_threshold_metrics(
+            y_prob=[y_prob, y_prob2],
+            y_test=y,
+            model_title=["M1", "M2"],
+            model_threshold={"M1": 0.3},
+            subplots=True,
+            save_plot=False,
+        )
+
+
+def test_plot_threshold_metrics_model_threshold_short_list_raises(clf_data):
+    """A sequence shorter than the model count raises ValueError."""
+    X, y, model, y_prob = clf_data
+    y_prob2 = np.random.rand(len(y))
+    with pytest.raises(ValueError):
+        plot_threshold_metrics(
+            y_prob=[y_prob, y_prob2],
+            y_test=y,
+            model_title=["M1", "M2"],
+            model_threshold=[0.3],
+            subplots=True,
+            save_plot=False,
+        )
+
+
+def test_plot_threshold_metrics_model_threshold_long_list_raises(clf_data):
+    """A sequence longer than the model count raises ValueError."""
+    X, y, model, y_prob = clf_data
+    y_prob2 = np.random.rand(len(y))
+    with pytest.raises(ValueError):
+        plot_threshold_metrics(
+            y_prob=[y_prob, y_prob2],
+            y_test=y,
+            model_title=["M1", "M2"],
+            model_threshold=[0.3, 0.4, 0.5],
+            subplots=True,
+            save_plot=False,
+        )
+
+
+def test_plot_threshold_metrics_model_threshold_bound_method_raises(clf_data):
+    """A bound method (the dict.items typo) raises TypeError at the boundary."""
+    X, y, model, y_prob = clf_data
+    thresholds = {"M1": 0.3, "M2": 0.4}
+    with pytest.raises(TypeError):
+        plot_threshold_metrics(
+            y_prob=[y_prob, np.random.rand(len(y))],
+            y_test=y,
+            model_title=["M1", "M2"],
+            model_threshold=thresholds.items,
+            subplots=True,
+            save_plot=False,
+        )
+
+
+def test_plot_threshold_metrics_model_threshold_string_raises(clf_data):
+    """A string is not a valid threshold shape."""
+    X, y, model, y_prob = clf_data
+    with pytest.raises(TypeError):
+        plot_threshold_metrics(
+            y_prob=y_prob,
+            y_test=y,
+            model_title=["M1"],
+            model_threshold="0.3",
+            save_plot=False,
+        )
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_threshold_metrics_model_threshold_none(mock_show, clf_data):
+    """model_threshold=None draws no threshold line."""
+    X, y, model, y_prob = clf_data
+    fig, ax = plt.subplots()
+    plot_threshold_metrics(
+        y_prob=y_prob,
+        y_test=y,
+        model_title=["M1"],
+        model_threshold=None,
+        baseline_thresh=False,
+        ax=ax,
+        save_plot=False,
+    )
+    labels = [line.get_label() for line in ax.lines]
+    assert not any("Threshold" in str(lab) for lab in labels)
+    
 def test_overlay_external_ax_does_not_save(clf_data, tmp_path):
     """overlay + ax= must not save even when save_plot=True."""
     X, y, model, y_prob = clf_data

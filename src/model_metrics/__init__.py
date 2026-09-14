@@ -28,7 +28,7 @@ PyPI: https://pypi.org/project/model-metrics/
 Documentation: https://lshpaner.github.io/model_metrics_docs/
 
 
-Version: 0.0.6a5
+Version: 0.0.6a6
 
 """
 
@@ -36,7 +36,7 @@ Version: 0.0.6a5
 __doc__ = detailed_doc
 
 
-__version__ = "0.0.6a5"
+__version__ = "0.0.6a6"
 __author__ = "Leonid Shpaner, Arthur Funnell"
 __email__ = "lshpaner@ucla.edu, alafunnell@gmail.com"
 

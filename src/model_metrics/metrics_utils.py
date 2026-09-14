@@ -388,6 +388,12 @@ def _y_for_model(y, idx, n_models, n_expected=None, name=None):
 
 def compute_classification_metrics(y_true, y_pred, y_prob, threshold, decimal_places=3):
     """Compute classification performance metrics."""
+    if len(np.unique(y_true)) < 2:
+        raise ValueError(
+            "y_true contains a single class; classification metrics are "
+            "undefined. Provide labels containing both classes."
+        )
+
     return {
         "Precision/PPV": round(
             precision_score(y_true, y_pred, zero_division=0), decimal_places
@@ -407,7 +413,6 @@ def compute_classification_metrics(y_true, y_pred, y_prob, threshold, decimal_pl
         "Brier Score": round(brier_score_loss(y_true, y_prob), decimal_places),
         "Model Threshold": round(float(threshold), decimal_places),
     }
-
 
 def compute_regression_metrics(
     y_true, y_pred, n_features=None, include_adjusted_r2=False, decimal_places=3
