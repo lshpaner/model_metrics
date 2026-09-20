@@ -6098,6 +6098,7 @@ def show_cumulative_feature_performance(
     threshold=0.5,
     proba_func=None,
     step=1,
+    progress=True,
     order=None,
     feature_groups=None,
     column_transformer=None,
@@ -6154,8 +6155,9 @@ def show_cumulative_feature_performance(
     y_probs : dict, optional
         Precomputed-predictions mode: maps feature-count to a prediction vector
         (positive-class probabilities for classification, predicted values for
-        regression), e.g. ``{1: pred_top1, 2: pred_top2, ...}``. When given,
-        the model/X are unused and no ablation runs.
+        regression), e.g. ``{1: pred_top1, 2: pred_top2, ...}``. Every vector
+        must be the same length as ``y``. When given, the model/X are unused and
+        no ablation runs.
     metrics : sequence of str or callable, optional
         Metrics to trace. Strings resolve against the built-in registry
         (classification: roc_auc, average_precision, brier, precision, recall,
@@ -6199,9 +6201,17 @@ def show_cumulative_feature_performance(
         (precision, recall, f1, accuracy).
     proba_func : callable, optional
         Custom function returning scores/predictions for a given X. Overrides
-        the model's own ``predict_proba`` / ``predict``.
+        the model's own ``predict_proba`` / ``predict``. The ablation mode still
+        requires ``model`` to be passed, since it selects that mode and supplies
+        the feature ranking; the model's own predict methods simply go unused.
     step : int, default=1
         Evaluate every ``step`` features; the full count is always included.
+    progress : bool, default=True
+        Show a tqdm progress bar over the ablation sweep. Each step is one full
+        re-score of the evaluation set, so on a wide model the sweep can run for
+        a long time with no other output. Requires tqdm; without it a
+        UserWarning is issued and the sweep runs unbarred. No effect in the
+        ``y_probs`` path, which performs no sweep.
     order : sequence of str, optional
         Explicit feature ordering (highest importance first). May be a subset of
         X's columns: any feature not listed is treated as below the cut and is
@@ -6217,22 +6227,58 @@ def show_cumulative_feature_performance(
     column_transformer : ColumnTransformer, optional
         Fitted transformer used by ``feature_groups="auto"`` to map output
         columns back to their source columns.
+    feature_selection_step : str, default="feature_selection_RFE"
+        Name of the feature-selection step to look for inside a pipeline when
+        deriving the importance ranking. Only used when ``order`` is None.
+    preprocessor_step : str, default="preprocess_column_transformer_ColumnTransformer"
+        Name of the preprocessing step to look for inside a pipeline when
+        mapping ranked features back to their names. Only used when ``order``
+        is None.
     missing_value : scalar, default=numpy.nan
-        Value written into excluded columns.
+        Value written into excluded columns. When every column of X is numeric
+        and this value is castable to float, the sweep uses a faster buffer-based
+        blanking path; otherwise it falls back to a per-step copy of X.
     title : str or None, default=None
         Custom plot title. None uses the default; "" disables the title.
+    text_wrap : int, optional
+        Character width at which the title is wrapped.
+    xlabel : str, default="Number of top features retained"
+        X-axis label. Left at the default with ``x_as_percent=True``, it becomes
+        "Cumulative % of features".
+    ylabel : str, default="Score"
+        Y-axis label. Left at the default with ``display="cumulative_gains"``,
+        it becomes "% of full-model performance".
+    figsize : tuple, optional
+        Figure size, default (8, 5). Ignored when ``ax`` is supplied.
+    label_fontsize : int, default=12
+        Font size for the title and axis labels.
+    tick_fontsize : int, default=10
+        Font size for tick labels, the legend, and the retain annotation.
+    legend_loc : str, default="best"
+        Legend location passed to ``apply_legend``.
+    save_plot : bool, default=False
+        Save the figure via ``save_plot_images``. Ignored when ``ax`` is
+        supplied, since the caller owns the figure.
+    image_path_png : str, optional
+        Directory for the PNG output.
+    image_path_svg : str, optional
+        Directory for the SVG output.
+    image_filename : str, optional
+        Base filename for the saved figure; defaults to
+        "cumulative_feature_performance".
     retain : dict, optional
         Convenience that couples the metric and its threshold into one mapping,
         e.g. ``{"average_precision": 0.98}`` for "98% of full-model average
-        precision". When given, it supersedes ``retain_metric`` /
-        ``retain_threshold``. Currently one entry (a single marker); the value is
-        a fraction of full-model performance.
+        precision". Currently one entry (a single marker); the value is a
+        fraction of full-model performance. Passing ``retain_metric`` or
+        ``retain_threshold`` alongside it raises ValueError.
     retain_threshold : float, optional
         If set, annotates the smallest k retaining this fraction of the full
-        score on ``retain_metric``. Ignored when ``retain`` is provided.
+        score on ``retain_metric``. Raises ValueError if ``retain`` is also
+        given.
     retain_metric : str, optional
         Metric for the retain-threshold marker. Defaults to the first
-        higher-is-better metric. Ignored when ``retain`` is provided.
+        higher-is-better metric. Raises ValueError if ``retain`` is also given.
     retention_levels : sequence of float, default=(0.90, 0.95, 0.99)
         Levels used to build the retention summary table.
     return_retention : bool, default=False
@@ -6317,6 +6363,16 @@ def show_cumulative_feature_performance(
                 "y_probs must be a dict mapping n_features (int) to a "
                 "prediction array, e.g. {1: pred_1, 2: pred_2, ...}."
             )
+        # Catch a length mismatch here, where the offending key can be named,
+        # rather than letting it surface as an opaque error inside a metric.
+        _n_y = len(np.asarray(y))
+        for _k, _pred in y_probs.items():
+            _n_pred = len(np.asarray(_pred))
+            if _n_pred != _n_y:
+                raise ValueError(
+                    f"y_probs[{_k!r}] has length {_n_pred}, which does not match "
+                    f"len(y) = {_n_y}."
+                )
         results_df = pd.DataFrame([_score_row(k, y_probs[k]) for k in sorted(y_probs)])
 
     # ================================================================== #
@@ -6403,21 +6459,84 @@ def show_cumulative_feature_performance(
                 "ranking and are held out (blanked) at every step.\n"
             )
 
+        # The retained set only grows with k, so an all-blank buffer plus a
+        # write-back of the newly retained columns is equivalent to copying X
+        # and blanking the complement, at a fraction of the cost: the work per
+        # step scales with the columns added rather than the full width of X.
+        # The buffer is float, so this path needs every column of X to be
+        # numeric and `missing_value` to be castable to float; anything else
+        # (a categorical or object column, a sentinel string, None) falls back
+        # to the copy-based path, which blanks column by column and preserves
+        # each non-numeric column's dtype.
+        try:
+            _fill = float(missing_value)
+        except (TypeError, ValueError):
+            _fill = None
+        _fast = _fill is not None and all(
+            pd.api.types.is_numeric_dtype(dt) for dt in X.dtypes
+        )
+        if _fast:
+            _cols = list(X.columns)
+            _col_pos = {c: i for i, c in enumerate(_cols)}
+            _base = X.to_numpy(dtype=float, copy=False)
+            _buf = np.full(_base.shape, _fill, dtype=float)
+
+        _iter = ks
+        if progress:
+            try:
+                from tqdm.auto import tqdm
+
+                _iter = tqdm(ks, desc="feature sweep", unit="step", total=len(ks))
+            except ImportError:
+                warnings.warn(
+                    "progress=True requires tqdm, which is not installed; "
+                    "running the sweep without a progress bar.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+
         rows = []
-        for k in ks:
-            X_k = X.copy()
-            # Retain exactly the top-k (expanded through groups); blank the rest.
-            _keep = set(
-                _expand_groups(ordered_features[:k], _group_map)
-                if _group_map is not None
-                else ordered_features[:k]
-            )
-            for col in X.columns:
-                if col not in _keep:
-                    X_k[col] = missing_value
+        _prev = 0
+        for k in _iter:
+            if _fast:
+                # restore only the features newly promoted into the top-k
+                _new = (
+                    _expand_groups(ordered_features[_prev:k], _group_map)
+                    if _group_map is not None
+                    else ordered_features[_prev:k]
+                )
+                _pos = [_col_pos[c] for c in _new]
+                if _pos:
+                    _buf[:, _pos] = _base[:, _pos]
+                X_k = pd.DataFrame(_buf, columns=_cols, index=X.index, copy=False)
+            else:
+                X_k = X.copy()
+                # Retain exactly the top-k (expanded through groups); blank the rest.
+                _keep = set(
+                    _expand_groups(ordered_features[:k], _group_map)
+                    if _group_map is not None
+                    else ordered_features[:k]
+                )
+                for col in X.columns:
+                    if col in _keep:
+                        continue
+                    _dt = X[col].dtype
+                    if pd.api.types.is_numeric_dtype(_dt):
+                        X_k[col] = missing_value
+                    else:
+                        # A plain scalar assignment replaces the whole column and
+                        # drops its dtype (a Categorical becomes float64 NaN),
+                        # which breaks models that were fitted with declared
+                        # categorical features. Cast the blank column back.
+                        X_k[col] = pd.Series(
+                            missing_value, index=X.index, dtype=object
+                        ).astype(_dt)
+
             row = _score_row(k, _predict(X_k))
             row["features"] = list(ordered_features[:k])  # the top-k retained, in order
             rows.append(row)
+            _prev = k
+
         results_df = pd.DataFrame(rows)
 
     if display not in ("absolute", "cumulative_gains"):
@@ -6426,10 +6545,10 @@ def show_cumulative_feature_performance(
         )
 
     # `retain` is a convenience that couples the metric and its threshold into one
-    # dict, e.g. retain={"average_precision": 0.98}. When given, it supersedes the
-    # separate `retain_metric` / `retain_threshold` arguments. Single-key
-    # semantics for now (one marker); the threshold is a fraction of full-model
-    # performance, matching `retain_threshold`.
+    # dict, e.g. retain={"average_precision": 0.98}. Single-key semantics for now
+    # (one marker); the threshold is a fraction of full-model performance,
+    # matching `retain_threshold`. Passing it alongside the separate
+    # `retain_metric` / `retain_threshold` arguments is an error.
     if retain is not None:
         if retain_threshold is not None or retain_metric is not None:
             raise ValueError(

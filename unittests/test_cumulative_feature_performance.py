@@ -55,6 +55,43 @@ class _StubRegressor:
     def predict(self, X):
         return _nan_score(X)
 
+class _RecordingClfWrapper:
+    """Stub that keeps every frame it is asked to score, so the tests can
+    inspect what blanking actually handed to the model."""
+
+    def __init__(self, names):
+        self.estimator = _Inner(_StubEstimator(len(names)))
+        self._names = names
+        self.seen = []
+
+    def get_feature_names(self):
+        return self._names
+
+    def predict_proba(self, X):
+        self.seen.append(X.copy())
+        num = X.select_dtypes(include="number")
+        if num.shape[1] == 0:
+            half = np.full(len(X), 0.5)
+            return np.column_stack([half, half])
+        p1 = 1.0 / (1.0 + np.exp(-_nan_score(num)))
+        return np.column_stack([1.0 - p1, p1])
+
+
+@pytest.fixture
+def mixed_dtype_clf():
+    """Numeric + categorical frame. Importance order is m0 > m1 > m2, so the
+    categorical is blanked at k=1 and k=2 and retained at k=3."""
+    rng = np.random.RandomState(0)
+    n = 200
+    X = pd.DataFrame(
+        {
+            "m0": rng.randn(n),
+            "m1": rng.randn(n),
+            "m2": pd.Categorical(rng.choice(["a", "b", "c"], n)),
+        }
+    )
+    y = (X["m0"] + rng.randn(n) * 0.4 > 0).astype(int).values
+    return _RecordingClfWrapper(list(X.columns)), X, y
 
 @pytest.fixture
 def clf_bundle():
@@ -545,3 +582,131 @@ def test_unknown_per_metric_style_key_raises(flat_clf):
         show_cumulative_feature_performance(
             model, X, y, metrics=["roc_auc"], marker_kwgs={"nope": {"marker": "^"}}
         )
+
+# --------------------------------------------------------------------------- #
+# y_probs length validation
+# --------------------------------------------------------------------------- #
+def test_yprobs_length_mismatch_raises_and_names_the_key(clf_bundle):
+    _, _, y = clf_bundle
+    yp = {
+        1: np.random.RandomState(1).rand(len(y)),
+        2: np.random.RandomState(2).rand(len(y) - 5),
+    }
+    with pytest.raises(ValueError) as exc:
+        show_cumulative_feature_performance(y=y, y_probs=yp, metrics=["roc_auc"])
+    msg = str(exc.value)
+    assert "y_probs[2]" in msg
+    assert str(len(y) - 5) in msg and str(len(y)) in msg
+
+
+def test_yprobs_validates_before_scoring(clf_bundle):
+    """The bad key must be caught even when it sorts last, so no metric runs
+    on a mismatched vector first."""
+    _, _, y = clf_bundle
+    yp = {1: np.random.RandomState(1).rand(len(y)), 9: np.random.RandomState(9).rand(3)}
+    with pytest.raises(ValueError, match=r"y_probs\[9\]"):
+        show_cumulative_feature_performance(y=y, y_probs=yp, metrics=["roc_auc"])
+
+
+def test_yprobs_equal_lengths_pass(clf_bundle):
+    _, _, y = clf_bundle
+    yp = {k: np.random.RandomState(k).rand(len(y)) for k in range(1, 4)}
+    df = show_cumulative_feature_performance(
+        y=y, y_probs=yp, metrics=["roc_auc"], return_df=True
+    )
+    assert len(df) == 3
+
+
+# --------------------------------------------------------------------------- #
+# dtype preservation in the copy path
+# --------------------------------------------------------------------------- #
+def test_blanked_categorical_keeps_its_dtype(mixed_dtype_clf):
+    """A plain scalar assignment replaced the column outright and turned a
+    Categorical into float64 NaN, which breaks models fitted with declared
+    categorical features."""
+    model, X, y = mixed_dtype_clf
+    show_cumulative_feature_performance(model, X, y, metrics=["roc_auc"])
+    assert len(model.seen) == 3
+    for frame in model.seen:
+        assert isinstance(frame["m2"].dtype, pd.CategoricalDtype)
+
+
+def test_blanked_categorical_is_all_nan_and_retained_is_intact(mixed_dtype_clf):
+    model, X, y = mixed_dtype_clf
+    show_cumulative_feature_performance(model, X, y, metrics=["roc_auc"])
+    first, last = model.seen[0], model.seen[-1]
+    assert first["m0"].notna().all()
+    assert first["m1"].isna().all()
+    assert first["m2"].isna().all()
+    assert last["m2"].notna().all()
+    assert list(last["m2"].astype(str)) == list(X["m2"].astype(str))
+
+
+def test_categorical_categories_survive_blanking(mixed_dtype_clf):
+    model, X, y = mixed_dtype_clf
+    show_cumulative_feature_performance(model, X, y, metrics=["roc_auc"])
+    assert list(model.seen[0]["m2"].cat.categories) == list(X["m2"].cat.categories)
+
+
+# --------------------------------------------------------------------------- #
+# missing_value castability guard on the fast path
+# --------------------------------------------------------------------------- #
+def test_non_castable_missing_value_matches_nan_blanking(clf_bundle):
+    """None is not castable to float, so the sweep drops to the copy path; on a
+    float frame the blanked cells are still NaN and the scores must match."""
+    model, X, y = clf_bundle
+    fast = show_cumulative_feature_performance(
+        model, X, y, metrics=["roc_auc"], return_df=True
+    )
+    slow = show_cumulative_feature_performance(
+        model, X, y, metrics=["roc_auc"], missing_value=None, return_df=True
+    )
+    assert np.allclose(fast["ROC AUC"], slow["ROC AUC"])
+
+
+def test_string_missing_value_reaches_the_model(clf_bundle):
+    """Before the guard this died inside np.full(..., dtype=float) rather than
+    reaching predict."""
+    model, X, y = clf_bundle
+    seen = []
+
+    def _pf(X_in):
+        seen.append(X_in.dtypes.copy())
+        return np.zeros(len(X_in))
+
+    show_cumulative_feature_performance(
+        model, X, y, metrics=["roc_auc"], missing_value="MISSING", proba_func=_pf
+    )
+    assert seen[0]["c5"] == object
+    assert seen[-1].map(pd.api.types.is_numeric_dtype).all()
+
+
+def test_numeric_sentinel_still_takes_the_fast_path(clf_bundle):
+    """-999 is castable, so the buffer path stays in play and every column stays
+    float."""
+    model, X, y = clf_bundle
+    seen = []
+
+    def _pf(X_in):
+        seen.append(X_in.copy())
+        return np.zeros(len(X_in))
+
+    show_cumulative_feature_performance(
+        model, X, y, metrics=["roc_auc"], missing_value=-999.0, proba_func=_pf
+    )
+    assert seen[0].dtypes.map(pd.api.types.is_numeric_dtype).all()
+    assert (seen[0]["c5"] == -999.0).all()
+
+def test_non_castable_missing_value_takes_the_copy_path(clf_bundle):
+    model, X, y = clf_bundle
+    seen = []
+
+    def _pf(X_in):
+        seen.append(X_in.dtypes.copy())
+        return np.zeros(len(X_in))
+
+    show_cumulative_feature_performance(
+        model, X, y, metrics=["roc_auc"], missing_value=None, proba_func=_pf
+    )
+    # the fast path would have produced a uniformly float buffer
+    assert seen[0]["c5"] != np.dtype("float64")
