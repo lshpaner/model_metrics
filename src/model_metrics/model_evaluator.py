@@ -37,6 +37,15 @@ from model_metrics.metrics_utils import (
     validate_and_normalize_inputs,
     _y_for_model,
     compute_classification_metrics,
+    compute_multiclass_metrics,
+    compute_multiclass_metrics_by_class,
+    get_multiclass_proba,
+    _is_multiclass_input,
+    _reject_multiclass,
+    _ovr_curves,
+    _macro_average_curve,
+    _resolve_classes,
+    _is_multiclass_model,
     compute_regression_metrics,
     compute_leverage_and_cooks_distance,
     compute_residual_diagnostics,
@@ -105,6 +114,10 @@ def summarize_model_performance(
     decimal_places=3,
     group_category=None,
     include_adjusted_r2=False,
+    average="macro",
+    per_class=False,
+    split_by_model=False,
+    class_labels=None,
 ):
     """
     Summarize performance metrics for classification or regression models.
@@ -148,12 +161,39 @@ def summarize_model_performance(
     include_adjusted_r2 : bool, default=False
         For regression only. If True, computes and includes adjusted R-squared score.
         Requires both model and X to be provided for proper calculation.
+    average : {"macro", "weighted", "micro"}, default="macro"
+        For multiclass classification only. How per-class metrics are combined.
+        Multiclass is detected automatically: a 2D `y_prob` with more than two
+        columns, or more than two classes in `y` when `model` and `X` are given.
+        Predictions are the argmax class, so thresholds do not apply. When
+        `y_prob` is passed directly, its columns must follow the sorted class
+        labels (scikit-learn's `classes_` order).
+    per_class : bool, default=False
+        For multiclass classification only. If True, reports one-vs-rest
+        metrics for each class instead of averaged metrics, plus a "Support"
+        row with the number of true cases per class. Brier Score in this view
+        is the binary one-vs-rest score per class (range 0 to 1). `average`
+        is not used. Cannot be combined with `group_category`.
+    split_by_model : bool, default=False
+        Requires `per_class=True`. If True, returns a dict of DataFrames keyed
+        by model title, one per model with classes as columns, in place of the
+        single (model, class) MultiIndex table. When `return_df=False`, prints
+        one table per model.
+    class_labels : list of str, optional
+        For multiclass models. Names for the model's classes in `classes_`
+        order (position i names encoded class i). `y` may hold these names or
+        the model's encoded labels. Output uses the names, and no label-
+        mapping warning is raised.
 
     Returns
     -------
     pandas.DataFrame or None
         If `return_df=True`, returns metrics as a DataFrame:
         - Classification (no groups): metrics as rows, models as columns.
+        - Classification (per_class): metrics as rows, classes as columns.
+          With several models, columns are a (model, class) MultiIndex.
+        - Classification (per_class, split_by_model): dict of DataFrames keyed
+          by model title, each with metrics as rows and classes as columns.
         - Classification (grouped): metrics as rows, groups as columns.
         - Regression: rows for metrics, coefficients, and/or feature importances.
         If `return_df=False`, prints a formatted summary table.
@@ -164,6 +204,13 @@ def summarize_model_performance(
         - If `model_type` is not "classification" or "regression".
         - If `overall_only=True` is used with classification models.
         - If neither (`model` and `X`) nor (`y_prob` or `y_pred`) are provided.
+        - If `average` is not "macro", "weighted", or "micro".
+        - If a threshold is passed for a multiclass model.
+        - If `per_class=True` is used with a binary model or with
+          `group_category`.
+        - If `split_by_model=True` is used without `per_class=True`.
+    NotImplementedError
+        If a k-fold model is passed for a multiclass task.
     """
 
     # --- Input validation ---
@@ -197,6 +244,15 @@ def summarize_model_performance(
     if model_type == "classification" and overall_only:
         raise ValueError("'overall_only' only applies to regression models")
 
+    if average not in ("macro", "weighted", "micro"):
+        raise ValueError("average must be 'macro', 'weighted', or 'micro'")
+
+    if per_class and group_category is not None:
+        raise ValueError("per_class cannot be combined with group_category")
+
+    if split_by_model and not per_class:
+        raise ValueError("split_by_model requires per_class=True")
+
     # When no estimator is supplied, the number of models is the number of
     # prediction arrays passed. `[model]` would collapse that to one entry and
     # silently evaluate only the first set of predictions.
@@ -224,34 +280,84 @@ def summarize_model_performance(
         name = model_title[i]
 
         if model_type == "classification":
+            # Multiclass: a 2D y_prob with >2 columns, or >2 classes in y when
+            # predictions come from model + X.
             if X is None:
-                y_true = _y_for_model(y, i, len(models), len(y_prob[i]), name)
-                y_prob_m = y_prob[i]
-                threshold = custom_threshold or (
-                    model_threshold[name]
-                    if (
-                        model_threshold
-                        and isinstance(model_threshold, dict)
-                        and name in model_threshold
-                    )
-                    else 0.5
+                is_multiclass = (
+                    np.ndim(y_prob[i]) == 2 and np.shape(y_prob[i])[1] > 2
                 )
             else:
-                y_true, y_prob_m, _, threshold = get_predictions(
-                    m, X, y, model_threshold, custom_threshold, score
+                is_multiclass = _is_multiclass_model(m, y)
+
+            if is_multiclass:
+                if model_threshold is not None or custom_threshold is not None:
+                    raise ValueError(
+                        "Thresholds do not apply to multiclass models; "
+                        "predictions are the argmax class. Remove "
+                        "`model_threshold` / `custom_threshold`."
+                    )
+                classes = None
+                if X is None:
+                    y_true = _y_for_model(y, i, len(models), len(y_prob[i]), name)
+                    y_prob_m = np.asarray(y_prob[i])
+                else:
+                    y_true = y
+                    y_prob_m, classes = get_multiclass_proba(m, X)
+                classes, y_true = _resolve_classes(
+                    classes, y_true, np.shape(y_prob_m)[1], class_labels
                 )
-            y_pred_m = (np.asarray(y_prob_m) > float(threshold)).astype(int)
+                y_pred_m = np.asarray(classes)[np.argmax(y_prob_m, axis=1)]
+
+                def _clf_metrics(yt, yp, pr):
+                    return compute_multiclass_metrics(
+                        yt, yp, pr, classes, average, decimal_places
+                    )
+
+                def _skip_group(yt):
+                    return np.setdiff1d(classes, np.unique(yt)).size > 0
+
+            else:
+                if X is None:
+                    y_true = _y_for_model(y, i, len(models), len(y_prob[i]), name)
+                    y_prob_m = y_prob[i]
+                    threshold = custom_threshold or (
+                        model_threshold[name]
+                        if (
+                            model_threshold
+                            and isinstance(model_threshold, dict)
+                            and name in model_threshold
+                        )
+                        else 0.5
+                    )
+                else:
+                    y_true, y_prob_m, _, threshold = get_predictions(
+                        m, X, y, model_threshold, custom_threshold, score
+                    )
+                y_pred_m = (np.asarray(y_prob_m) > float(threshold)).astype(int)
+
+                def _clf_metrics(yt, yp, pr):
+                    return compute_classification_metrics(yt, yp, pr, threshold)
+
+                def _skip_group(yt):
+                    return len(np.unique(yt)) < 2
+
+            # per-class rows (multiclass only); replaces the averaged row
+            if per_class:
+                if not is_multiclass:
+                    raise ValueError(
+                        f"per_class applies to multiclass models only; "
+                        f"'{name}' is binary."
+                    )
+                by_class = compute_multiclass_metrics_by_class(
+                    y_true, y_pred_m, y_prob_m, classes, decimal_places
+                )
+                for c, c_metrics in by_class.items():
+                    metrics_data.append({"Model": name, "Class": str(c), **c_metrics})
+                continue
 
             # overall row
             overall_row = {"Model": name, "Group": "Overall"}
-            overall_row.update(
-                compute_classification_metrics(
-                    y_true,
-                    y_pred_m,
-                    y_prob_m,
-                    threshold,
-                )
-            )
+            overall_row.update(_clf_metrics(y_true, y_pred_m, y_prob_m))
             metrics_data.append(overall_row)
 
             # group rows
@@ -269,17 +375,13 @@ def summarize_model_performance(
                 for g in group_series.unique():
                     idx = group_series[group_series == g].index.to_numpy()
                     y_true_g = np.asarray(y_true)[idx]
-                    # must skip groups with single-class y to avoid AUC/AP errors
-                    if len(np.unique(y_true_g)) < 2:
+                    # skip groups lacking a class to avoid AUC/AP errors
+                    if _skip_group(y_true_g):
                         continue
                     y_prob_g = np.asarray(y_prob_m)[idx]
                     y_pred_g = np.asarray(y_pred_m)[idx]
                     g_row = {"Model": name, "Group": str(g)}
-                    g_row.update(
-                        compute_classification_metrics(
-                            y_true_g, y_pred_g, y_prob_g, threshold
-                        )
-                    )
+                    g_row.update(_clf_metrics(y_true_g, y_pred_g, y_prob_g))
                     metrics_data.append(g_row)
 
         else:  # regression
@@ -430,7 +532,32 @@ def summarize_model_performance(
             "Brier Score",
             "Model Threshold",
         ]
-        if group_category is not None:
+        # multiclass rows carry no threshold
+        metric_order = [c for c in metric_order if c in metrics_df.columns]
+        if per_class:
+            # metrics as rows; classes as columns, or (model, class) for
+            # several models
+            # object dtype keeps Support as an integer count after transposing
+            metrics_df = (
+                metrics_df.set_index(["Model", "Class"])[metric_order + ["Support"]]
+                .astype(object)
+                .T
+            )
+            if split_by_model:
+                # one DataFrame per model, keyed by model title
+                metrics_df = {
+                    mname: metrics_df[mname]
+                    .rename_axis(columns=None)
+                    .rename_axis("Metrics")
+                    .reset_index()
+                    for mname in metrics_df.columns.get_level_values(0).unique()
+                }
+            else:
+                if metrics_df.columns.get_level_values(0).nunique() == 1:
+                    metrics_df.columns = metrics_df.columns.get_level_values(1)
+                metrics_df.columns.names = [None] * metrics_df.columns.nlevels
+                metrics_df = metrics_df.rename_axis("Metrics").reset_index()
+        elif group_category is not None:
             # Warn before silently dropping extra models in grouped path.
             if "Model" in metrics_df.columns and len(metrics_df["Model"].unique()) > 1:
                 warnings.warn(
@@ -473,6 +600,18 @@ def summarize_model_performance(
     # --- Regression: nothing to reshape; preserve rows (incl. Coeff/Feat. Imp.) ---
     if model_type == "regression":
         pass
+
+    # --- per_class split: dict of DataFrames, one per model ---
+    if isinstance(metrics_df, dict):
+        for df_m in metrics_df.values():
+            df_m.index = [""] * len(df_m)
+        if return_df:
+            return metrics_df
+        for mname, df_m in metrics_df.items():
+            print(f"Per-Class Performance Metrics: {mname}")
+            print(df_m.to_string(index=False))
+            print()
+        return
 
     # **Manual formatting**
     if not return_df:
@@ -597,6 +736,12 @@ def show_confusion_matrix(
     class_report=False,
     show_colorbar=False,
     ax=None,
+    return_df=False,
+    xtick_rotation=None,
+    normalize=None,
+    highlight_diagonal=False,
+    diagonal_kwgs=None,
+    cell_values=None,
     **kwargs,
 ):
     """
@@ -628,7 +773,9 @@ def show_confusion_matrix(
       applied to all models. If set, it takes precedence over
       `model_threshold`.
     - class_labels (list, optional): Custom class names for axis tick labels
-      and display labels.
+      and display labels. For multiclass models, names the model's classes in
+      `classes_` order (position i names encoded class i); `y` may hold these
+      names or the encoded labels, and no label-mapping warning is raised.
     - cmap (str, default="Blues"): Colormap for visualization.
     - save_plot (bool, default=False): Whether to save plots to disk.
     - image_path_png (str, optional): Path to save PNG images.
@@ -653,15 +800,59 @@ def show_confusion_matrix(
         - n_cols (int, optional): Number of columns when `subplots=True`.
         - show_colorbar (bool, optional): Whether to show the colorbar.
 
+    Multiclass:
+    - Detected automatically: a 2D `y_prob` with more than two columns, or
+      more than two classes in `y` when `model` and `X` are given.
+    - Predictions are the argmax class and the matrix is N x N. Axis labels
+      come from `class_labels` if given (one per class, in sorted class
+      order), else the model's `classes_`.
+    - The TN/FP/FN/TP overlay (`labels`) is binary only and is skipped.
+
+    - return_df (bool, default=False): If True, also return the confusion
+      matrices as a dict of DataFrames keyed by model title (rows "Actual
+      <class>", columns "Predicted <class>"). Plots are still drawn.
+    - xtick_rotation (float, optional): Rotation in degrees for the predicted
+      (x-axis) class labels, right-aligned to their ticks. If None, 45 for
+      multiclass models and 0 for binary.
+    - normalize ({None, "true", "pred", "all"}, default=None): Show
+      proportions instead of raw counts. "true" divides each row by its total
+      (diagonal = per-class recall), "pred" divides each column (diagonal =
+      per-class precision), "all" divides by the grand total. Cells show the
+      proportion with the count beneath it, colors use a fixed 0 to 1 scale so
+      panels are comparable, and `return_df` returns the normalized tables.
+    - highlight_diagonal (bool, default=False): Draw a border around the
+      diagonal (correct-prediction) cells.
+    - diagonal_kwgs (dict, optional): Styling for the diagonal borders,
+      passed to matplotlib.patches.Rectangle (default: black, linewidth 2).
+    - cell_values ({"both", "proportion", "count"}, optional): What each cell
+      prints when `normalize` is set: the proportion with the count beneath
+      it ("both", the default), the proportion only, or the raw count only.
+      Colors follow the normalized values in every case. Without `normalize`,
+      cells always show counts.
+
     Returns:
-    - None
+    - dict of pandas.DataFrame if `return_df=True`, else None
 
     Raises:
     - ValueError: If neither (`model` and `X`) nor `y_prob` is provided.
+    - ValueError: If a threshold is passed for a multiclass model, or
+      `class_labels` does not match the number of classes.
+    - ValueError: If `normalize` is not None, "true", "pred", or "all".
+    - ValueError: If `cell_values` is invalid, or "proportion"/"both" is
+      requested without `normalize`.
     """
 
     if not ((model is not None and X is not None) or y_prob is not None):
         raise ValueError("You need to provide model and X or y_prob")
+
+    if normalize not in (None, "true", "pred", "all"):
+        raise ValueError("normalize must be None, 'true', 'pred', or 'all'")
+    if cell_values is None:
+        cell_values = "both" if normalize is not None else "count"
+    if cell_values not in ("both", "proportion", "count"):
+        raise ValueError("cell_values must be 'both', 'proportion', or 'count'")
+    if normalize is None and cell_values != "count":
+        raise ValueError(f"cell_values={cell_values!r} requires `normalize`")
 
     # Save user-supplied ax before the loop variable shadows it
     _user_ax = ax
@@ -700,6 +891,7 @@ def show_confusion_matrix(
     else:
         axes = [None] * len(model)
 
+    cm_dfs = {}  # one confusion matrix DataFrame per model, for return_df
     for idx, (m, ax) in enumerate(zip(model, axes)):
         # Determine the model name
         if model_title:
@@ -707,8 +899,35 @@ def show_confusion_matrix(
         else:
             name = extract_model_name(m)  # Fallback to model class name
 
+        # Multiclass: a 2D y_prob with >2 columns, or >2 classes in y when
+        # predictions come from model + X.
+        is_mc = (
+            _is_multiclass_input(y_prob=y_probs[idx])
+            if X is None
+            else _is_multiclass_model(m, y)
+        )
+
         # use y_prob_curr to avoid clobbering the function-level y_prob param.
-        if X is None:
+        if is_mc:
+            if model_threshold is not None or custom_threshold is not None:
+                raise ValueError(
+                    "Thresholds do not apply to multiclass models; predictions "
+                    "are the argmax class. Remove `model_threshold` / "
+                    "`custom_threshold`."
+                )
+            classes = None
+            if X is None:
+                y_true = _y_for_model(y, idx, len(model), len(y_probs[idx]), name)
+                y_prob_curr = np.asarray(y_probs[idx])
+            else:
+                y_true = y
+                y_prob_curr, classes = get_multiclass_proba(m, X)
+            classes, y_true = _resolve_classes(
+                classes, y_true, np.shape(y_prob_curr)[1], class_labels
+            )
+            y_pred = np.asarray(classes)[np.argmax(y_prob_curr, axis=1)]
+            threshold = None
+        elif X is None:
             y_true = _y_for_model(y, idx, len(model), len(y_probs[idx]), name)
             y_prob_curr = y_probs[idx]
             threshold = 0.5
@@ -736,46 +955,61 @@ def show_confusion_matrix(
                 custom_threshold,
                 score,
             )
-        # Compute confusion matrix
-        cm = confusion_matrix(y_true, y_pred)
+
+        # Compute confusion matrix and tick labels
+        if is_mc:
+            tick_labels = [str(lbl) for lbl in (class_labels or classes)]
+            if len(tick_labels) != len(classes):
+                raise ValueError(
+                    f"class_labels has {len(tick_labels)} entries but the model "
+                    f"has {len(classes)} classes."
+                )
+            cm = confusion_matrix(y_true, y_pred, labels=classes)
+        else:
+            cm = confusion_matrix(y_true, y_pred)
+            tick_labels = (
+                [f"{label}" for label in class_labels] if class_labels else ["0", "1"]
+            )
+
+        # Optional normalization; cm keeps the raw counts for cell text
+        if normalize is not None:
+            with np.errstate(invalid="ignore", divide="ignore"):
+                if normalize == "true":
+                    cm_show = cm / cm.sum(axis=1, keepdims=True)
+                elif normalize == "pred":
+                    cm_show = cm / cm.sum(axis=0, keepdims=True)
+                else:
+                    cm_show = cm / cm.sum()
+            cm_show = np.nan_to_num(cm_show)  # empty rows/columns -> 0
+        else:
+            cm_show = cm
 
         # Create confusion matrix DataFrame
         conf_matrix_df = pd.DataFrame(
-            cm,
-            index=(
-                [f"Actual {label}" for label in class_labels]
-                if class_labels
-                else ["Actual 0", "Actual 1"]
-            ),
-            columns=(
-                [f"Predicted {label}" for label in class_labels]
-                if class_labels
-                else ["Predicted 0", "Predicted 1"]
-            ),
+            cm_show,
+            index=[f"Actual {label}" for label in tick_labels],
+            columns=[f"Predicted {label}" for label in tick_labels],
         )
 
+        cm_dfs[name] = conf_matrix_df
+
         print(f"Confusion Matrix for {name}: \n")
-        print(f"{conf_matrix_df}\n")
+        print(f"{conf_matrix_df.round(3) if normalize else conf_matrix_df}\n")
         if class_report:
             print(f"Classification Report for {name}: \n")
             print(classification_report(y_true, y_pred))
 
         # Plot the confusion matrix
-        # Use ConfusionMatrixDisplay with custom class_labels
-        if class_labels:
-            disp = ConfusionMatrixDisplay(
-                confusion_matrix=cm,
-                display_labels=[f"{label}" for label in class_labels],
-            )
-        else:
-            disp = ConfusionMatrixDisplay(
-                confusion_matrix=cm, display_labels=["0", "1"]
-            )
+        disp = ConfusionMatrixDisplay(
+            confusion_matrix=cm_show, display_labels=tick_labels
+        )
+        _plot_kw = {"cmap": cmap}
+        if "colorbar" in disp.plot.__code__.co_varnames:
+            _plot_kw["colorbar"] = show_colorbar
+        if normalize is not None and "im_kw" in disp.plot.__code__.co_varnames:
+            _plot_kw["im_kw"] = {"vmin": 0, "vmax": 1}  # comparable across panels
         if subplots:
-            if "colorbar" in disp.plot.__code__.co_varnames:
-                disp.plot(cmap=cmap, ax=ax, colorbar=show_colorbar)
-            else:
-                disp.plot(cmap=cmap, ax=ax)
+            disp.plot(ax=ax, **_plot_kw)
         else:
             if _user_ax is not None:
                 ax = _user_ax
@@ -783,10 +1017,7 @@ def show_confusion_matrix(
             else:
                 _, ax = plt.subplots(figsize=figsize)
                 _created_fig = True
-            if "colorbar" in disp.plot.__code__.co_varnames:
-                disp.plot(cmap=cmap, ax=ax, colorbar=show_colorbar)
-            else:
-                disp.plot(cmap=cmap, ax=ax)
+            disp.plot(ax=ax, **_plot_kw)
 
         # Ensure text annotations are not duplicated
         if hasattr(disp, "text_") and disp.text_ is not None:
@@ -800,8 +1031,13 @@ def show_confusion_matrix(
 
         for i in range(disp.text_.shape[0]):
             for j in range(disp.text_.shape[1]):
-                new_value = disp.confusion_matrix[i, j]
-                disp.text_[i, j].set_text(f"{new_value:,}")
+                if cell_values == "both":
+                    # proportion with the raw count beneath it
+                    disp.text_[i, j].set_text(f"{cm_show[i, j]:.2f}\n({cm[i, j]:,})")
+                elif cell_values == "proportion":
+                    disp.text_[i, j].set_text(f"{cm_show[i, j]:.2f}")
+                else:
+                    disp.text_[i, j].set_text(f"{cm[i, j]:,}")
 
         # **Forcefully Remove the Colorbar If It Exists**
         if not show_colorbar:
@@ -818,9 +1054,20 @@ def show_confusion_matrix(
                     except Exception as e:
                         print(f"Warning: Failed to remove colorbar: {e}")
 
+        _norm_note = {
+            None: "",
+            "true": " (row-normalized)",
+            "pred": " (column-normalized)",
+            "all": " (normalized)",
+        }[normalize]
         apply_plot_title(
             title,
-            default_title=f"Confusion Matrix: {name} (Threshold = {threshold:.2f})",
+            default_title=(
+                f"Confusion Matrix: {name}{_norm_note}"
+                if is_mc
+                else f"Confusion Matrix: {name} (Threshold = {threshold:.2f})"
+                f"{_norm_note}"
+            ),
             text_wrap=text_wrap,
             fontsize=label_fontsize,
             ax=ax,
@@ -831,13 +1078,23 @@ def show_confusion_matrix(
         ax.yaxis.label.set_size(label_fontsize)
         ax.tick_params(axis="both", labelsize=tick_fontsize)
 
+        # Rotate predicted-class labels so long names do not collide
+        _rot = xtick_rotation if xtick_rotation is not None else (45 if is_mc else 0)
+        if _rot:
+            plt.setp(
+                ax.get_xticklabels(),
+                rotation=_rot,
+                ha="right",
+                rotation_mode="anchor",
+            )
+
         # Adjust the font size for the numeric values directly
         if disp.text_ is not None:
             for text in disp.text_.ravel():
                 text.set_fontsize(inner_fontsize)  # Apply inner_fontsize here
 
-        # Add labels (TN, FP, FN, TP) only if `labels` is True
-        if labels:
+        # Add labels (TN, FP, FN, TP) only if `labels` is True; binary only
+        if labels and not is_mc:
             for i in range(cm.shape[0]):
                 for j in range(cm.shape[1]):
                     label_text = (
@@ -849,7 +1106,7 @@ def show_confusion_matrix(
                             else "FN" if i == 1 and j == 0 else "TP"
                         )
                     )
-                    rgba_color = disp.im_.cmap(disp.im_.norm(cm[i, j]))
+                    rgba_color = disp.im_.cmap(disp.im_.norm(cm_show[i, j]))
                     luminance = (
                         0.2126 * rgba_color[0]
                         + 0.7152 * rgba_color[1]
@@ -864,6 +1121,25 @@ def show_confusion_matrix(
                         fontsize=inner_fontsize,
                         color="white" if luminance < 0.5 else "black",
                     )
+
+        # Border the diagonal (correct-prediction) cells
+        if highlight_diagonal:
+            from matplotlib.patches import Rectangle
+
+            _diag_style = {"edgecolor": "black", "linewidth": 2}
+            _diag_style.update(diagonal_kwgs or {})
+            for k in range(cm.shape[0]):
+                ax.add_patch(
+                    Rectangle(
+                        (k - 0.48, k - 0.48),
+                        0.96,
+                        0.96,
+                        fill=False,
+                        clip_on=False,
+                        zorder=3,
+                        **_diag_style,
+                    )
+                )
 
         if not subplots:
             if _created_fig:
@@ -888,6 +1164,9 @@ def show_confusion_matrix(
             image_filename=image_filename,
         )
         plt.show()
+
+    if return_df:
+        return cm_dfs
 
 
 ################################################################################
@@ -928,6 +1207,7 @@ def show_roc_curve(
     operating_point_kwgs=None,
     legend_loc="lower right",
     ax=None,
+    class_labels=None,
 ):
     """
     Plot Receiver Operating Characteristic (ROC) curves for models or pipelines
@@ -1021,6 +1301,20 @@ def show_roc_curve(
         Location for the legend. Standard matplotlib locations like 'lower right',
         'upper left', etc., or 'bottom' to place legend below the plot
         (default: 'lower right').
+    - class_labels (list of str, optional): For multiclass models. Names for
+      the model's classes in `classes_` order (position i names encoded
+      class i). `y` may hold these names or the encoded labels. Legends use
+      the names, and no label-mapping warning is raised.
+
+    Multiclass:
+        Detected automatically: a 2D `y_prob` with more than two columns, or
+        more than two classes in `y` when `model` and `X` are given. Single
+        and subplot modes draw one one-vs-rest ROC curve per class with its
+        AUC; a model-level `color` in `curve_kwgs` is not applied so classes
+        stay distinguishable. Overlay mode draws each model's macro-average
+        curve, labeled with the macro AUC (the mean of the per-class AUCs).
+        `group_category`, `delong`, `hanley_mcneil`, and `show_operating_point`
+        apply to binary models only.
 
     Raises:
         - ValueError: If `subplots=True` and `overlay=True` are both set, if
@@ -1030,6 +1324,7 @@ def show_roc_curve(
         - ValueError: If `delong` or `hanley_mcneil` is provided while
           `group_category` is specified, since AUCs from different groups cannot
           be compared using these tests.
+        - ValueError: If a binary-only option is used with a multiclass model.
     """
 
     # Validate and normalize inputs
@@ -1097,6 +1392,99 @@ def show_roc_curve(
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
+        # Multiclass: one-vs-rest curve per class, or a macro-average curve
+        # per model in overlay mode.
+        is_mc = (
+            _is_multiclass_input(y_prob=y_probs[idx])
+            if X is None
+            else _is_multiclass_model(mod, y)
+        )
+        if is_mc:
+            if group_category is not None:
+                raise ValueError(
+                    "`group_category` is not supported for multiclass models."
+                )
+            if delong is not None or hanley_mcneil is not None:
+                raise ValueError(
+                    "DeLong and Hanley & McNeil comparisons apply to binary "
+                    "models only."
+                )
+            if show_operating_point:
+                raise ValueError(
+                    "`show_operating_point` applies to binary models only."
+                )
+            classes = None
+            if X is None:
+                y_true = _y_for_model(y, idx, len(model), len(y_probs[idx]), name)
+                y_prob_curr = np.asarray(y_probs[idx])
+            else:
+                y_true = y
+                y_prob_curr, classes = get_multiclass_proba(mod, X)
+            classes, y_true = _resolve_classes(
+                classes, y_true, np.shape(y_prob_curr)[1], class_labels
+            )
+
+            curves = _ovr_curves(y_true, y_prob_curr, classes, kind="roc")
+            macro_auc = np.mean([v[2] for v in curves.values()])
+            for c, (_, _, c_auc) in curves.items():
+                print(f"AUC for {c} vs rest ({name}): {c_auc:.{decimal_places}f}")
+            print(f"Macro AUC for {name}: {macro_auc:.{decimal_places}f}")
+
+            if overlay:
+                fx, fy = _macro_average_curve(curves)
+                _overlay_ax.plot(
+                    fx,
+                    fy,
+                    label=f"{name} (macro AUC = {macro_auc:.{decimal_places}f})",
+                    **curve_style,
+                )
+                continue
+
+            if subplots:
+                ax = axes[idx]
+                _created_fig = False
+            elif _ax_param is None:
+                fig, ax = plt.subplots(figsize=figsize or (8, 6))
+                _created_fig = True
+            else:
+                ax = _ax_param
+                _created_fig = False
+
+            # one color per class, so a model-level color is not applied
+            class_style = {
+                k: v for k, v in curve_style.items() if k not in ("color", "label")
+            }
+            for c, (c_fpr, c_tpr, c_auc) in curves.items():
+                ax.plot(
+                    c_fpr,
+                    c_tpr,
+                    label=f"{c} vs rest (AUC = {c_auc:.{decimal_places}f})",
+                    **class_style,
+                )
+            ax.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
+            ax.set_xlabel(xlabel, fontsize=label_fontsize)
+            ax.set_ylabel(ylabel, fontsize=label_fontsize)
+            ax.tick_params(axis="both", labelsize=tick_fontsize)
+            apply_plot_title(
+                title,
+                default_title=f"ROC Curve: {name} (one-vs-rest)",
+                text_wrap=text_wrap,
+                fontsize=label_fontsize,
+                ax=ax,
+            )
+            apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
+            ax.grid(visible=gridlines)
+            if _created_fig:
+                save_plot_images(
+                    f"{name.lower().replace(' ', '_')}_roc_auc",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                    image_filename=image_filename,
+                )
+                plt.show()
+            continue
+
         # use y_prob_curr to avoid clobbering the function-level y_prob param.
         if X is None:
             y_true = _y_for_model(y, idx, len(model), len(y_probs[idx]), name)
@@ -1474,6 +1862,7 @@ def show_pr_curve(
     legend_metric="ap",
     legend_loc="lower left",
     ax=None,
+    class_labels=None,
 ):
     """
     Plot Precision-Recall (PR) curves for models or pipelines with optional
@@ -1548,14 +1937,28 @@ def show_pr_curve(
         Location for the legend. Standard matplotlib locations like 'lower left',
         'upper right', etc., or 'bottom' to place legend below the plot
         (default: 'lower left').
+    - class_labels (list of str, optional): For multiclass models. Names for
+      the model's classes in `classes_` order (position i names encoded
+      class i). `y` may hold these names or the encoded labels. Legends use
+      the names, and no label-mapping warning is raised.
 
     Raises:
     - ValueError:
         - If `subplots=True` and `overlay=True` are both set.
         - If `group_category` is used with `subplots=True` or `overlay=True`.
         - If `legend_metric` is not one of {"ap", "aucpr"}.
+        - If `group_category` is used with a multiclass model.
     - TypeError:
         - If `model_title` is not a string, list of strings, or None.
+
+    Multiclass:
+        Detected automatically: a 2D `y_prob` with more than two columns, or
+        more than two classes in `y` when `model` and `X` are given. Single
+        and subplot modes draw one one-vs-rest PR curve per class with its
+        `legend_metric`; a model-level `color` in `curve_kwgs` is not applied
+        so classes stay distinguishable. Overlay mode draws each model's
+        macro-average curve (precision averaged over a common recall grid),
+        labeled with the mean of the per-class AP or AUCPR.
     """
 
     # Validate and normalize inputs
@@ -1608,6 +2011,100 @@ def show_pr_curve(
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
+        # Multiclass: one-vs-rest curve per class, or a macro-average curve
+        # per model in overlay mode.
+        is_mc = (
+            _is_multiclass_input(y_prob=y_probs[idx])
+            if X is None
+            else _is_multiclass_model(mod, y)
+        )
+        if is_mc:
+            if group_category is not None:
+                raise ValueError(
+                    "`group_category` is not supported for multiclass models."
+                )
+            classes = None
+            if X is None:
+                y_true = _y_for_model(y, idx, len(model), len(y_probs[idx]), name)
+                y_prob_curr = np.asarray(y_probs[idx])
+            else:
+                y_true = y
+                y_prob_curr, classes = get_multiclass_proba(mod, X)
+            classes, y_true = _resolve_classes(
+                classes, y_true, np.shape(y_prob_curr)[1], class_labels
+            )
+
+            curves = _ovr_curves(y_true, y_prob_curr, classes, kind="pr")
+            metric_label = "AP" if legend_metric == "ap" else "AUCPR"
+            score_pos = 2 if legend_metric == "ap" else 3
+            macro_score = np.mean([v[score_pos] for v in curves.values()])
+            for c, vals in curves.items():
+                print(
+                    f"{metric_label} for {c} vs rest ({name}): "
+                    f"{vals[score_pos]:.{decimal_places}f}"
+                )
+            print(f"Macro {metric_label} for {name}: {macro_score:.{decimal_places}f}")
+
+            if overlay:
+                fx, fy = _macro_average_curve(curves)
+                _overlay_ax.plot(
+                    fx,
+                    fy,
+                    label=(
+                        f"{name} (macro {metric_label} = "
+                        f"{macro_score:.{decimal_places}f})"
+                    ),
+                    **curve_style,
+                )
+                continue
+
+            if subplots:
+                ax = axes[idx]
+                _created_fig = False
+            elif _ax_param is None:
+                fig, ax = plt.subplots(figsize=figsize or (8, 6))
+                _created_fig = True
+            else:
+                ax = _ax_param
+                _created_fig = False
+
+            # one color per class, so a model-level color is not applied
+            class_style = {
+                k: v for k, v in curve_style.items() if k not in ("color", "label")
+            }
+            for c, vals in curves.items():
+                ax.plot(
+                    vals[0],
+                    vals[1],
+                    label=(
+                        f"{c} vs rest ({metric_label} = "
+                        f"{vals[score_pos]:.{decimal_places}f})"
+                    ),
+                    **class_style,
+                )
+            ax.set_xlabel(xlabel, fontsize=label_fontsize)
+            ax.set_ylabel(ylabel, fontsize=label_fontsize)
+            ax.tick_params(axis="both", labelsize=tick_fontsize)
+            apply_plot_title(
+                title,
+                default_title=f"PR Curve: {name} (one-vs-rest)",
+                text_wrap=text_wrap,
+                fontsize=label_fontsize,
+                ax=ax,
+            )
+            apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
+            ax.grid(visible=gridlines)
+            if _created_fig:
+                save_plot_images(
+                    f"{name.lower().replace(' ', '_')}_precision_recall",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                    image_filename=image_filename,
+                )
+                plt.show()
+            continue
+
         # use y_prob_curr to avoid clobbering the function-level y_prob param.
         if X is None:
             y_true = _y_for_model(y, idx, len(model), len(y_probs[idx]), name)
@@ -1894,6 +2391,12 @@ def show_lift_chart(
     # Validate and normalize inputs
     model, y_probs, _ = validate_and_normalize_inputs(model, X, y_prob)
 
+    # binary-only: reject multiclass input with a clear message
+    for _p in y_probs or []:
+        _reject_multiclass("show_lift_chart", y_prob=_p)
+    if X is not None:
+        _reject_multiclass("show_lift_chart", y=y)
+
     if overlay and subplots:
         raise ValueError("`subplots` cannot be set to True when `overlay` is True.")
 
@@ -2126,6 +2629,12 @@ def show_gain_chart(
     # Validate and normalize inputs
     model, y_probs, _ = validate_and_normalize_inputs(model, X, y_prob)
 
+    # binary-only: reject multiclass input with a clear message
+    for _p in y_probs or []:
+        _reject_multiclass("show_gain_chart", y_prob=_p)
+    if X is not None:
+        _reject_multiclass("show_gain_chart", y=y)
+
     if overlay and subplots:
         raise ValueError("`subplots` cannot be set to True when `overlay` is True.")
 
@@ -2333,6 +2842,7 @@ def show_calibration_curve(
     group_category=None,
     legend_loc="best",
     ax=None,
+    class_labels=None,
     **kwargs,
 ):
     """
@@ -2383,12 +2893,27 @@ def show_calibration_curve(
     - legend_loc (str, optional): Location for the legend. Standard matplotlib
       locations like 'best', 'upper right', 'lower left', etc., or 'bottom' to
       place legend below the plot (default: 'best').
+    - class_labels (list of str, optional): For multiclass models. Names for
+      the model's classes in `classes_` order (position i names encoded
+      class i). `y` may hold these names or the encoded labels. Legends use
+      the names, and no label-mapping warning is raised.
 
     Raises:
     - ValueError: If both `subplots=True` and `overlay=True` are set (incompatible).
     - ValueError: If `group_category` used w/ either `overlay=True` or `subplots=True`.
     - ValueError: If length of `curve_kwgs` does not match number of models.
+    - ValueError: If `overlay` or `group_category` is used with a multiclass
+      model.
     - TypeError: If `model_title` is not a string, list, pandas Series, or None.
+
+    Multiclass:
+    - Detected automatically: a 2D `y_prob` with more than two columns, or
+      more than two classes in `y` when `model` and `X` are given.
+    - Draws one one-vs-rest reliability curve per class, with that class's
+      one-vs-rest Brier score (range 0 to 1) in the legend. A model-level
+      `color` in `curve_kwgs` is not applied so classes stay distinguishable.
+    - Use `subplots=True` to compare models; `overlay` and `group_category`
+      apply to binary models only.
 
     Returns:
     - None
@@ -2436,6 +2961,85 @@ def show_calibration_curve(
     for idx, (mod, name, curve_style) in enumerate(
         zip(model, model_title, curve_styles)
     ):
+        # Multiclass: one-vs-rest reliability curve per class
+        is_mc = (
+            _is_multiclass_input(y_prob=y_probs[idx])
+            if X is None
+            else _is_multiclass_model(mod, y)
+        )
+        if is_mc:
+            if overlay or group_category is not None:
+                raise ValueError(
+                    "`overlay` and `group_category` are not supported for "
+                    "multiclass models; use `subplots=True` to compare models."
+                )
+            classes = None
+            if X is None:
+                y_true = _y_for_model(y, idx, len(model), len(y_probs[idx]), name)
+                y_prob_curr = np.asarray(y_probs[idx])
+            else:
+                y_true = y
+                y_prob_curr, classes = get_multiclass_proba(mod, X)
+            classes, y_true = _resolve_classes(
+                classes, y_true, np.shape(y_prob_curr)[1], class_labels
+            )
+            y_true_arr = np.asarray(y_true).ravel()
+
+            if subplots:
+                ax = axes[idx]
+                _created_fig = False
+            elif _ax_param is None:
+                fig, ax = plt.subplots(figsize=figsize or (8, 6))
+                _created_fig = True
+            else:
+                ax = _ax_param
+                _created_fig = False
+
+            # one color per class, so a model-level color is not applied
+            class_style = {
+                k: v for k, v in curve_style.items() if k not in ("color", "label")
+            }
+            for j, c in enumerate(classes):
+                yt = (y_true_arr == c).astype(int)
+                prob_true, prob_pred = calibration_curve(
+                    yt, y_prob_curr[:, j], n_bins=bins
+                )
+                legend_label = f"{c} vs rest"
+                if show_brier_score:
+                    c_brier = brier_score_loss(yt, y_prob_curr[:, j])
+                    legend_label += f" (Brier: {c_brier:.{brier_decimals}f})"
+                ax.plot(
+                    prob_pred,
+                    prob_true,
+                    marker=marker,
+                    label=legend_label,
+                    **class_style,
+                    **kwargs,
+                )
+            ax.plot([0, 1], [0, 1], label="Perfectly Calibrated", **_ls_kwgs)
+            ax.set_xlabel(xlabel, fontsize=label_fontsize)
+            ax.set_ylabel(ylabel, fontsize=label_fontsize)
+            apply_plot_title(
+                title,
+                default_title=f"Calibration Curve: {name} (one-vs-rest)",
+                text_wrap=text_wrap,
+                fontsize=label_fontsize,
+                ax=ax,
+            )
+            apply_legend(legend_loc, fontsize=tick_fontsize, ax=ax)
+            ax.tick_params(axis="both", labelsize=tick_fontsize)
+            ax.grid(visible=gridlines)
+            if _created_fig:
+                save_plot_images(
+                    f"{name}_Calibration",
+                    save_plot,
+                    image_path_png,
+                    image_path_svg,
+                    image_filename=image_filename,
+                )
+                plt.show()
+            continue
+
         # use y_prob_curr to avoid clobbering the function-level y_prob param.
         if X is None:
             y_true = _y_for_model(y, idx, len(model), len(y_probs[idx]), name)
@@ -2876,6 +3480,12 @@ def plot_threshold_metrics(
 
     # Normalize models and probabilities into lists
     model, y_probs, num_models = validate_and_normalize_inputs(model, X_test, y_prob)
+
+    # binary-only: reject multiclass input with a clear message
+    for _p in y_probs or []:
+        _reject_multiclass("plot_threshold_metrics", y_prob=_p)
+    if X_test is not None:
+        _reject_multiclass("plot_threshold_metrics", y=y_test)
 
     # Normalize model titles; use class name when available, not generic index
     if model_title is None:
@@ -3445,6 +4055,7 @@ def plot_overlap_venns(
         If model_a or model_b is supplied but does not implement a
         .predict() method.
     """
+    _reject_multiclass("plot_overlap_venns", y=y_true)
     y_true = np.asarray(y_true).ravel().astype(int)
 
     if X_b is None:
@@ -3653,6 +4264,7 @@ def overlap_table(
         If model_a or model_b is supplied but does not implement a
         .predict() method.
     """
+    _reject_multiclass("overlap_table", y=y_true)
     y_true = np.asarray(y_true).ravel().astype(int)
     if X_b is None:
         X_b = X_a
@@ -3788,6 +4400,7 @@ def overlap_summary(
         If model_a or model_b is supplied but does not implement a
         .predict() method.
     """
+    _reject_multiclass("overlap_summary", y=y_true)
     y_true = np.asarray(y_true).ravel().astype(int)
     if X_b is None:
         X_b = X_a
@@ -3927,6 +4540,7 @@ def overlap_crosstab(
         If model_a or model_b is supplied but does not implement
         .predict().
     """
+    _reject_multiclass("overlap_crosstab", y=y_true)
     y_true = np.asarray(y_true).ravel().astype(int)
     if X_b is None:
         X_b = X_a
@@ -6327,6 +6941,10 @@ def show_cumulative_feature_performance(
     if metrics is None:
         metrics = _DEFAULT_METRICS[task]
     _validate_metrics_for_task(metrics, task)
+
+    # binary-only for classification: the sweep scores the positive class
+    if task == "classification":
+        _reject_multiclass("show_cumulative_feature_performance", y=y)
 
     # --- Resolve metrics (shared by both modes) ---
     resolved = []  # (label, func, higher_is_better, kind)

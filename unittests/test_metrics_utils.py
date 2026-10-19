@@ -439,23 +439,17 @@ def test_get_predictions_multiclass():
     X = np.random.randn(60, 4)
     y = np.random.randint(0, 3, size=60)
 
-    m = LogisticRegression(multi_class="auto", max_iter=200).fit(X, y)
+    m = LogisticRegression(max_iter=200).fit(X, y)
 
-    result = get_predictions(
-        m,
-        X,
-        y,
-        model_threshold=0.5,
-        custom_threshold=None,
-        score="roc_auc",
-    )
-
-    y_pred = result[0]
-    y_prob = result[1]
-
-    assert y_pred.shape[0] == 60
-    assert y_prob is not None
-
+    with pytest.raises(ValueError, match="binary classification only"):
+        get_predictions(
+            m,
+            X,
+            y,
+            model_threshold=0.5,
+            custom_threshold=None,
+            score="roc_auc",
+        )
 
 # --------------------------
 # compute_classification_metrics threshold edge

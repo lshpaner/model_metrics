@@ -1,3 +1,5 @@
+import warnings
+
 import pandas as pd
 import numpy as np
 from scipy.stats import spearmanr, jarque_bera, norm
@@ -20,7 +22,9 @@ from sklearn.metrics import (
     explained_variance_score,
     r2_score,
     accuracy_score,
+    confusion_matrix,
 )
+from sklearn.preprocessing import label_binarize
 
 from statsmodels.stats.diagnostic import (
     het_breuschpagan,
@@ -205,6 +209,17 @@ def get_predictions(model, X, y, model_threshold, custom_threshold, score):
                 getattr(model, "scoring", [0])[0], 0.5
             )
 
+    def _positive_class_proba(proba):
+        # this helper is binary-only; multiclass callers use
+        # get_multiclass_proba instead
+        proba = np.asarray(proba)
+        if proba.ndim == 2 and proba.shape[1] > 2:
+            raise ValueError(
+                f"Model returns probabilities for {proba.shape[1]} classes. "
+                "This function supports binary classification only."
+            )
+        return proba[:, 1]
+
     # Handle k-fold logic if the model uses cross-validation
     if hasattr(model, "kfold") and model.kfold:
         print("\nRunning k-fold model metrics...\n")
@@ -224,7 +239,7 @@ def get_predictions(model, X, y, model_threshold, custom_threshold, score):
             test_model.fit(X_train, y_train.values.ravel())
 
             if hasattr(test_model, "predict_proba"):
-                y_pred_proba = test_model.predict_proba(X_test)[:, 1]
+                y_pred_proba = _positive_class_proba(test_model.predict_proba(X_test))
                 y_pred = (y_pred_proba > threshold).astype(int)
             else:
                 # Fallback if predict_proba is not available
@@ -239,7 +254,7 @@ def get_predictions(model, X, y, model_threshold, custom_threshold, score):
         aggregated_y_true = y
 
         if hasattr(test_model, "predict_proba"):
-            aggregated_y_prob = test_model.predict_proba(X)[:, 1]
+            aggregated_y_prob = _positive_class_proba(test_model.predict_proba(X))
             aggregated_y_pred = (aggregated_y_prob > threshold).astype(int)
         else:
             # Fallback if predict_proba is not available
@@ -420,6 +435,333 @@ def compute_classification_metrics(y_true, y_pred, y_prob, threshold, decimal_pl
         "Model Threshold": round(float(threshold), decimal_places),
     }
 
+
+def compute_multiclass_metrics(
+    y_true, y_pred, y_prob, classes, average="macro", decimal_places=3
+):
+    """Compute multiclass classification performance metrics.
+
+    Precision, recall, F1, and specificity are computed one-vs-rest per class
+    and combined with `average`. AUC ROC and Average Precision use one-vs-rest
+    on the binarized labels. Brier Score is the multiclass form: the mean over
+    observations of the summed squared error across the one-hot classes.
+
+    Parameters
+    ----------
+    y_true : array-like
+        True class labels.
+    y_pred : array-like
+        Predicted class labels.
+    y_prob : array-like of shape (n_samples, n_classes)
+        Predicted class probabilities, columns ordered as `classes`.
+    classes : array-like
+        Class labels in the column order of `y_prob`.
+    average : {"macro", "weighted", "micro"}, default="macro"
+        Averaging across classes.
+    decimal_places : int, default=3
+        Rounding for returned values.
+
+    Raises
+    ------
+    ValueError
+        If `y_prob` does not have one column per class, or if `y_true` is
+        missing any class (one-vs-rest AUC is undefined for that class).
+    """
+    y_true = np.asarray(y_true).ravel()
+    y_pred = np.asarray(y_pred).ravel()
+    y_prob = np.asarray(y_prob, dtype=float)
+    classes = np.asarray(classes)
+
+    if y_prob.ndim != 2 or y_prob.shape[1] != len(classes):
+        raise ValueError(
+            f"y_prob must have shape (n_samples, {len(classes)}), "
+            f"got {y_prob.shape}."
+        )
+    missing = np.setdiff1d(classes, np.unique(y_true))
+    if missing.size:
+        raise ValueError(
+            f"y_true is missing class(es) {missing.tolist()}; one-vs-rest "
+            "metrics are undefined for an absent class."
+        )
+
+    y_bin = label_binarize(y_true, classes=classes)
+
+    # Specificity per class from the one-vs-rest confusion counts
+    cm = confusion_matrix(y_true, y_pred, labels=classes)
+    tp = np.diag(cm)
+    fp = cm.sum(axis=0) - tp
+    fn = cm.sum(axis=1) - tp
+    tn = cm.sum() - tp - fp - fn
+    if average == "micro":
+        specificity = tn.sum() / (tn.sum() + fp.sum())
+    else:
+        per_class = np.divide(
+            tn, tn + fp, out=np.zeros(len(classes)), where=(tn + fp) > 0
+        )
+        weights = cm.sum(axis=1) if average == "weighted" else None
+        specificity = np.average(per_class, weights=weights)
+
+    label_kw = dict(labels=classes, average=average, zero_division=0)
+    return {
+        "Precision/PPV": round(
+            float(precision_score(y_true, y_pred, **label_kw)), decimal_places
+        ),
+        "Average Precision": round(
+            float(average_precision_score(y_bin, y_prob, average=average)),
+            decimal_places,
+        ),
+        "Sensitivity/Recall": round(
+            float(recall_score(y_true, y_pred, **label_kw)), decimal_places
+        ),
+        "Specificity": round(float(specificity), decimal_places),
+        "F1-Score": round(float(f1_score(y_true, y_pred, **label_kw)), decimal_places),
+        "AUC ROC": round(
+            float(roc_auc_score(y_bin, y_prob, average=average)), decimal_places
+        ),
+        "Brier Score": round(
+            float(np.mean(np.sum((y_prob - y_bin) ** 2, axis=1))), decimal_places
+        ),
+    }
+
+
+def compute_multiclass_metrics_by_class(
+    y_true, y_pred, y_prob, classes, decimal_places=3
+):
+    """Compute one-vs-rest metrics for each class of a multiclass model.
+
+    Each class is scored as a binary problem (that class vs. all others) with
+    the same definitions as `compute_classification_metrics`, so per-class
+    values read like binary results. Brier Score here is the binary one-vs-rest
+    score for that class (range 0 to 1), unlike the summed multiclass Brier
+    (range 0 to 2) returned by `compute_multiclass_metrics`.
+
+    Returns
+    -------
+    dict
+        {class_label: {metric: value, ..., "Support": n_true}} in `classes`
+        order.
+    """
+    y_true = np.asarray(y_true).ravel()
+    y_pred = np.asarray(y_pred).ravel()
+    y_prob = np.asarray(y_prob, dtype=float)
+
+    missing = np.setdiff1d(classes, np.unique(y_true))
+    if missing.size:
+        raise ValueError(
+            f"y_true has no cases of class(es) {missing.tolist()}; one-vs-rest "
+            "metrics are undefined for an absent class."
+        )
+
+    out = {}
+    for j, c in enumerate(classes):
+        yt = (y_true == c).astype(int)
+        yp = (y_pred == c).astype(int)
+        m = compute_classification_metrics(
+            yt, yp, y_prob[:, j], threshold=0.5, decimal_places=decimal_places
+        )
+        m.pop("Model Threshold")
+        m["Support"] = int(yt.sum())
+        out[c] = m
+    return out
+
+
+################################################################################
+############################# Multiclass Helpers ###############################
+################################################################################
+
+
+def _is_multiclass_input(y_prob=None, y=None):
+    """True for a 2D probability matrix with more than two columns, or, when
+    no probabilities are given, a target with more than two classes."""
+    if y_prob is not None:
+        return np.ndim(y_prob) == 2 and np.shape(y_prob)[1] > 2
+    if y is not None:
+        return len(np.unique(np.asarray(y).ravel())) > 2
+    return False
+
+
+def _reject_multiclass(func_name, y_prob=None, y=None):
+    """Raise a clear error when multiclass input reaches a binary-only function."""
+    if _is_multiclass_input(y_prob=y_prob, y=y):
+        raise ValueError(
+            f"{func_name} supports binary classification only; the input "
+            "has more than two classes."
+        )
+
+
+def get_multiclass_proba(model, X):
+    """Return (probability matrix, classes) for a multiclass model.
+
+    Uses the model_tuner `test_model` when present, mirroring `get_predictions`.
+    `classes` is None when the estimator does not expose `classes_`.
+
+    Raises
+    ------
+    NotImplementedError
+        For k-fold models, whose out-of-fold probabilities should be passed as
+        `y_prob` instead.
+    """
+    if getattr(model, "kfold", False):
+        raise NotImplementedError(
+            "k-fold evaluation is not supported for multiclass models; pass "
+            "out-of-fold y_prob instead."
+        )
+    test_model = model.test_model if hasattr(model, "test_model") else model
+    proba = np.asarray(test_model.predict_proba(X))
+    return proba, _model_classes(model)
+
+
+def _model_classes(model):
+    """The fitted model's `classes_`, or None when it cannot be found.
+
+    model_tuner wrappers keep `classes_` on the fitted estimator inside them
+    rather than on the wrapper itself.
+    """
+    test_model = model.test_model if hasattr(model, "test_model") else model
+    for obj in (test_model, model, getattr(model, "estimator", None)):
+        classes = getattr(obj, "classes_", None)
+        if classes is not None:
+            return classes
+    return None
+
+
+def _is_multiclass_model(model, y):
+    """Multiclass check for the model + X path.
+
+    Goes by the model's own classes when available, so a test set that happens
+    to contain only two of a model's classes is still treated as multiclass.
+    Falls back to the number of classes in `y`.
+    """
+    classes = _model_classes(model)
+    if classes is not None:
+        return len(classes) > 2
+    return _is_multiclass_input(y=y)
+
+
+def _resolve_classes(classes, y_true, n_columns, class_labels=None):
+    """Class labels for the probability columns, and y expressed in them.
+
+    Returns
+    -------
+    (classes, y_true)
+        `classes[j]` labels probability column j; `y_true` uses the same
+        labels.
+
+    With `class_labels`, `class_labels[j]` names column j explicitly (the
+    model's `classes_` order). `y_true` may hold those names, the model's
+    `classes_` values, or column positions 0..K-1 when `classes_` is unknown;
+    it is returned as names. Nothing is inferred, so no warning is issued.
+
+    Without `class_labels`, uses the model's `classes_` when they match the
+    labels in `y_true`; otherwise the sorted unique labels of `y_true`, which
+    only line up with the columns when every class appears in `y_true`. A
+    count mismatch raises instead of silently mislabeling.
+    """
+    if class_labels is not None:
+        names = np.asarray([str(c) for c in class_labels], dtype=object)
+        if len(names) != n_columns:
+            raise ValueError(
+                f"class_labels has {len(names)} entries but the probabilities "
+                f"have {n_columns} columns."
+            )
+        y_arr = np.asarray(y_true).ravel()
+        y_str = np.asarray([str(v) for v in y_arr], dtype=object)
+        if np.isin(y_str, names).all():
+            return names, y_str
+        if classes is not None:
+            codes = np.asarray(classes)
+        elif np.isin(y_arr, np.arange(n_columns)).all():
+            codes = np.arange(n_columns)
+        else:
+            # y_prob path: columns follow the sorted labels in y
+            codes = np.unique(y_arr)
+        if len(codes) == n_columns and np.isin(y_arr, codes).all():
+            lookup = {c: names[j] for j, c in enumerate(codes.tolist())}
+            return names, np.asarray([lookup[v] for v in y_arr.tolist()], dtype=object)
+        unknown = np.setdiff1d(y_str, names)[:5].tolist()
+        raise ValueError(
+            f"Labels in y such as {unknown} are neither in class_labels nor "
+            "among the model's classes."
+        )
+
+    y_labels = np.unique(np.asarray(y_true).ravel())
+    if classes is not None:
+        classes = np.asarray(classes)
+        if np.isin(y_labels, classes).all():
+            return classes, y_true
+        # Labels in y are not the model's classes_, e.g. the model was fit on
+        # encoded targets (0..K-1) and y holds the original labels. Sorted y
+        # labels match a sorted encoding, so use them when the counts agree.
+        if len(y_labels) == n_columns:
+            warnings.warn(
+                f"The model's classes_ {classes.tolist()} do not match the "
+                f"labels in y {y_labels.tolist()}; using the sorted labels in "
+                "y. This assumes the model was fit on label-encoded targets. "
+                "Pass `class_labels` to set the mapping explicitly.",
+                UserWarning,
+                stacklevel=3,
+            )
+            return y_labels, y_true
+        raise ValueError(
+            f"The labels in y {y_labels.tolist()} do not match the model's "
+            f"classes_ {classes.tolist()}."
+        )
+    if len(y_labels) != n_columns:
+        raise ValueError(
+            f"Probabilities have {n_columns} columns but {len(y_labels)} class "
+            "labels were found. When the model does not expose `classes_`, "
+            "every class must appear in `y`."
+        )
+    return y_labels, y_true
+
+
+def _ovr_curves(y_true, y_prob, classes, kind="roc"):
+    """One-vs-rest curves for each class.
+
+    Returns
+    -------
+    dict
+        kind="roc": {class: (fpr, tpr, auc)}
+        kind="pr":  {class: (recall, precision, average_precision, aucpr)}
+    """
+    from sklearn.metrics import roc_curve, precision_recall_curve, auc
+
+    y_true = np.asarray(y_true).ravel()
+    y_prob = np.asarray(y_prob, dtype=float)
+    out = {}
+    for j, c in enumerate(classes):
+        yt = (y_true == c).astype(int)
+        if kind == "roc":
+            fpr, tpr, _ = roc_curve(yt, y_prob[:, j])
+            out[c] = (fpr, tpr, roc_auc_score(yt, y_prob[:, j]))
+        else:
+            precision, recall, _ = precision_recall_curve(yt, y_prob[:, j])
+            out[c] = (
+                recall,
+                precision,
+                average_precision_score(yt, y_prob[:, j]),
+                auc(recall, precision),
+            )
+    return out
+
+
+def _macro_average_curve(curves):
+    """Macro-average a set of one-vs-rest curves on a common x grid.
+
+    Each curve is (x, y, ...). Values are interpolated onto the union of all
+    x points and averaged across classes, as in the scikit-learn macro-average
+    ROC example. Works for ROC (fpr, tpr) and PR (recall, precision) curves.
+    """
+    xs = [np.asarray(v[0]) for v in curves.values()]
+    ys = [np.asarray(v[1]) for v in curves.values()]
+    grid = np.unique(np.concatenate(xs))
+    mean_y = np.zeros_like(grid, dtype=float)
+    for x, y in zip(xs, ys):
+        order = np.argsort(x, kind="stable")  # PR recall comes in descending
+        mean_y += np.interp(grid, x[order], y[order])
+    return grid, mean_y / len(xs)
+
+
 def compute_regression_metrics(
     y_true, y_pred, n_features=None, include_adjusted_r2=False, decimal_places=3
 ):
@@ -567,6 +909,12 @@ def _venn_resolve_side(
                      overrides; score picks a non-default key from the
                      model's threshold dict.
     """
+    # TP/FP/FN/TN categories are binary by definition
+    if y_true is not None:
+        _reject_multiclass("The overlap functions", y=y_true)
+    if y_prob is not None:
+        _reject_multiclass("The overlap functions", y_prob=y_prob)
+
     provided = sum(v is not None for v in (y_pred, y_prob, model))
     if provided > 1:
         raise ValueError(
