@@ -7521,6 +7521,7 @@ def show_retention_zoom(
     title=None,
     text_wrap=None,
     suptitle_wrap=None,
+    suptitle_y=0.98,
     xlabel="Number of top features retained",
     ylabel="Score",
     figsize=None,
@@ -7582,6 +7583,9 @@ def show_retention_zoom(
         Character width at which each panel title is wrapped.
     suptitle_wrap : int, optional
         Character width at which the figure title is wrapped.
+    suptitle_y : float, default=0.98
+        Vertical position of the figure title (0-1 range). Increase it
+        (e.g. 1.02) to add space between the title and the top row of panels.
     xlabel : str, default="Number of top features retained"
         X-axis label for every panel.
     ylabel : str, default="Score"
@@ -7786,6 +7790,7 @@ def show_retention_zoom(
         text_wrap=suptitle_wrap,
         fontsize=label_fontsize + 2,
         fig=fig,
+        suptitle_y=suptitle_y,
     )
     plt.tight_layout()
 

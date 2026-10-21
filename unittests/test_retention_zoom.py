@@ -197,3 +197,8 @@ def test_scalar_retention_level(dip_scores):
     assert list(out.index) == ["80%"]
     fig = plt.gcf()
     assert len(fig.axes) == 1
+
+
+def test_suptitle_y(dip_scores):
+    show_retention_zoom(dip_scores, suptitle_y=1.05)
+    assert plt.gcf()._suptitle.get_position()[1] == pytest.approx(1.05)
