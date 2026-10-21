@@ -284,3 +284,20 @@ def _expand_groups(group_names, mapping):
     for g in group_names:
         out.extend(members.get(g, [g]))
     return out
+
+def _retention_cutoff(n_features, frac, level, crossing="first"):
+    """Smallest feature count retaining ``level`` of full-model performance.
+
+    ``crossing="first"`` returns the first k where ``frac >= level``, matching
+    the ``return_retention`` table. ``crossing="sustained"`` returns the first k
+    after which ``frac`` never falls back below ``level``, so a later dip moves
+    the cutoff out past it. Returns None when the level is never reached.
+    """
+    ok = (pd.Series(np.asarray(frac, dtype=float)) >= level).to_numpy()
+    if crossing == "sustained":
+        ok = np.minimum.accumulate(ok[::-1])[::-1]
+    elif crossing != "first":
+        raise ValueError(f"crossing must be 'first' or 'sustained', got {crossing!r}.")
+    if not ok.any():
+        return None
+    return int(np.asarray(n_features)[ok.argmax()])

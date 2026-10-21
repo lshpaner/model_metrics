@@ -81,6 +81,7 @@ from .feature_selection_utils import (
     _clean_feature_labels,
     _group_importance_df,
     _expand_groups,
+    _retention_cutoff,
 )
 
 from model_metrics.plot_utils import (
@@ -7508,3 +7509,313 @@ def show_cumulative_feature_performance(
     if len(outputs) == 1:
         return next(iter(outputs.values()))
     return outputs
+
+def show_retention_zoom(
+    scores_df,
+    metrics=None,
+    retain_metric=None,
+    retention_levels=(0.80, 0.90, 0.95, 0.99),
+    window=50,
+    crossing="first",
+    n_cols=2,
+    title=None,
+    text_wrap=None,
+    suptitle_wrap=None,
+    xlabel="Number of top features retained",
+    ylabel="Score",
+    figsize=None,
+    label_fontsize=12,
+    tick_fontsize=10,
+    legend_loc="bottom",
+    curve_kwgs=None,
+    marker_kwgs=None,
+    retain_kwgs=None,
+    level_kwgs=None,
+    save_plot=False,
+    image_path_png=None,
+    image_path_svg=None,
+    image_filename=None,
+    return_df=False,
+):
+    """
+    Zoom into the cumulative feature performance curve around each retention
+    level, one panel per level, using a scores table already produced by
+    ``show_cumulative_feature_performance(return_df=True)``. No model or
+    re-scoring is needed, so the (often slow) sweep never has to be rerun.
+
+    For each level L, the cutoff is the smallest feature count retaining L of
+    the full-model value on ``retain_metric``. Each panel shows every metric in
+    ``metrics`` over ``[cutoff - window, cutoff + window]``, a dashed vertical
+    line at the cutoff, and a dotted horizontal line at the L-of-full value.
+
+    Parameters
+    ----------
+    scores_df : pandas.DataFrame
+        Per-k scores table with an ``n_features`` column and one column per
+        metric label (e.g. "ROC AUC", "Average Precision"), as returned by
+        ``show_cumulative_feature_performance``. A ``features`` column or
+        ``"(% of full)"`` columns are ignored. The row with the largest
+        ``n_features`` is treated as the full model.
+    metrics : sequence of str, optional
+        Metrics to plot, as registry keys (e.g. "roc_auc") or column labels
+        (e.g. "ROC AUC"). Defaults to every registry metric present in
+        ``scores_df``.
+    retain_metric : str, optional
+        Metric that defines the cutoffs, as a registry key or column label.
+        Defaults to the first higher-is-better metric in ``metrics``.
+    retention_levels : float or sequence of float, default=(0.80, 0.90, 0.95, 0.99)
+        Fractions of full-model performance, each in (0, 1]. One panel per
+        level. A single float gives a single panel.
+    window : int, default=50
+        Features shown on each side of the cutoff.
+    crossing : {"first", "sustained"}, default="first"
+        "first" takes the first k reaching the level, matching the
+        ``return_retention`` table. "sustained" takes the first k after which
+        the metric never falls back below the level, which is more defensible
+        when the curve is non-monotonic.
+    n_cols : int, default=2
+        Panels per row, capped at the number of levels; rows are sized from
+        ``len(retention_levels)``.
+    title : str or None, default=None
+        Figure title. None uses the default; "" disables it.
+    text_wrap : int, optional
+        Character width at which each panel title is wrapped.
+    suptitle_wrap : int, optional
+        Character width at which the figure title is wrapped.
+    xlabel : str, default="Number of top features retained"
+        X-axis label for every panel.
+    ylabel : str, default="Score"
+        Y-axis label for every panel.
+    figsize : tuple, optional
+        Figure size, default ``(10 * n_cols, 4.5 * n_rows)``.
+    label_fontsize : int, default=12
+        Font size for panel titles and axis labels; the figure title uses
+        ``label_fontsize + 2``.
+    tick_fontsize : int, default=10
+        Font size for tick labels and the legend.
+    legend_loc : str, default="bottom"
+        "bottom" draws one shared legend centered below the grid, in a single
+        row. Any other matplotlib location (e.g. "best", "upper left") draws
+        the legend inside the first panel at that location instead.
+    curve_kwgs : dict, optional
+        Line styling, either flat (applied to every curve) or per-metric keyed
+        by the names passed in ``metrics``, as in
+        ``show_cumulative_feature_performance``.
+    marker_kwgs : dict, optional
+        Marker styling in the same flat-or-per-metric form. Defaults to
+        size-3 circles, since each panel holds about ``2 * window`` points.
+    retain_kwgs : dict, optional
+        Overrides for the vertical cutoff line (default black, dashed, width 1).
+    level_kwgs : dict, optional
+        Overrides for the horizontal level line (default gray, dotted, width 1).
+    save_plot : bool, default=False
+        Save the figure via ``save_plot_images``.
+    image_path_png : str, optional
+        Directory for the PNG output.
+    image_path_svg : str, optional
+        Directory for the SVG output.
+    image_filename : str, optional
+        Filename for the saved figure; defaults to "retention_zoom".
+    return_df : bool, default=False
+        If True, return the cutoff table: one row per level with the cutoff
+        ``n_features`` and each metric's value there.
+
+    Returns
+    -------
+    pandas.DataFrame or None
+        The cutoff table when ``return_df=True``, otherwise None.
+    """
+    if not isinstance(scores_df, pd.DataFrame) or "n_features" not in scores_df:
+        raise ValueError("`scores_df` must be a DataFrame with an 'n_features' column.")
+    df = scores_df.sort_values("n_features").reset_index(drop=True)
+
+    # Resolve each metric to (label, func, higher_is_better, kind), accepting a
+    # registry key ("roc_auc") or the column label it produces ("ROC AUC").
+    _label_to_entry = {v[0]: v for v in _ALL_METRICS.values()}
+
+    def _resolve(name):
+        entry = _ALL_METRICS.get(name) or _label_to_entry.get(name)
+        if entry is None or entry[0] not in df.columns:
+            available = [lbl for lbl in _label_to_entry if lbl in df.columns]
+            raise ValueError(
+                f"Metric {name!r} not found in scores_df. Available: {available}."
+            )
+        return entry
+
+    if metrics is None:
+        metrics = [lbl for lbl in _label_to_entry if lbl in df.columns]
+        if not metrics:
+            raise ValueError("scores_df has no recognized metric columns.")
+    resolved = [_resolve(m) for m in metrics]
+
+    if retain_metric is None:
+        rm_entry = next((r for r in resolved if r[2]), resolved[0])
+    else:
+        rm_entry = _resolve(retain_metric)
+        if rm_entry[0] not in [r[0] for r in resolved]:
+            resolved.append(rm_entry)
+            metrics = list(metrics) + [retain_metric]
+    rm_label, _, rm_hib, _ = rm_entry
+
+    if isinstance(retention_levels, (int, float, np.number)):
+        retention_levels = (retention_levels,)
+    bad = [L for L in retention_levels if not 0 < L <= 1]
+    if bad:
+        raise ValueError(f"retention_levels must be in (0, 1], got {bad}.")
+    if not isinstance(window, (int, np.integer)) or window < 1:
+        raise ValueError(f"window must be a positive int, got {window!r}.")
+
+    frac_df = _retained_fractions(df, resolved)
+    full_val = df[rm_label].iloc[-1]
+
+    # Cutoff table, one row per level.
+    rows = []
+    for L in retention_levels:
+        k = _retention_cutoff(df["n_features"], frac_df[rm_label], L, crossing)
+        row = {"retain_level": f"{L:.0%}", "n_features": k}
+        for label, _, _, _ in resolved:
+            row[label] = (
+                df.loc[df["n_features"] == k, label].iloc[0] if k is not None else np.nan
+            )
+        rows.append(row)
+    cutoff_df = pd.DataFrame(rows).set_index("retain_level")
+    cutoff_df["n_features"] = cutoff_df["n_features"].astype("Int64")
+
+    print(f"\nFeatures needed to retain each level of {rm_label} ({crossing} crossing):\n")
+    print(cutoff_df.to_string())
+
+    # curve_kwgs / marker_kwgs: flat dict or per-metric {metric_name: {...}},
+    # keyed by the names passed in `metrics` (same rule as the sweep function).
+    _label_to_key = {r[0]: m for m, r in zip(metrics, resolved)}
+
+    def _is_per_metric(kw):
+        return (
+            isinstance(kw, dict)
+            and len(kw) > 0
+            and all(isinstance(v, dict) for v in kw.values())
+        )
+
+    for _nm, _kw in (("curve_kwgs", curve_kwgs), ("marker_kwgs", marker_kwgs)):
+        if _is_per_metric(_kw):
+            _bad = [k for k in _kw if k not in metrics]
+            if _bad:
+                raise ValueError(
+                    f"`{_nm}` has unknown metric keys {_bad}; valid keys: "
+                    f"{list(metrics)}."
+                )
+
+    def _style_for(kw, label, default=None):
+        out = dict(default or {})
+        if kw:
+            out.update(
+                kw.get(_label_to_key.get(label, label), {})
+                if _is_per_metric(kw)
+                else kw
+            )
+        return out
+
+    _retain_style = {"color": "black", "linewidth": 1, "linestyle": "--"}
+    _retain_style.update(retain_kwgs or {})
+    _level_style = {"color": "gray", "linewidth": 1, "linestyle": ":"}
+    _level_style.update(level_kwgs or {})
+
+    def _short(label):
+        return label.replace(" (lower is better)", "")
+
+    reached = [
+        (L, int(cutoff_df["n_features"].iloc[i]))
+        for i, L in enumerate(retention_levels)
+        if not pd.isna(cutoff_df["n_features"].iloc[i])
+    ]
+    if not reached:
+        raise ValueError(f"No retention level was reached on {rm_label}.")
+
+    n_cols = min(n_cols, len(reached))
+    n_rows = int(np.ceil(len(reached) / n_cols))
+    fig, axes = setup_subplots(
+        len(reached),
+        n_cols=n_cols,
+        n_rows=n_rows,
+        figsize=figsize or (10 * n_cols, 4.5 * n_rows),
+    )
+
+    n_min, n_max = df["n_features"].min(), df["n_features"].max()
+    for ax, (L, k) in zip(axes, reached):
+        lo, hi = max(n_min, k - window), min(n_max, k + window)
+        sub = df[(df["n_features"] >= lo) & (df["n_features"] <= hi)]
+
+        for label, _, _, _ in resolved:
+            _plot_perf_series(
+                ax,
+                sub["n_features"],
+                sub[label],
+                label,
+                smooth=False,
+                curve_kwgs=_style_for(curve_kwgs, label),
+                marker_kwgs=_style_for(marker_kwgs, label, {"markersize": 3}),
+            )
+        ax.axvline(k, **_retain_style)
+        ax.axhline(full_val * L if rm_hib else full_val / L, **_level_style)
+
+        labels = [r[0] for r in resolved]
+        ymin, ymax = sub[labels].min().min(), sub[labels].max().max()
+        pad = (ymax - ymin) * 0.1 or 0.01
+        apply_axis_limits(ax, xlim=(lo, hi), ylim=(ymin - pad, ymax + pad))
+
+        vals = ", ".join(
+            f"{_short(lbl)} {cutoff_df.loc[f'{L:.0%}', lbl]:.3f}" for lbl in labels
+        )
+        apply_plot_title(
+            None,
+            default_title=f"{L:.0%} of full {_short(rm_label)}: {k} features ({vals})",
+            text_wrap=text_wrap,
+            fontsize=label_fontsize,
+            ax=ax,
+        )
+        ax.set_xlabel(xlabel, fontsize=label_fontsize)
+        ax.set_ylabel(ylabel, fontsize=label_fontsize)
+        ax.tick_params(labelsize=tick_fontsize)
+        ax.grid(True, alpha=0.3)
+
+    for ax in axes[len(reached):]:
+        ax.set_visible(False)
+
+    apply_plot_title(
+        title,
+        default_title="Cumulative Feature Performance: zoom around retention levels",
+        text_wrap=suptitle_wrap,
+        fontsize=label_fontsize + 2,
+        fig=fig,
+    )
+    plt.tight_layout()
+
+    # Every panel shows the same metrics, so one legend serves the figure.
+    # "bottom" hangs it below the grid; bbox_inches="tight" (save and inline
+    # display) keeps it in frame. Otherwise it goes inside the first panel.
+    if legend_loc == "bottom":
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(
+            handles,
+            labels,
+            loc="upper center",
+            bbox_to_anchor=(0.5, 0.0),
+            ncol=len(labels),
+            fontsize=tick_fontsize,
+            frameon=False,
+        )
+    else:
+        apply_legend(legend_loc=legend_loc, fontsize=tick_fontsize, ax=axes[0])
+
+    save_plot_images(
+        "retention_zoom",
+        save_plot,
+        image_path_png,
+        image_path_svg,
+        image_filename=image_filename,
+        fig=fig,
+    )
+    plt.show()
+
+    if return_df:
+        return cutoff_df
+    return None
