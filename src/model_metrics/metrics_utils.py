@@ -436,6 +436,13 @@ def compute_classification_metrics(y_true, y_pred, y_prob, threshold, decimal_pl
     }
 
 
+def _class_support(y_true, c):
+    """One-vs-rest support for class `c` in `y_true`: 'n = 1,234, 4.1%'."""
+    y_arr = np.asarray(y_true).ravel()
+    n_c = int((y_arr == c).sum())
+    return f"n = {n_c:,}, {n_c / len(y_arr):.1%}"
+
+
 def compute_multiclass_metrics(
     y_true, y_pred, y_prob, classes, average="macro", decimal_places=3
 ):

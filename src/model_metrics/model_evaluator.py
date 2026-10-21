@@ -46,6 +46,7 @@ from model_metrics.metrics_utils import (
     _macro_average_curve,
     _resolve_classes,
     _is_multiclass_model,
+    _class_support,
     compute_regression_metrics,
     compute_leverage_and_cooks_distance,
     compute_residual_diagnostics,
@@ -1208,6 +1209,7 @@ def show_roc_curve(
     legend_loc="lower right",
     ax=None,
     class_labels=None,
+    show_class_counts=True,
 ):
     """
     Plot Receiver Operating Characteristic (ROC) curves for models or pipelines
@@ -1305,13 +1307,17 @@ def show_roc_curve(
       the model's classes in `classes_` order (position i names encoded
       class i). `y` may hold these names or the encoded labels. Legends use
       the names, and no label-mapping warning is raised.
+    - show_class_counts (bool, default=True): For multiclass models, append
+      each class's one-vs-rest support (count and prevalence in `y`) to its
+      legend entry.
 
     Multiclass:
         Detected automatically: a 2D `y_prob` with more than two columns, or
         more than two classes in `y` when `model` and `X` are given. Single
         and subplot modes draw one one-vs-rest ROC curve per class with its
-        AUC; a model-level `color` in `curve_kwgs` is not applied so classes
-        stay distinguishable. Overlay mode draws each model's macro-average
+        AUC and, when `show_class_counts=True`, its count and prevalence; a
+        model-level `color` in `curve_kwgs` is not applied so classes stay
+        distinguishable. Overlay mode draws each model's macro-average
         curve, labeled with the macro AUC (the mean of the per-class AUCs).
         `group_category`, `delong`, `hanley_mcneil`, and `show_operating_point`
         apply to binary models only.
@@ -1454,11 +1460,15 @@ def show_roc_curve(
             class_style = {
                 k: v for k, v in curve_style.items() if k not in ("color", "label")
             }
+            y_true_arr = np.asarray(y_true).ravel()
             for c, (c_fpr, c_tpr, c_auc) in curves.items():
+                parts = [f"AUC = {c_auc:.{decimal_places}f}"]
+                if show_class_counts:
+                    parts.append(_class_support(y_true_arr, c))
                 ax.plot(
                     c_fpr,
                     c_tpr,
-                    label=f"{c} vs rest (AUC = {c_auc:.{decimal_places}f})",
+                    label=f"{c} vs rest ({'; '.join(parts)})",
                     **class_style,
                 )
             ax.plot([0, 1], [0, 1], label="Random Guess", **linestyle_kwgs)
@@ -1863,6 +1873,8 @@ def show_pr_curve(
     legend_loc="lower left",
     ax=None,
     class_labels=None,
+    show_class_counts=True,
+    show_prevalence_baseline=True,
 ):
     """
     Plot Precision-Recall (PR) curves for models or pipelines with optional
@@ -1941,6 +1953,12 @@ def show_pr_curve(
       the model's classes in `classes_` order (position i names encoded
       class i). `y` may hold these names or the encoded labels. Legends use
       the names, and no label-mapping warning is raised.
+    - show_class_counts (bool, default=True): For multiclass models, append
+      each class's one-vs-rest support (count and prevalence in `y`) to its
+      legend entry.
+    - show_prevalence_baseline (bool, default=True): For multiclass models,
+      draw each class's no-skill baseline (its prevalence in `y`) as a dotted
+      horizontal line in the class's color.
 
     Raises:
     - ValueError:
@@ -1955,10 +1973,13 @@ def show_pr_curve(
         Detected automatically: a 2D `y_prob` with more than two columns, or
         more than two classes in `y` when `model` and `X` are given. Single
         and subplot modes draw one one-vs-rest PR curve per class with its
-        `legend_metric`; a model-level `color` in `curve_kwgs` is not applied
-        so classes stay distinguishable. Overlay mode draws each model's
-        macro-average curve (precision averaged over a common recall grid),
-        labeled with the mean of the per-class AP or AUCPR.
+        `legend_metric` and, when `show_class_counts=True`, its count and
+        prevalence; a model-level `color` in `curve_kwgs` is not applied so
+        classes stay distinguishable. Each class's no-skill baseline is drawn
+        at its prevalence when `show_prevalence_baseline=True`. Overlay mode
+        draws each model's macro-average curve (precision averaged over a
+        common recall grid), labeled with the mean of the per-class AP or
+        AUCPR.
     """
 
     # Validate and normalize inputs
@@ -2072,16 +2093,26 @@ def show_pr_curve(
             class_style = {
                 k: v for k, v in curve_style.items() if k not in ("color", "label")
             }
+            y_true_arr = np.asarray(y_true).ravel()
             for c, vals in curves.items():
-                ax.plot(
+                parts = [f"{metric_label} = {vals[score_pos]:.{decimal_places}f}"]
+                if show_class_counts:
+                    parts.append(_class_support(y_true_arr, c))
+                (line,) = ax.plot(
                     vals[0],
                     vals[1],
-                    label=(
-                        f"{c} vs rest ({metric_label} = "
-                        f"{vals[score_pos]:.{decimal_places}f})"
-                    ),
+                    label=f"{c} vs rest ({'; '.join(parts)})",
                     **class_style,
                 )
+                # no-skill baseline for this class: precision equals prevalence
+                if show_prevalence_baseline:
+                    ax.axhline(
+                        np.mean(y_true_arr == c),
+                        color=line.get_color(),
+                        linestyle=":",
+                        linewidth=1,
+                        alpha=0.8,
+                    )
             ax.set_xlabel(xlabel, fontsize=label_fontsize)
             ax.set_ylabel(ylabel, fontsize=label_fontsize)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
@@ -2843,6 +2874,7 @@ def show_calibration_curve(
     legend_loc="best",
     ax=None,
     class_labels=None,
+    show_class_counts=True,
     **kwargs,
 ):
     """
@@ -2897,6 +2929,9 @@ def show_calibration_curve(
       the model's classes in `classes_` order (position i names encoded
       class i). `y` may hold these names or the encoded labels. Legends use
       the names, and no label-mapping warning is raised.
+    - show_class_counts (bool, default=True): For multiclass models, append
+      each class's one-vs-rest support (count and prevalence in `y`) to its
+      legend entry.
 
     Raises:
     - ValueError: If both `subplots=True` and `overlay=True` are set (incompatible).
@@ -2910,8 +2945,10 @@ def show_calibration_curve(
     - Detected automatically: a 2D `y_prob` with more than two columns, or
       more than two classes in `y` when `model` and `X` are given.
     - Draws one one-vs-rest reliability curve per class, with that class's
-      one-vs-rest Brier score (range 0 to 1) in the legend. A model-level
-      `color` in `curve_kwgs` is not applied so classes stay distinguishable.
+      one-vs-rest Brier score (range 0 to 1) and, when
+      `show_class_counts=True`, its count and prevalence in the legend. A
+      model-level `color` in `curve_kwgs` is not applied so classes stay
+      distinguishable.
     - Use `subplots=True` to compare models; `overlay` and `group_category`
       apply to binary models only.
 
@@ -3004,10 +3041,15 @@ def show_calibration_curve(
                 prob_true, prob_pred = calibration_curve(
                     yt, y_prob_curr[:, j], n_bins=bins
                 )
-                legend_label = f"{c} vs rest"
+                parts = []
                 if show_brier_score:
                     c_brier = brier_score_loss(yt, y_prob_curr[:, j])
-                    legend_label += f" (Brier: {c_brier:.{brier_decimals}f})"
+                    parts.append(f"Brier: {c_brier:.{brier_decimals}f}")
+                if show_class_counts:
+                    parts.append(_class_support(y_true_arr, c))
+                legend_label = f"{c} vs rest"
+                if parts:
+                    legend_label += f" ({'; '.join(parts)})"
                 ax.plot(
                     prob_pred,
                     prob_true,

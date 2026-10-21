@@ -142,13 +142,40 @@ def test_confusion_matrix_multiclass_raises(mc_data, mc_model, kwargs, match):
 def test_roc_one_curve_per_class(mc_data, mc_model):
     X, y = mc_data
     p = mc_model.predict_proba(X)
+    y_arr = np.asarray(y)
+
     _, ax = plt.subplots()
     show_roc_curve(y_prob=p, y=y, ax=ax, decimal_places=3)
     labels = _legend(ax)
     for j, c in enumerate(LABELS):
         expected = round(roc_auc_score(y == c, p[:, j]), 3)
+        n_c = int((y_arr == c).sum())
+        support = f"n = {n_c:,}, {n_c / len(y_arr):.1%}"
+        assert f"{c} vs rest (AUC = {expected:.3f}; {support})" in labels
+
+    # counts off restores the original label
+    _, ax = plt.subplots()
+    show_roc_curve(y_prob=p, y=y, ax=ax, decimal_places=3, show_class_counts=False)
+    labels = _legend(ax)
+    for j, c in enumerate(LABELS):
+        expected = round(roc_auc_score(y == c, p[:, j]), 3)
         assert f"{c} vs rest (AUC = {expected:.3f})" in labels
-    assert "Random Guess" in labels
+
+
+def test_pr_one_curve_per_class(mc_data, mc_model):
+    X, y = mc_data
+
+    # one curve per class, plus one prevalence baseline per class
+    _, ax = plt.subplots()
+    show_pr_curve(model=mc_model, X=X, y=y, ax=ax)
+    curves = [l for l in ax.get_lines() if " vs rest" in l.get_label()]
+    assert len(curves) == len(LABELS)
+    assert len(ax.get_lines()) == 2 * len(LABELS)
+
+    # baselines off leaves only the class curves
+    _, ax = plt.subplots()
+    show_pr_curve(model=mc_model, X=X, y=y, ax=ax, show_prevalence_baseline=False)
+    assert len(ax.get_lines()) == len(LABELS)
 
 
 def test_roc_overlay_macro_auc_matches_sklearn(mc_data, mc_model):
@@ -172,14 +199,6 @@ def test_roc_binary_only_options_raise(mc_data, mc_model, kwargs, match):
     X, y = mc_data
     with pytest.raises(ValueError, match=match):
         show_roc_curve(y_prob=mc_model.predict_proba(X), y=y, **kwargs)
-
-
-def test_pr_one_curve_per_class(mc_data, mc_model):
-    X, y = mc_data
-    _, ax = plt.subplots()
-    show_pr_curve(model=mc_model, X=X, y=y, ax=ax)
-    assert len(ax.get_lines()) == len(LABELS)
-    assert all("vs rest (AP = " in lbl for lbl in _legend(ax))
 
 
 def test_pr_overlay_macro_label(mc_data, mc_model):
