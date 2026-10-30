@@ -7922,7 +7922,7 @@ def show_retention_zoom(
             f"{_short(lbl)} {cutoff_df.loc[_key, lbl]:.3f}" for lbl in labels
         )
         lvl = (
-            f"{Ls[0]:.0%}" if len(Ls) == 1 else f"{Ls[0]:.0%}\u2013{Ls[-1]:.0%}"
+            f"{Ls[0]:.0%}" if len(Ls) == 1 else f"{Ls[0]:.0%}-{Ls[-1]:.0%}"
         )
         # A jump: the curve passes the target(s) in one step and lands well
         # above the highest one, so no feature count sits at the target itself.
@@ -8000,3 +8000,4 @@ def show_retention_zoom(
     if return_df:
         return cutoff_df
     return None
+

@@ -280,7 +280,7 @@ def test_merge_shared_collapses_same_cutoff(jump_scores):
     assert len(axes) == 2
     first, last = axes
     assert len(_level_lines(first)) == 3  # one line per target sharing k=26
-    assert first.get_title().startswith("80%\u201395% target: minimum 26 features")
+    assert first.get_title().startswith("80%-95% target: minimum 26 features")
     assert last.get_title().startswith("99% target: minimum 100 features")
 
 
@@ -337,7 +337,7 @@ def test_classic_title_style(jump_scores):
 def test_classic_title_merged_range(jump_scores):
     show_retention_zoom(jump_scores, title_style="classic", merge_shared=True, **_JUMP)
     title = _visible(plt.gcf())[0].get_title()
-    assert title.startswith("80%\u201395% of full Average Precision: 26 features")
+    assert title.startswith("80%-95% of full Average Precision: 26 features")
 
 
 def test_bad_title_style_raises(dip_scores):
