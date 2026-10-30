@@ -1,3 +1,4 @@
+import ast
 import warnings
 
 import pandas as pd
@@ -6747,6 +6748,7 @@ def show_cumulative_feature_performance(
     X=None,
     y=None,
     y_probs=None,
+    scores_df=None,
     metrics=None,
     task="auto",
     display="absolute",
@@ -6767,12 +6769,15 @@ def show_cumulative_feature_performance(
     xlabel="Number of top features retained",
     ylabel="Score",
     figsize=None,
+    xlim=None,
+    ylim=None,
     label_fontsize=12,
     tick_fontsize=10,
     legend_loc="best",
     curve_kwgs=None,
     marker_kwgs=None,
     retain_kwgs=None,
+    retain_marker=True,
     retain=None,
     retain_threshold=None,
     retain_metric=None,
@@ -6802,24 +6807,38 @@ def show_cumulative_feature_performance(
     ----------
     model : estimator, optional
         Fitted model / wrapper. Uses ``predict_proba`` for classification and
-        ``predict`` for regression. Provide either ``model`` (+ ``X``) or
-        ``y_probs``, not both.
+        ``predict`` for regression. Provide exactly one of ``model`` (+ ``X``),
+        ``y_probs``, or ``scores_df``.
     X : pandas.DataFrame, optional
         Evaluation features for the ablation mode. Columns must match the
         ranked feature names.
     y : array-like
-        True labels/targets. Required in both modes.
+        True labels/targets. Required with ``model`` or ``y_probs``; not used
+        with ``scores_df``.
     y_probs : dict, optional
         Precomputed-predictions mode: maps feature-count to a prediction vector
         (positive-class probabilities for classification, predicted values for
         regression), e.g. ``{1: pred_top1, 2: pred_top2, ...}``. Every vector
         must be the same length as ``y``. When given, the model/X are unused and
         no ablation runs.
+    scores_df : pandas.DataFrame, optional
+        Precomputed-scores mode: a per-k scores table previously returned by
+        this function with ``return_df=True`` (an ``n_features`` column plus one
+        column per metric label). The sweep is skipped and the curve is redrawn
+        from the table, so plot options, retention levels, or retain markers can
+        be changed without rerunning the ablation. ``model``, ``X``, ``y``, and
+        ``y_probs`` are not used. A ``features`` column, if present, is carried
+        through (stringified lists, as read back from CSV, are parsed) and
+        enables ``return_features``. Existing ``"(% of full)"`` columns are
+        dropped and recomputed when ``include_retained_pct=True``.
     metrics : sequence of str or callable, optional
         Metrics to trace. Strings resolve against the built-in registry
         (classification: roc_auc, average_precision, brier, precision, recall,
         f1, accuracy; regression: r2, mae, rmse, mse). Callables take
-        ``(y_true, y_score)``. Defaults to the task's standard set.
+        ``(y_true, y_score)``. Defaults to the task's standard set. With
+        ``scores_df``, metrics may be registry keys or column labels (e.g.
+        "ROC AUC"), callables are not accepted, and the default is every
+        registry metric present in the table.
     task : {"auto", "classification", "regression"}, default="auto"
         Auto-detected from the requested metrics, then from the model
         (``predict_proba`` implies classification).
@@ -6849,6 +6868,12 @@ def show_cumulative_feature_performance(
     retain_kwgs : dict, optional
         Extra keyword arguments merged into the retain-threshold marker
         lines, e.g. ``{"linewidth": 2}``; overrides the defaults.
+    retain_marker : {True, False, "line", "label"}, default=True
+        What to draw at the retain threshold. True draws the dashed marker
+        line(s) and the text label (e.g. "162 feats retain 98% of ROC AUC"),
+        "line" draws only the line(s), "label" only the text, and False
+        neither. The threshold is still applied to ``return_features`` and the
+        returned outputs either way.
     smooth : bool, default=False
         Smooth each metric curve with a monotone PCHIP interpolation (markers
         stay on the real points). Falls back to straight segments with too few
@@ -6907,6 +6932,14 @@ def show_cumulative_feature_performance(
         it becomes "% of full-model performance".
     figsize : tuple, optional
         Figure size, default (8, 5). Ignored when ``ax`` is supplied.
+    xlim : tuple, optional
+        X-axis limits as ``(min, max)``. In feature-count units, or in
+        fractions (0-1) when ``x_as_percent=True``.
+    ylim : tuple, optional
+        Y-axis limits as ``(min, max)``, in the plotted units: raw metric
+        values for ``display="absolute"``, fractions (0-1) of full-model
+        performance for ``"cumulative_gains"``. With the R2 split, applies to
+        the left-hand axis only.
     label_fontsize : int, default=12
         Font size for the title and axis labels.
     tick_fontsize : int, default=10
@@ -6959,8 +6992,8 @@ def show_cumulative_feature_performance(
     return_features : bool, default=False
         If True, return the selected feature list: the top-k features that reach
         ``retain_threshold`` on the primary metric, or the full importance-ranked
-        list when ``retain_threshold`` is None. Model mode only (the y_probs path
-        has no feature names).
+        list when ``retain_threshold`` is None. Model mode, or ``scores_df`` with
+        a ``features`` column (the y_probs path has no feature names).
     ax : matplotlib.axes.Axes, optional
         Existing axis (e.g. from ``combine_plots``); suppresses save/show.
 
@@ -6972,33 +7005,62 @@ def show_cumulative_feature_performance(
         keyed by ``"scores"``, ``"retention"``, and/or ``"features"``. With none
         set, returns None.
     """
-    if y is None:
-        raise ValueError("`y` (true labels/targets) is required.")
-    if (y_probs is None) == (model is None):
+    if sum(v is not None for v in (model, y_probs, scores_df)) != 1:
         raise ValueError(
-            "Provide exactly one of `y_probs` (precomputed per-k predictions) "
-            "or `model` (+ `X`, for the internal NaN-ablation sweep)."
+            "Provide exactly one of `model` (+ `X`, for the internal "
+            "NaN-ablation sweep), `y_probs` (precomputed per-k predictions), "
+            "or `scores_df` (a precomputed per-k scores table)."
         )
+    if scores_df is None and y is None:
+        raise ValueError("`y` (true labels/targets) is required.")
 
-    task = _resolve_task(task, model, metrics)
-    if metrics is None:
-        metrics = _DEFAULT_METRICS[task]
-    _validate_metrics_for_task(metrics, task)
+    if scores_df is not None:
+        # Mode C resolves metrics against the table's columns: a registry key
+        # ("roc_auc") or the column label it produces ("ROC AUC").
+        if not isinstance(scores_df, pd.DataFrame) or "n_features" not in scores_df:
+            raise ValueError(
+                "`scores_df` must be a DataFrame with an 'n_features' column."
+            )
+        _label_to_entry = {v[0]: v for v in _ALL_METRICS.values()}
+        if metrics is None:
+            metrics = [lbl for lbl in _label_to_entry if lbl in scores_df.columns]
+            if not metrics:
+                raise ValueError("scores_df has no recognized metric columns.")
+        resolved = []  # (label, func, higher_is_better, kind)
+        for m in metrics:
+            entry = (
+                None
+                if callable(m)
+                else (_ALL_METRICS.get(m) or _label_to_entry.get(m))
+            )
+            if entry is None or entry[0] not in scores_df.columns:
+                available = [
+                    lbl for lbl in _label_to_entry if lbl in scores_df.columns
+                ]
+                raise ValueError(
+                    f"Metric {m!r} not found in scores_df. Available: {available}."
+                )
+            resolved.append(entry)
+    else:
+        task = _resolve_task(task, model, metrics)
+        if metrics is None:
+            metrics = _DEFAULT_METRICS[task]
+        _validate_metrics_for_task(metrics, task)
 
-    # binary-only for classification: the sweep scores the positive class
-    if task == "classification":
-        _reject_multiclass("show_cumulative_feature_performance", y=y)
+        # binary-only for classification: the sweep scores the positive class
+        if task == "classification":
+            _reject_multiclass("show_cumulative_feature_performance", y=y)
 
-    # --- Resolve metrics (shared by both modes) ---
-    resolved = []  # (label, func, higher_is_better, kind)
-    for m in metrics:
-        if callable(m):
-            kind = "value" if task == "regression" else "score"
-            resolved.append((getattr(m, "__name__", "metric"), m, True, kind))
-        elif m in _ALL_METRICS:
-            resolved.append(_ALL_METRICS[m])
-        else:
-            raise ValueError(f"Unknown metric '{m}'. Known: {list(_ALL_METRICS)}")
+        # --- Resolve metrics (shared by modes A and B) ---
+        resolved = []  # (label, func, higher_is_better, kind)
+        for m in metrics:
+            if callable(m):
+                kind = "value" if task == "regression" else "score"
+                resolved.append((getattr(m, "__name__", "metric"), m, True, kind))
+            elif m in _ALL_METRICS:
+                resolved.append(_ALL_METRICS[m])
+            else:
+                raise ValueError(f"Unknown metric '{m}'. Known: {list(_ALL_METRICS)}")
 
     def _score_row(k, scores):
         scores = np.asarray(scores)
@@ -7011,14 +7073,33 @@ def show_cumulative_feature_performance(
                 row[label] = func(y, scores)
         return row
 
-    # Feature ranking is only available in model mode (Mode B); stays None in
-    # the y_probs path, which has no feature names.
+    # Feature ranking is available in model mode (Mode B), or in Mode C when the
+    # table carries a `features` column; stays None in the y_probs path, which
+    # has no feature names.
     ordered_features = None
+
+    # ================================================================== #
+    # Mode C: precomputed scores table                                   #
+    # ================================================================== #
+    if scores_df is not None:
+        _keep_cols = ["n_features"] + [label for label, *_ in resolved]
+        if "features" in scores_df.columns:
+            _keep_cols.append("features")
+        results_df = (
+            scores_df[_keep_cols].sort_values("n_features").reset_index(drop=True)
+        )
+        if "features" in results_df.columns:
+            # A table read back from CSV holds the lists as strings.
+            results_df["features"] = [
+                ast.literal_eval(f) if isinstance(f, str) else list(f)
+                for f in results_df["features"]
+            ]
+            ordered_features = list(results_df["features"].iloc[-1])
 
     # ================================================================== #
     # Mode A: precomputed predictions                                    #
     # ================================================================== #
-    if y_probs is not None:
+    elif y_probs is not None:
         if not isinstance(y_probs, dict):
             raise TypeError(
                 "y_probs must be a dict mapping n_features (int) to a "
@@ -7199,6 +7280,12 @@ def show_cumulative_feature_performance(
             _prev = k
 
         results_df = pd.DataFrame(rows)
+
+    if retain_marker not in (True, False, "line", "label"):
+        raise ValueError(
+            "retain_marker must be True, False, 'line', or 'label', got "
+            f"{retain_marker!r}."
+        )
 
     if display not in ("absolute", "cumulative_gains"):
         raise ValueError(
@@ -7425,6 +7512,8 @@ def show_cumulative_feature_performance(
     )
     ax.tick_params(labelsize=tick_fontsize)
     ax.grid(True, alpha=0.3)
+    # Before the retain marker, so its label sits at the limited y floor.
+    apply_axis_limits(ax, xlim=xlim, ylim=ylim)
 
     if retain_threshold is not None:
         rm = retain_metric
@@ -7439,18 +7528,20 @@ def show_cumulative_feature_performance(
                 x_star = k_star / total_feats if x_as_percent else k_star
                 _retain_style = {"color": "black", "linewidth": 1, "linestyle": "--"}
                 _retain_style.update(retain_kwgs or {})
-                ax.axvline(x_star, **_retain_style)
-                if display == "cumulative_gains":
-                    ax.axhline(retain_threshold, **_retain_style)
-                ax.text(
-                    x_star,
-                    ax.get_ylim()[0],
-                    f" {k_star} feats retain {retain_threshold:.0%} of {rm}",
-                    va="bottom",
-                    ha="left",
-                    fontsize=tick_fontsize - 1,
-                    color="black",
-                )
+                if retain_marker in (True, "line"):
+                    ax.axvline(x_star, **_retain_style)
+                    if display == "cumulative_gains":
+                        ax.axhline(retain_threshold, **_retain_style)
+                if retain_marker in (True, "label"):
+                    ax.text(
+                        x_star,
+                        ax.get_ylim()[0],
+                        f" {k_star} feats retain {retain_threshold:.0%} of {rm}",
+                        va="bottom",
+                        ha="left",
+                        fontsize=tick_fontsize - 1,
+                        color="black",
+                    )
 
     apply_plot_title(
         title,
@@ -7490,8 +7581,9 @@ def show_cumulative_feature_performance(
     if return_features:
         if ordered_features is None:
             raise ValueError(
-                "return_features requires model mode (a feature ranking); it is "
-                "unavailable in the y_probs path, which carries no feature names."
+                "return_features requires a feature ranking: model mode, or a "
+                "scores_df with a 'features' column. It is unavailable in the "
+                "y_probs path, which carries no feature names."
             )
         if retain_threshold is not None and frac_df is not None:
             rm = retain_metric
@@ -7517,6 +7609,9 @@ def show_retention_zoom(
     retention_levels=(0.80, 0.90, 0.95, 0.99),
     window=50,
     crossing="first",
+    merge_shared=False,
+    overshoot_tol=0.01,
+    title_style="target",
     n_cols=2,
     title=None,
     text_wrap=None,
@@ -7549,6 +7644,11 @@ def show_retention_zoom(
     ``metrics`` over ``[cutoff - window, cutoff + window]``, a dashed vertical
     line at the cutoff, and a dotted horizontal line at the L-of-full value.
 
+    A cutoff can overshoot its target when the curve jumps (e.g. adding one
+    feature moves the metric from 60% to 96% of full), so several levels may
+    resolve to the same feature count. Panel titles therefore report the
+    retention actually achieved at the cutoff alongside the target.
+
     Parameters
     ----------
     scores_df : pandas.DataFrame
@@ -7566,7 +7666,8 @@ def show_retention_zoom(
         Defaults to the first higher-is-better metric in ``metrics``.
     retention_levels : float or sequence of float, default=(0.80, 0.90, 0.95, 0.99)
         Fractions of full-model performance, each in (0, 1]. One panel per
-        level. A single float gives a single panel.
+        level (or per distinct cutoff when ``merge_shared=True``). A single
+        float gives a single panel.
     window : int, default=50
         Features shown on each side of the cutoff.
     crossing : {"first", "sustained"}, default="first"
@@ -7574,9 +7675,26 @@ def show_retention_zoom(
         ``return_retention`` table. "sustained" takes the first k after which
         the metric never falls back below the level, which is more defensible
         when the curve is non-monotonic.
+    merge_shared : bool, default=False
+        If False, every level gets its own panel. If True, levels that resolve
+        to the same cutoff share one panel, titled with the range of targets
+        (e.g. "80%-95% target"), with a level line drawn for each target.
+    overshoot_tol : float, default=0.01
+        How far (as a fraction of full) the cutoff may land above the highest
+        target in its panel before the title also shows the preceding step.
+        Within the tolerance the title reads "80% target: minimum 40 features
+        (80.3% of full AP)"; beyond it, "80% target: minimum 26 features
+        (96.4% of full AP; 59.5% at 25)", so the skipped range is visible.
+    title_style : {"target", "classic"}, default="target"
+        Panel title format. "target" gives two lines, e.g.
+        "80% target: minimum 26 features (96.4% of full AP; 59.5% at 25)"
+        over "At 26: ROC AUC 0.728, Average Precision 0.305". "classic" gives
+        the original one-line form, e.g.
+        "90% of full ROC AUC: 102 features (AUC 0.893, AP 0.249)", which
+        does not report achieved retention or jumps (``overshoot_tol`` is
+        unused).
     n_cols : int, default=2
-        Panels per row, capped at the number of levels; rows are sized from
-        ``len(retention_levels)``.
+        Panels per row, capped at the number of panels.
     title : str or None, default=None
         Figure title. None uses the default; "" disables it.
     text_wrap : int, optional
@@ -7622,7 +7740,9 @@ def show_retention_zoom(
         Filename for the saved figure; defaults to "retention_zoom".
     return_df : bool, default=False
         If True, return the cutoff table: one row per level with the cutoff
-        ``n_features`` and each metric's value there.
+        ``n_features``, the retention ``achieved`` there on ``retain_metric``
+        (a fraction of full), the preceding step (``prev_n_features``,
+        ``prev_achieved``), and each metric's value at the cutoff.
 
     Returns
     -------
@@ -7668,15 +7788,29 @@ def show_retention_zoom(
         raise ValueError(f"retention_levels must be in (0, 1], got {bad}.")
     if not isinstance(window, (int, np.integer)) or window < 1:
         raise ValueError(f"window must be a positive int, got {window!r}.")
+    if title_style not in ("target", "classic"):
+        raise ValueError(
+            f"title_style must be 'target' or 'classic', got {title_style!r}."
+        )
 
     frac_df = _retained_fractions(df, resolved)
     full_val = df[rm_label].iloc[-1]
 
-    # Cutoff table, one row per level.
+    # Cutoff table, one row per level. `achieved` is the retention actually
+    # reached at the cutoff, which can overshoot the target L on a jump.
     rows = []
     for L in retention_levels:
         k = _retention_cutoff(df["n_features"], frac_df[rm_label], L, crossing)
         row = {"retain_level": f"{L:.0%}", "n_features": k}
+        # also keep the step just before the cutoff, so a jump that skips
+        # over L can be reported as "prev -> cutoff"
+        row["achieved"] = row["prev_n_features"] = row["prev_achieved"] = np.nan
+        if k is not None:
+            _i = int(np.flatnonzero(df["n_features"].to_numpy() == k)[0])
+            row["achieved"] = frac_df[rm_label].iloc[_i]
+            if _i > 0:
+                row["prev_n_features"] = df["n_features"].iloc[_i - 1]
+                row["prev_achieved"] = frac_df[rm_label].iloc[_i - 1]
         for label, _, _, _ in resolved:
             row[label] = (
                 df.loc[df["n_features"] == k, label].iloc[0] if k is not None else np.nan
@@ -7684,6 +7818,7 @@ def show_retention_zoom(
         rows.append(row)
     cutoff_df = pd.DataFrame(rows).set_index("retain_level")
     cutoff_df["n_features"] = cutoff_df["n_features"].astype("Int64")
+    cutoff_df["prev_n_features"] = cutoff_df["prev_n_features"].astype("Int64")
 
     print(f"\nFeatures needed to retain each level of {rm_label} ({crossing} crossing):\n")
     print(cutoff_df.to_string())
@@ -7734,17 +7869,28 @@ def show_retention_zoom(
     if not reached:
         raise ValueError(f"No retention level was reached on {rm_label}.")
 
-    n_cols = min(n_cols, len(reached))
-    n_rows = int(np.ceil(len(reached) / n_cols))
+    # Group levels by cutoff: one panel per distinct cutoff when merging,
+    # otherwise one panel per level. Each panel carries its list of levels.
+    if merge_shared:
+        _merged = {}
+        for L, k in reached:
+            _merged.setdefault(k, []).append(L)
+        panels = [(Ls, k) for k, Ls in _merged.items()]
+    else:
+        panels = [([L], k) for L, k in reached]
+
+    n_cols = min(n_cols, len(panels))
+    n_rows = int(np.ceil(len(panels) / n_cols))
     fig, axes = setup_subplots(
-        len(reached),
+        len(panels),
         n_cols=n_cols,
         n_rows=n_rows,
         figsize=figsize or (10 * n_cols, 4.5 * n_rows),
     )
 
     n_min, n_max = df["n_features"].min(), df["n_features"].max()
-    for ax, (L, k) in zip(axes, reached):
+    labels = [r[0] for r in resolved]
+    for ax, (Ls, k) in zip(axes, panels):
         lo, hi = max(n_min, k - window), min(n_max, k + window)
         sub = df[(df["n_features"] >= lo) & (df["n_features"] <= hi)]
 
@@ -7759,19 +7905,49 @@ def show_retention_zoom(
                 marker_kwgs=_style_for(marker_kwgs, label, {"markersize": 3}),
             )
         ax.axvline(k, **_retain_style)
-        ax.axhline(full_val * L if rm_hib else full_val / L, **_level_style)
+        # one level line per target sharing this cutoff
+        for L in Ls:
+            ax.axhline(full_val * L if rm_hib else full_val / L, **_level_style)
 
-        labels = [r[0] for r in resolved]
         ymin, ymax = sub[labels].min().min(), sub[labels].max().max()
         pad = (ymax - ymin) * 0.1 or 0.01
         apply_axis_limits(ax, xlim=(lo, hi), ylim=(ymin - pad, ymax + pad))
 
+        # every level in Ls shares the same cutoff, so any row gives the values
+        _key = f"{Ls[0]:.0%}"
+        achieved = cutoff_df.loc[_key, "achieved"]
+        prev_k = cutoff_df.loc[_key, "prev_n_features"]
+        prev_ach = cutoff_df.loc[_key, "prev_achieved"]
         vals = ", ".join(
-            f"{_short(lbl)} {cutoff_df.loc[f'{L:.0%}', lbl]:.3f}" for lbl in labels
+            f"{_short(lbl)} {cutoff_df.loc[_key, lbl]:.3f}" for lbl in labels
         )
+        lvl = (
+            f"{Ls[0]:.0%}" if len(Ls) == 1 else f"{Ls[0]:.0%}\u2013{Ls[-1]:.0%}"
+        )
+        # A jump: the curve passes the target(s) in one step and lands well
+        # above the highest one, so no feature count sits at the target itself.
+        jumped = (achieved - max(Ls) > overshoot_tol) and not pd.isna(prev_k)
+        if title_style == "classic":
+            # original one-line label, metric names abbreviated
+            _abbr = {"ROC AUC": "AUC", "Average Precision": "AP"}
+            vals_short = ", ".join(
+                f"{_abbr.get(_short(lbl), _short(lbl))} "
+                f"{cutoff_df.loc[_key, lbl]:.3f}"
+                for lbl in labels
+            )
+            panel_title = (
+                f"{lvl} of full {_short(rm_label)}: {k} features ({vals_short})"
+            )
+        else:
+            head = (
+                f"{lvl} target: minimum {k} features "
+                f"({achieved:.1%} of full {_short(rm_label)}"
+            )
+            head += f"; {prev_ach:.1%} at {prev_k})" if jumped else ")"
+            panel_title = f"{head}\nAt {k}: {vals}"
         apply_plot_title(
             None,
-            default_title=f"{L:.0%} of full {_short(rm_label)}: {k} features ({vals})",
+            default_title=panel_title,
             text_wrap=text_wrap,
             fontsize=label_fontsize,
             ax=ax,
@@ -7781,7 +7957,7 @@ def show_retention_zoom(
         ax.tick_params(labelsize=tick_fontsize)
         ax.grid(True, alpha=0.3)
 
-    for ax in axes[len(reached):]:
+    for ax in axes[len(panels):]:
         ax.set_visible(False)
 
     apply_plot_title(
@@ -7798,13 +7974,13 @@ def show_retention_zoom(
     # "bottom" hangs it below the grid; bbox_inches="tight" (save and inline
     # display) keeps it in frame. Otherwise it goes inside the first panel.
     if legend_loc == "bottom":
-        handles, labels = axes[0].get_legend_handles_labels()
+        handles, leg_labels = axes[0].get_legend_handles_labels()
         fig.legend(
             handles,
-            labels,
+            leg_labels,
             loc="upper center",
             bbox_to_anchor=(0.5, 0.0),
-            ncol=len(labels),
+            ncol=len(leg_labels),
             fontsize=tick_fontsize,
             frameon=False,
         )

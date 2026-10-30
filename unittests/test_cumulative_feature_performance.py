@@ -710,3 +710,215 @@ def test_non_castable_missing_value_takes_the_copy_path(clf_bundle):
     )
     # the fast path would have produced a uniformly float buffer
     assert seen[0]["c5"] != np.dtype("float64")
+
+# -----------------------------------------------------------------------------------
+# scores_df mode: redraw from a precomputed scores table, no sweep
+# -----------------------------------------------------------------------------------
+@pytest.fixture
+def clf_scores(clf_bundle):
+    model, X, y = clf_bundle
+    return show_cumulative_feature_performance(
+        model=model, X=X, y=y, progress=False, return_df=True
+    )
+
+
+def test_scores_df_roundtrip_matches_model_mode(clf_bundle, clf_scores):
+    model, X, y = clf_bundle
+    direct = show_cumulative_feature_performance(
+        model=model,
+        X=X,
+        y=y,
+        progress=False,
+        retention_levels=(0.9, 0.99),
+        include_retained_pct=True,
+        return_df=True,
+        return_retention=True,
+    )
+    redrawn = show_cumulative_feature_performance(
+        scores_df=clf_scores,
+        retention_levels=(0.9, 0.99),
+        include_retained_pct=True,
+        return_df=True,
+        return_retention=True,
+    )
+    pd.testing.assert_frame_equal(direct["scores"], redrawn["scores"])
+    pd.testing.assert_frame_equal(direct["retention"], redrawn["retention"])
+
+
+def test_scores_df_needs_no_y(clf_scores):
+    # no model, X, or y: the table alone is enough
+    out = show_cumulative_feature_performance(scores_df=clf_scores, return_df=True)
+    assert list(out["n_features"]) == list(clf_scores["n_features"])
+
+
+def test_scores_df_with_model_raises(clf_bundle, clf_scores):
+    model, X, y = clf_bundle
+    with pytest.raises(ValueError, match="exactly one"):
+        show_cumulative_feature_performance(
+            model=model, X=X, y=y, scores_df=clf_scores
+        )
+
+
+def test_scores_df_with_yprobs_raises(clf_bundle, clf_scores):
+    _, _, y = clf_bundle
+    with pytest.raises(ValueError, match="exactly one"):
+        show_cumulative_feature_performance(
+            y=y, y_probs={1: y}, scores_df=clf_scores
+        )
+
+
+def test_scores_df_missing_n_features_raises(clf_scores):
+    with pytest.raises(ValueError, match="n_features"):
+        show_cumulative_feature_performance(
+            scores_df=clf_scores.drop(columns="n_features")
+        )
+
+
+def test_scores_df_metric_key_or_label(clf_scores):
+    by_key = show_cumulative_feature_performance(
+        scores_df=clf_scores, metrics=["roc_auc"], return_df=True
+    )
+    by_label = show_cumulative_feature_performance(
+        scores_df=clf_scores, metrics=["ROC AUC"], return_df=True
+    )
+    pd.testing.assert_frame_equal(by_key, by_label)
+    assert list(by_key.columns) == ["n_features", "ROC AUC", "features"]
+
+
+def test_scores_df_unknown_metric_raises(clf_scores):
+    with pytest.raises(ValueError, match="not found in scores_df"):
+        show_cumulative_feature_performance(scores_df=clf_scores, metrics=["r2"])
+
+
+def test_scores_df_callable_metric_raises(clf_scores):
+    with pytest.raises(ValueError, match="not found in scores_df"):
+        show_cumulative_feature_performance(
+            scores_df=clf_scores, metrics=[roc_auc_score]
+        )
+
+
+def test_scores_df_stringified_features_from_csv(clf_scores, tmp_path):
+    path = tmp_path / "scores.csv"
+    clf_scores.to_csv(path, index=False)
+    loaded = pd.read_csv(path)
+    assert isinstance(loaded["features"].iloc[0], str)
+    out = show_cumulative_feature_performance(
+        scores_df=loaded, return_df=True, return_features=True
+    )
+    assert out["scores"]["features"].tolist() == clf_scores["features"].tolist()
+    assert out["features"] == clf_scores["features"].iloc[-1]
+
+
+def test_scores_df_return_features_with_retain(clf_bundle, clf_scores):
+    model, X, y = clf_bundle
+    direct = show_cumulative_feature_performance(
+        model=model, X=X, y=y, progress=False,
+        retain={"roc_auc": 0.95}, return_features=True,
+    )
+    redrawn = show_cumulative_feature_performance(
+        scores_df=clf_scores, retain={"roc_auc": 0.95}, return_features=True
+    )
+    assert redrawn == direct
+
+
+def test_scores_df_without_features_column_return_features_raises(clf_scores):
+    with pytest.raises(ValueError, match="return_features requires"):
+        show_cumulative_feature_performance(
+            scores_df=clf_scores.drop(columns="features"), return_features=True
+        )
+
+
+def test_scores_df_stale_pct_columns_recomputed(clf_scores):
+    stale = clf_scores.copy()
+    stale["ROC AUC (% of full)"] = -1.0
+    out = show_cumulative_feature_performance(
+        scores_df=stale, include_retained_pct=True, return_df=True
+    )
+    assert (out["ROC AUC (% of full)"] > 0).all()
+    plain = show_cumulative_feature_performance(scores_df=stale, return_df=True)
+    assert "ROC AUC (% of full)" not in plain.columns
+
+
+def test_scores_df_unsorted_input(clf_scores):
+    shuffled = clf_scores.sample(frac=1, random_state=0)
+    out = show_cumulative_feature_performance(scores_df=shuffled, return_df=True)
+    pd.testing.assert_frame_equal(out, clf_scores)
+
+
+def test_scores_df_on_supplied_ax(clf_scores):
+    fig, ax = plt.subplots()
+    show_cumulative_feature_performance(
+        scores_df=clf_scores, display="cumulative_gains", x_as_percent=True, ax=ax
+    )
+    assert len(ax.get_lines()) >= 2
+    plt.close(fig)
+
+
+def test_scores_df_regression_r2_split(reg_bundle):
+    model, X, y = reg_bundle
+    scores = show_cumulative_feature_performance(
+        model=model, X=X, y=y, progress=False, metrics=["r2", "mae"], return_df=True
+    )
+    fig, ax = plt.subplots()
+    show_cumulative_feature_performance(scores_df=scores, ax=ax)
+    assert len(fig.axes) == 2  # R2 on its own twin axis
+    plt.close(fig)
+
+
+@pytest.mark.parametrize(
+    "marker, n_text, has_line",
+    [(True, 1, True), ("line", 0, True), ("label", 1, False), (False, 0, False)],
+)
+def test_retain_marker(clf_scores, marker, n_text, has_line):
+    fig, ax = plt.subplots()
+    out = show_cumulative_feature_performance(
+        scores_df=clf_scores,
+        retain_threshold=0.95,
+        retain_marker=marker,
+        return_features=True,
+        ax=ax,
+    )
+    assert len(ax.texts) == n_text
+    assert any(l.get_linestyle() == "--" for l in ax.get_lines()) == has_line
+    assert out == show_cumulative_feature_performance(
+        scores_df=clf_scores, retain_threshold=0.95, return_features=True, ax=ax
+    )  # threshold still drives the outputs
+    plt.close(fig)
+
+
+def test_retain_marker_invalid_raises(clf_scores):
+    with pytest.raises(ValueError, match="retain_marker"):
+        show_cumulative_feature_performance(
+            scores_df=clf_scores, retain_threshold=0.95, retain_marker="both"
+        )
+
+
+def test_xlim_ylim_applied(clf_scores):
+    fig, ax = plt.subplots()
+    show_cumulative_feature_performance(
+        scores_df=clf_scores, xlim=(0, 3), ylim=(0.4, 1.0), ax=ax
+    )
+    assert ax.get_xlim() == (0, 3)
+    assert ax.get_ylim() == (0.4, 1.0)
+    plt.close(fig)
+
+
+def test_ylim_sets_retain_label_floor(clf_scores):
+    fig, ax = plt.subplots()
+    show_cumulative_feature_performance(
+        scores_df=clf_scores, retain_threshold=0.95, ylim=(0.3, 1.0), ax=ax
+    )
+    assert ax.texts[0].get_position()[1] == 0.3
+    plt.close(fig)
+
+
+def test_limits_default_unchanged(clf_scores):
+    fig1, ax1 = plt.subplots()
+    show_cumulative_feature_performance(scores_df=clf_scores, ax=ax1)
+    fig2, ax2 = plt.subplots()
+    show_cumulative_feature_performance(
+        scores_df=clf_scores, xlim=None, ylim=None, ax=ax2
+    )
+    assert ax1.get_xlim() == ax2.get_xlim() and ax1.get_ylim() == ax2.get_ylim()
+    plt.close(fig1)
+    plt.close(fig2)
