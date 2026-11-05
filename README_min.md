@@ -27,7 +27,7 @@ Additionally, `model_metrics` depends on the following packages, which will be a
 - `scikit-learn`: version `1.0.2` or higher
 - `scipy`: version `1.7.3` or higher
 - `statsmodels`: version `0.13` or higher, but capped below `0.15`
-- `shap`: version `0.41.0` or higher, but capped below `0.53`
+- `shap`: version `0.51` or higher, but capped below `0.54` (Python 3.11+); version `0.41.0` or higher, but capped below `0.50` (Python 3.10 and below)
 - `tqdm`: version `4.66.4` or higher
 
 ## 💾 Installation
