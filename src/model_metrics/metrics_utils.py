@@ -401,6 +401,76 @@ def _y_for_model(y, idx, n_models, n_expected=None, name=None):
     return y_i
 
 
+def _prepare_group_category(group_category, y_true, name):
+    """
+    Validate and align `group_category` against `y_true` for grouped
+    ROC / PR plots.
+
+    - Accepts a Series, NumPy array, or list.
+    - If both inputs are pandas Series with the same index labels in a
+      different order, `group_category` is reindexed to match `y_true`.
+      If the labels differ, a warning is issued and alignment is positional.
+    - Raises if lengths do not match.
+    - Missing values in `group_category` are excluded with a warning.
+
+    Returns
+    -------
+    grp_label : str
+        Name used in saved filenames (Series name, or "group").
+    grp_masks : list of (group_value, boolean np.ndarray)
+        One positional mask per non-missing group, in order of appearance.
+    """
+    grp_label = getattr(group_category, "name", None) or "group"
+
+    if len(group_category) != len(y_true):
+        raise ValueError(
+            f"`group_category` has length {len(group_category)}, but `y` has length "
+            f"{len(y_true)} ({name}). They must be the same length."
+        )
+
+    if isinstance(group_category, pd.Series):
+        gc = group_category
+        if isinstance(y_true, pd.Series) and not gc.index.equals(y_true.index):
+            same_labels = (
+                len(gc) == len(y_true)
+                and gc.index.is_unique
+                and y_true.index.is_unique
+                and set(gc.index) == set(y_true.index)
+            )
+            if same_labels:
+                gc = gc.reindex(y_true.index)
+            else:
+                warnings.warn(
+                    f"`group_category` index does not match the index of `y` "
+                    f"({name}); aligning by position. Reset both indexes or "
+                    f"pass matching indexes to avoid mislabeled groups.",
+                    UserWarning,
+                )
+        gc_vals = gc.to_numpy()
+    else:
+        gc_vals = pd.Series(np.asarray(group_category).ravel()).to_numpy()
+
+    na_mask = pd.isna(gc_vals)
+    if na_mask.any():
+        warnings.warn(
+            f"{int(na_mask.sum()):,} rows with missing `group_category` were "
+            f"excluded from the grouped curves ({name}).",
+            UserWarning,
+        )
+
+    groups = pd.unique(gc_vals[~na_mask])
+    grp_masks = [(gr, (gc_vals == gr) & ~na_mask) for gr in groups]
+    return grp_label, grp_masks
+
+
+def _single_class_group_warning(gr, name, n_total, metric):
+    warnings.warn(
+        f"Skipping group '{gr}' ({name}): only one class present "
+        f"(n={n_total:,}), so {metric} is undefined.",
+        UserWarning,
+    )
+
+
 def compute_classification_metrics(y_true, y_pred, y_prob, threshold, decimal_places=3):
     """Compute classification performance metrics.
 

@@ -37,6 +37,8 @@ from model_metrics.metrics_utils import (
     extract_model_name,
     validate_and_normalize_inputs,
     _y_for_model,
+    _prepare_group_category,
+    _single_class_group_warning,
     compute_classification_metrics,
     compute_multiclass_metrics,
     compute_multiclass_metrics_by_class,
@@ -1519,17 +1521,29 @@ def show_roc_curve(
             tpr = {}
             auc_str = {}
             counts = {}
-            for gr in group_category.unique():
-                grp_mask = group_category.values == gr
-                counts[gr] = [
-                    grp_mask.sum(),
-                    y_true.values[grp_mask].sum(),
-                    (1 - y_true.values[grp_mask]).sum(),
-                ]
-                fpr[gr], tpr[gr], _ = roc_curve(y_true[grp_mask], y_prob_curr[grp_mask])
-                roc_auc = roc_auc_score(y_true[grp_mask], y_prob_curr[grp_mask])
+            grp_label, grp_masks = _prepare_group_category(
+                group_category, y_true, name
+            )
+            y_arr = np.asarray(y_true)
+            p_arr = np.asarray(y_prob_curr)
+            for gr, grp_mask in grp_masks:
+                y_grp = y_arr[grp_mask]
+                p_grp = p_arr[grp_mask]
+                n_total = int(grp_mask.sum())
+                if np.unique(y_grp).size < 2:
+                    _single_class_group_warning(gr, name, n_total, "AUC")
+                    continue
+                n_pos = int((y_grp == 1).sum())
+                counts[gr] = [n_total, n_pos, n_total - n_pos]
+                fpr[gr], tpr[gr], _ = roc_curve(y_grp, p_grp)
+                roc_auc = roc_auc_score(y_grp, p_grp)
                 auc_str[gr] = f"{roc_auc:.{decimal_places}f}"
                 print(f"AUC for {gr} ({name}): {auc_str[gr]}")
+            if not counts:
+                raise ValueError(
+                    f"No group in `group_category` has both classes present "
+                    f"({name}); cannot plot grouped ROC curves."
+                )
 
         else:
             fpr, tpr, thresholds = roc_curve(y_true, y_prob_curr)
@@ -1628,11 +1642,11 @@ def show_roc_curve(
         elif subplots:
             ax = axes[idx]
             if group_category is not None:
-                for gr in tpr:
+                for gr in counts:
                     ax.plot(
                         fpr[gr],
                         tpr[gr],
-                        label=f"AUC for {gr} = {auc_str[gr]:{decimal_places}}, "
+                        label=f"AUC for {gr} = {auc_str[gr]}, "
                         f"Count: {counts[gr][0]:,}, "
                         f"Pos: {counts[gr][1]:,}, "
                         f"Neg: {counts[gr][2]:,}",
@@ -1700,11 +1714,11 @@ def show_roc_curve(
                 ax = _ax_param
                 _created_fig = False
             if group_category is not None:
-                for gr in group_category.unique():
+                for gr in counts:
                     ax.plot(
                         fpr[gr],
                         tpr[gr],
-                        label=f"AUC for {gr} = {auc_str[gr]:{decimal_places}}, "
+                        label=f"AUC for {gr} = {auc_str[gr]}, "
                         f"Count: {counts[gr][0]:,}, "
                         f"Pos: {counts[gr][1]:,}, "
                         f"Neg: {counts[gr][2]:,}",
@@ -1768,7 +1782,7 @@ def show_roc_curve(
             if _created_fig:
                 if group_category is not None:
                     save_plot_images(
-                        f"{name_clean}_{group_category.name}_roc_auc",
+                        f"{name_clean}_{grp_label}_roc_auc",
                         save_plot,
                         image_path_png,
                         image_path_svg,
@@ -2161,19 +2175,24 @@ def show_pr_curve(
             recall = {}
             ap_str = {}
             aucpr_str = {}
-            for gr in group_category.unique():
-                grp_mask = group_category.values == gr
-                counts[gr] = [
-                    grp_mask.sum(),
-                    y_true.values[grp_mask].sum(),
-                    (1 - y_true.values[grp_mask]).sum(),
-                ]
-                precision[gr], recall[gr], _ = precision_recall_curve(
-                    y_true[grp_mask], y_prob_curr[grp_mask]
-                )
-                avg_precision = average_precision_score(
-                    y_true[grp_mask], y_prob_curr[grp_mask]
-                )
+            grp_label, grp_masks = _prepare_group_category(
+                group_category, y_true, name
+            )
+            y_arr = np.asarray(y_true)
+            p_arr = np.asarray(y_prob_curr)
+            for gr, grp_mask in grp_masks:
+                y_grp = y_arr[grp_mask]
+                p_grp = p_arr[grp_mask]
+                n_total = int(grp_mask.sum())
+                if np.unique(y_grp).size < 2:
+                    _single_class_group_warning(
+                        gr, name, n_total, "the precision-recall curve"
+                    )
+                    continue
+                n_pos = int((y_grp == 1).sum())
+                counts[gr] = [n_total, n_pos, n_total - n_pos]
+                precision[gr], recall[gr], _ = precision_recall_curve(y_grp, p_grp)
+                avg_precision = average_precision_score(y_grp, p_grp)
                 auc_val = auc(recall[gr], precision[gr])
                 ap_str[gr] = f"{avg_precision:.{decimal_places}f}"
                 aucpr_str[gr] = f"{auc_val:.{decimal_places}f}"
@@ -2181,6 +2200,11 @@ def show_pr_curve(
                     print(f"AUCPR for {gr} ({name}): {aucpr_str[gr]}")
                 else:
                     print(f"Average Precision for {gr} ({name}): {ap_str[gr]}")
+            if not counts:
+                raise ValueError(
+                    f"No group in `group_category` has both classes present "
+                    f"({name}); cannot plot grouped PR curves."
+                )
 
         else:
             precision, recall, _ = precision_recall_curve(y_true, y_prob_curr)
@@ -2208,7 +2232,7 @@ def show_pr_curve(
         elif subplots:
             ax = axes[idx]
             if group_category is not None:
-                for gr in group_category.unique():
+                for gr in counts:
                     ax.plot(
                         recall[gr],
                         precision[gr],
@@ -2250,7 +2274,7 @@ def show_pr_curve(
                 ax = _ax_param
                 _created_fig = False
             if group_category is not None:
-                for gr in group_category.unique():
+                for gr in counts:
                     ax.plot(
                         recall[gr],
                         precision[gr],
@@ -2287,7 +2311,7 @@ def show_pr_curve(
             if _created_fig:
                 if group_category is not None:
                     save_plot_images(
-                        f"{name_clean}_{group_category.name}_precision_recall",
+                        f"{name_clean}_{grp_label}_precision_recall",
                         save_plot,
                         image_path_png,
                         image_path_svg,
@@ -8000,4 +8024,3 @@ def show_retention_zoom(
     if return_df:
         return cutoff_df
     return None
-
